@@ -13,9 +13,10 @@
         android:layout_height="wrap_content"
         app:contentInsetStartWithNavigation="0dp"
         app:displayHomeAsUp="true"
+        app:fitStatusBar="false"
         app:title="@string/replace_rule_edit" />
 
-    <io.legado.app.ui.widget.NoChildScrollNestedScrollView
+    <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
 
@@ -166,6 +167,6 @@
             </io.legado.app.ui.widget.text.TextInputLayout>
 
         </LinearLayout>
-    </io.legado.app.ui.widget.NoChildScrollNestedScrollView>
+    </androidx.core.widget.NestedScrollView>
 
 </LinearLayout>

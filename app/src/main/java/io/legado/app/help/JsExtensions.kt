@@ -1,56 +1,32 @@
 package io.legado.app.help
 
+import android.net.Uri
 import android.webkit.WebSettings
 import androidx.annotation.Keep
 import cn.hutool.core.codec.Base64
 import cn.hutool.core.util.HexUtil
-import com.script.rhino.rhinoContext
-import com.script.rhino.rhinoContextOrNull
+import com.github.khoben.libwoff2dec.Woff2Decoder
+import com.github.liuyueyi.quick.transfer.ChineseUtils
 import io.legado.app.constant.AppConst
 import io.legado.app.constant.AppConst.dateFormat
 import io.legado.app.constant.AppLog
 import io.legado.app.constant.AppPattern
 import io.legado.app.data.entities.BaseSource
 import io.legado.app.exception.NoStackTraceException
-import io.legado.app.help.config.AppConfig
 import io.legado.app.help.http.BackstageWebView
 import io.legado.app.help.http.CookieManager.cookieJarHeader
 import io.legado.app.help.http.CookieStore
 import io.legado.app.help.http.SSLHelper
 import io.legado.app.help.http.StrResponse
 import io.legado.app.help.source.SourceVerificationHelp
-import io.legado.app.help.source.getSourceType
 import io.legado.app.model.Debug
 import io.legado.app.model.analyzeRule.AnalyzeUrl
 import io.legado.app.model.analyzeRule.QueryTTF
-import io.legado.app.ui.association.OpenUrlConfirmActivity
-import io.legado.app.utils.ArchiveUtils
-import io.legado.app.utils.ChineseUtils
-import io.legado.app.utils.EncoderUtils
-import io.legado.app.utils.EncodingDetect
-import io.legado.app.utils.FileUtils
-import io.legado.app.utils.GSON
-import io.legado.app.utils.HtmlFormatter
-import io.legado.app.utils.JsURL
-import io.legado.app.utils.MD5Utils
-import io.legado.app.utils.StringUtils
-import io.legado.app.utils.UrlUtil
+import io.legado.app.model.analyzeRule.QueryWOFF
+import io.legado.app.utils.*
 import io.legado.app.utils.compress.LibArchiveUtils
-import io.legado.app.utils.createFileReplace
-import io.legado.app.utils.externalCache
-import io.legado.app.utils.fromJsonObject
-import io.legado.app.utils.isAbsUrl
-import io.legado.app.utils.isMainThread
-import io.legado.app.utils.longToastOnUi
-import io.legado.app.utils.mapAsync
-import io.legado.app.utils.stackTraceStr
-import io.legado.app.utils.startActivity
-import io.legado.app.utils.toStringArray
-import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.Dispatchers.IO
-import kotlinx.coroutines.flow.asFlow
-import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
 import okio.use
 import org.jsoup.Connection
@@ -59,18 +35,15 @@ import splitties.init.appCtx
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
+import java.io.FileOutputStream
 import java.net.URLEncoder
 import java.nio.charset.Charset
 import java.security.MessageDigest
 import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
-import java.util.SimpleTimeZone
-import java.util.UUID
+import java.util.*
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
-import kotlin.coroutines.CoroutineContext
-import kotlin.coroutines.EmptyCoroutineContext
+import com.google.gson.GsonBuilder
 
 /**
  * js扩展类, 在js中通过java变量调用
@@ -84,9 +57,6 @@ interface JsExtensions : JsEncodeUtils {
 
     fun getSource(): BaseSource?
 
-    private val context: CoroutineContext
-        get() = rhinoContext.coroutineContext ?: EmptyCoroutineContext
-
     /**
      * 访问网络,返回String
      */
@@ -96,30 +66,34 @@ interface JsExtensions : JsEncodeUtils {
         } else {
             url.toString()
         }
-        val analyzeUrl = AnalyzeUrl(urlStr, source = getSource(), coroutineContext = context)
-        return kotlin.runCatching {
-            analyzeUrl.getStrResponse().body
-        }.onFailure {
-            rhinoContext.ensureActive()
-            AppLog.put("ajax(${urlStr}) error\n${it.localizedMessage}", it)
-        }.getOrElse {
-            it.stackTraceStr
+        return runBlocking {
+            kotlin.runCatching {
+                val analyzeUrl = AnalyzeUrl(urlStr, source = getSource())
+                analyzeUrl.getStrResponseAwait().body
+            }.onFailure {
+                AppLog.put("ajax(${urlStr}) error\n${it.localizedMessage}", it)
+            }.getOrElse {
+                it.stackTraceStr
+            }
         }
     }
 
     /**
      * 并发访问网络
      */
-    fun ajaxAll(urlList: Array<String>): Array<StrResponse> {
-        return runBlocking(context) {
-            urlList.asFlow().mapAsync(AppConfig.threadCount) { url ->
-                val analyzeUrl = AnalyzeUrl(
-                    url,
-                    source = getSource(),
-                    coroutineContext = coroutineContext
-                )
-                analyzeUrl.getStrResponseAwait()
-            }.flowOn(IO).toList().toTypedArray()
+    fun ajaxAll(urlList: Array<String>): Array<StrResponse?> {
+        return runBlocking {
+            val asyncArray = Array(urlList.size) {
+                async(IO) {
+                    val url = urlList[it]
+                    val analyzeUrl = AnalyzeUrl(url, source = getSource())
+                    analyzeUrl.getStrResponseAwait()
+                }
+            }
+            val resArray = Array<StrResponse?>(urlList.size) {
+                asyncArray[it].await()
+            }
+            resArray
         }
     }
 
@@ -127,36 +101,29 @@ interface JsExtensions : JsEncodeUtils {
      * 访问网络,返回Response<String>
      */
     fun connect(urlStr: String): StrResponse {
-        val analyzeUrl = AnalyzeUrl(
-            urlStr,
-            source = getSource(),
-            coroutineContext = context
-        )
-        return kotlin.runCatching {
-            analyzeUrl.getStrResponse()
-        }.onFailure {
-            rhinoContext.ensureActive()
-            AppLog.put("connect(${urlStr}) error\n${it.localizedMessage}", it)
-        }.getOrElse {
-            StrResponse(analyzeUrl.url, it.stackTraceStr)
+        return runBlocking {
+            val analyzeUrl = AnalyzeUrl(urlStr, source = getSource())
+            kotlin.runCatching {
+                analyzeUrl.getStrResponseAwait()
+            }.onFailure {
+                AppLog.put("connect(${urlStr}) error\n${it.localizedMessage}", it)
+            }.getOrElse {
+                StrResponse(analyzeUrl.url, it.stackTraceStr)
+            }
         }
     }
 
     fun connect(urlStr: String, header: String?): StrResponse {
-        val headerMap = GSON.fromJsonObject<Map<String, String>>(header).getOrNull()
-        val analyzeUrl = AnalyzeUrl(
-            urlStr,
-            headerMapF = headerMap,
-            source = getSource(),
-            coroutineContext = context
-        )
-        return kotlin.runCatching {
-            analyzeUrl.getStrResponse()
-        }.onFailure {
-            rhinoContext.ensureActive()
-            AppLog.put("ajax($urlStr,$header) error\n${it.localizedMessage}", it)
-        }.getOrElse {
-            StrResponse(analyzeUrl.url, it.stackTraceStr)
+        return runBlocking {
+            val headerMap = GSON.fromJsonObject<Map<String, String>>(header).getOrNull()
+            val analyzeUrl = AnalyzeUrl(urlStr, headerMapF = headerMap, source = getSource())
+            kotlin.runCatching {
+                analyzeUrl.getStrResponseAwait()
+            }.onFailure {
+                AppLog.put("ajax($urlStr,$header) error\n${it.localizedMessage}", it)
+            }.getOrElse {
+                StrResponse(analyzeUrl.url, it.stackTraceStr)
+            }
         }
     }
 
@@ -168,10 +135,7 @@ interface JsExtensions : JsEncodeUtils {
      * @return 返回js获取的内容
      */
     fun webView(html: String?, url: String?, js: String?): String? {
-        if (isMainThread) {
-            error("webView must be called on a background thread")
-        }
-        return runBlocking(context) {
+        return runBlocking {
             BackstageWebView(
                 url = url,
                 html = html,
@@ -186,10 +150,7 @@ interface JsExtensions : JsEncodeUtils {
      * 使用webView获取资源url
      */
     fun webViewGetSource(html: String?, url: String?, js: String?, sourceRegex: String): String? {
-        if (isMainThread) {
-            error("webViewGetSource must be called on a background thread")
-        }
-        return runBlocking(context) {
+        return runBlocking {
             BackstageWebView(
                 url = url,
                 html = html,
@@ -210,10 +171,7 @@ interface JsExtensions : JsEncodeUtils {
         js: String?,
         overrideUrlRegex: String
     ): String? {
-        if (isMainThread) {
-            error("webViewGetOverrideUrl must be called on a background thread")
-        }
-        return runBlocking(context) {
+        return runBlocking {
             BackstageWebView(
                 url = url,
                 html = html,
@@ -231,7 +189,6 @@ interface JsExtensions : JsEncodeUtils {
      * @param title 浏览器页面的标题
      */
     fun startBrowser(url: String, title: String) {
-        rhinoContext.ensureActive()
         SourceVerificationHelp.startBrowser(getSource(), url, title)
     }
 
@@ -239,7 +196,6 @@ interface JsExtensions : JsEncodeUtils {
      * 使用内置浏览器打开链接，并等待网页结果
      */
     fun startBrowserAwait(url: String, title: String, refetchAfterSuccess: Boolean): StrResponse {
-        rhinoContext.ensureActive()
         val body = SourceVerificationHelp.getVerificationResult(
             getSource(), url, title, true, refetchAfterSuccess
         )
@@ -254,20 +210,39 @@ interface JsExtensions : JsEncodeUtils {
      * 打开图片验证码对话框，等待返回验证结果
      */
     fun getVerificationCode(imageUrl: String): String {
-        rhinoContext.ensureActive()
         return SourceVerificationHelp.getVerificationResult(getSource(), imageUrl, "", false)
     }
 
     /**
-     * 可从网络，本地文件(阅读私有数据目录相对路径)导入JavaScript脚本
+     * 可从网络，本地文件(阅读私有缓存目录和书籍保存位置支持相对路径)导入JavaScript脚本
      */
     fun importScript(path: String): String {
         val result = when {
             path.startsWith("http") -> cacheFile(path)
+            path.isUri() -> Uri.parse(path).readText(appCtx)
+            path.startsWith("/storage") -> FileUtils.readText(path)
             else -> readTxtFile(path)
         }
         if (result.isBlank()) throw NoStackTraceException("$path 内容获取失败或者为空")
         return result
+    }
+
+    fun importBytes(path: String): ByteArray {
+        val result = when {
+            path.startsWith("http") -> cacheBytes(path)
+            else -> readFile(path)
+        }
+        if (result?.size!! <= 0) throw NoStackTraceException("$path 内容获取失败或者为空")
+        return result
+    }
+
+    /**
+     * 缓存以文本方式保存的文件 如.js .txt等
+     * @param urlStr 网络文件的链接
+     * @return 返回缓存后的文件内容
+     */
+    fun cacheBytes(urlStr: String): ByteArray? {
+        return cacheBytes(urlStr, 0)
     }
 
     /**
@@ -277,6 +252,26 @@ interface JsExtensions : JsEncodeUtils {
      */
     fun cacheFile(urlStr: String): String {
         return cacheFile(urlStr, 0)
+    }
+
+    /**
+     * 缓存以文本方式保存的文件 如.js .txt等
+     * @param saveTime 缓存时间，单位：秒
+     */
+    fun cacheBytes(urlStr: String, saveTime: Int): ByteArray? {
+        val key = md5Encode16(urlStr)
+        val cachePath = CacheManager.get(key)
+        return if (
+            cachePath.isNullOrBlank() ||
+            !getFile(cachePath).exists()
+        ) {
+            val path = downloadFile(urlStr)
+            log("首次下载 $urlStr >> $path")
+            CacheManager.put(key, path, saveTime)
+            readFile(path)
+        } else {
+            readFile(cachePath)
+        }
     }
 
     /**
@@ -320,24 +315,16 @@ interface JsExtensions : JsEncodeUtils {
      * @return 下载的文件相对路径
      */
     fun downloadFile(url: String): String {
-        rhinoContext.ensureActive()
-        val analyzeUrl = AnalyzeUrl(url, source = getSource(), coroutineContext = context)
-        val type = analyzeUrl.type ?: UrlUtil.getSuffix(url)
+        val analyzeUrl = AnalyzeUrl(url, source = getSource())
+        val type = UrlUtil.getSuffix(url, analyzeUrl.type)
         val path = FileUtils.getPath(
             File(FileUtils.getCachePath()),
             "${MD5Utils.md5Encode16(url)}.${type}"
         )
-        val file = File(path)
-        file.delete()
+        val file = File(path).createFileReplace()
         analyzeUrl.getInputStream().use { iStream ->
-            file.createFileReplace()
-            try {
-                file.outputStream().buffered().use { oStream ->
-                    iStream.copyTo(oStream)
-                }
-            } catch (e: Throwable) {
-                file.delete()
-                throw e
+            FileOutputStream(file).use { oStream ->
+                iStream.copyTo(oStream)
             }
         }
         return path.substring(FileUtils.getCachePath().length)
@@ -351,13 +338,11 @@ interface JsExtensions : JsEncodeUtils {
      * @return 相对路径
      */
     @Deprecated(
-        "Deprecated",
-        ReplaceWith("downloadFile(url)")
+        "Depreted",
+        ReplaceWith("downloadFile(url: String)")
     )
     fun downloadFile(content: String, url: String): String {
-        rhinoContext.ensureActive()
-        val type = AnalyzeUrl(url, source = getSource(), coroutineContext = context).type
-            ?: return ""
+        val type = AnalyzeUrl(url, source = getSource()).type ?: return ""
         val path = FileUtils.getPath(
             FileUtils.createFolderIfNotExist(FileUtils.getCachePath()),
             "${MD5Utils.md5Encode16(url)}.${type}"
@@ -375,64 +360,61 @@ interface JsExtensions : JsEncodeUtils {
     /**
      * js实现重定向拦截,网络访问get
      */
+    @Suppress("UnnecessaryVariable")
     fun get(urlStr: String, headers: Map<String, String>): Connection.Response {
         val requestHeaders = if (getSource()?.enabledCookieJar == true) {
             headers.toMutableMap().apply { put(cookieJarHeader, "1") }
         } else headers
-        val rateLimiter = ConcurrentRateLimiter(getSource())
-        val response = rateLimiter.withLimitBlocking {
-            rhinoContext.ensureActive()
-            Jsoup.connect(urlStr)
-                .sslSocketFactory(SSLHelper.unsafeSSLSocketFactory)
-                .ignoreContentType(true)
-                .followRedirects(false)
-                .headers(requestHeaders)
-                .method(Connection.Method.GET)
-                .execute()
-        }
+        val response = Jsoup.connect(urlStr)
+            .sslSocketFactory(SSLHelper.unsafeSSLSocketFactory)
+            .ignoreContentType(true)
+            .ignoreHttpErrors(true)
+            .followRedirects(false)
+            .maxBodySize(0)
+            .headers(requestHeaders)
+            .method(Connection.Method.GET)
+            .execute()
         return response
     }
 
     /**
      * js实现重定向拦截,网络访问head,不返回Response Body更省流量
      */
+    @Suppress("UnnecessaryVariable")
     fun head(urlStr: String, headers: Map<String, String>): Connection.Response {
         val requestHeaders = if (getSource()?.enabledCookieJar == true) {
             headers.toMutableMap().apply { put(cookieJarHeader, "1") }
         } else headers
-        val rateLimiter = ConcurrentRateLimiter(getSource())
-        val response = rateLimiter.withLimitBlocking {
-            rhinoContext.ensureActive()
-            Jsoup.connect(urlStr)
-                .sslSocketFactory(SSLHelper.unsafeSSLSocketFactory)
-                .ignoreContentType(true)
-                .followRedirects(false)
-                .headers(requestHeaders)
-                .method(Connection.Method.HEAD)
-                .execute()
-        }
+        val response = Jsoup.connect(urlStr)
+            .sslSocketFactory(SSLHelper.unsafeSSLSocketFactory)
+            .ignoreContentType(true)
+            .ignoreHttpErrors(true)
+            .followRedirects(false)
+            .maxBodySize(0)
+            .headers(requestHeaders)
+            .method(Connection.Method.HEAD)
+            .execute()
         return response
     }
 
     /**
      * 网络访问post
      */
+    @Suppress("UnnecessaryVariable")
     fun post(urlStr: String, body: String, headers: Map<String, String>): Connection.Response {
         val requestHeaders = if (getSource()?.enabledCookieJar == true) {
             headers.toMutableMap().apply { put(cookieJarHeader, "1") }
         } else headers
-        val rateLimiter = ConcurrentRateLimiter(getSource())
-        val response = rateLimiter.withLimitBlocking {
-            rhinoContext.ensureActive()
-            Jsoup.connect(urlStr)
-                .sslSocketFactory(SSLHelper.unsafeSSLSocketFactory)
-                .ignoreContentType(true)
-                .followRedirects(false)
-                .requestBody(body)
-                .headers(requestHeaders)
-                .method(Connection.Method.POST)
-                .execute()
-        }
+        val response = Jsoup.connect(urlStr)
+            .sslSocketFactory(SSLHelper.unsafeSSLSocketFactory)
+            .ignoreContentType(true)
+            .ignoreHttpErrors(true)
+            .followRedirects(false)
+            .maxBodySize(0)
+            .requestBody(body)
+            .headers(requestHeaders)
+            .method(Connection.Method.POST)
+            .execute()
         return response
     }
 
@@ -524,6 +506,15 @@ interface JsExtensions : JsEncodeUtils {
         return dateFormat.format(Date(time))
     }
 
+    /**
+     * utf8编码转gbk编码
+     */
+    fun utf8ToGbk(str: String): String {
+        val utf8 = String(str.toByteArray(charset("UTF-8")))
+        val unicode = String(utf8.toByteArray(), charset("UTF-8"))
+        return String(unicode.toByteArray(charset("GBK")))
+    }
+
     fun encodeURI(str: String): String {
         return try {
             URLEncoder.encode(str, "UTF-8")
@@ -552,6 +543,16 @@ interface JsExtensions : JsEncodeUtils {
         return ChineseUtils.s2t(text)
     }
 
+    fun mapToJson(map: Map<String, String>?): String? {
+        if (map.isNullOrEmpty()) {
+            return ""
+        }
+        val gson = new GsonBuilder()
+            .disableHtmlEscaping()
+            .create()
+        return gson.toJson(map)
+    }
+
     fun getWebViewUA(): String {
         return WebSettings.getDefaultUserAgent(appCtx)
     }
@@ -566,16 +567,11 @@ interface JsExtensions : JsEncodeUtils {
     fun getFile(path: String): File {
         val cachePath = appCtx.externalCache.absolutePath
         val aPath = if (path.startsWith(File.separator)) {
-            cachePath + path
+            /*cachePath +*/ path
         } else {
             cachePath + File.separator + path
         }
-        val file = File(aPath)
-        val safePath = appCtx.externalCache.parent!!
-        if (!file.canonicalPath.startsWith(safePath)) {
-            throw SecurityException("非法路径")
-        }
-        return file
+        return File(aPath)
     }
 
     fun readFile(path: String): ByteArray? {
@@ -733,7 +729,7 @@ interface JsExtensions : JsEncodeUtils {
      */
     fun getZipByteArrayContent(url: String, path: String): ByteArray? {
         val bytes = if (url.isAbsUrl()) {
-            AnalyzeUrl(url, source = getSource(), coroutineContext = context).getByteArray()
+            AnalyzeUrl(url, source = getSource()).getByteArray()
         } else {
             HexUtil.decodeHex(url)
         }
@@ -761,7 +757,7 @@ interface JsExtensions : JsEncodeUtils {
      */
     fun getRarByteArrayContent(url: String, path: String): ByteArray? {
         val bytes = if (url.isAbsUrl()) {
-            AnalyzeUrl(url, source = getSource(), coroutineContext = context).getByteArray()
+            AnalyzeUrl(url, source = getSource()).getByteArray()
         } else {
             HexUtil.decodeHex(url)
         }
@@ -779,7 +775,7 @@ interface JsExtensions : JsEncodeUtils {
      */
     fun get7zByteArrayContent(url: String, path: String): ByteArray? {
         val bytes = if (url.isAbsUrl()) {
-            AnalyzeUrl(url, source = getSource(), coroutineContext = context).getByteArray()
+            AnalyzeUrl(url, source = getSource()).getByteArray()
         } else {
             HexUtil.decodeHex(url)
         }
@@ -819,14 +815,13 @@ interface JsExtensions : JsEncodeUtils {
                     if (useCache) {
                         key = MessageDigest.getInstance("SHA-256").digest(data.toByteArray())
                             .toHexString()
-                        qTTF = AppCacheManager.getQueryTTF(key)
+                        qTTF = CacheManager.getQueryTTF(key)
                         if (qTTF != null) return qTTF
                     }
                     val font: ByteArray? = when {
                         data.isAbsUrl() -> AnalyzeUrl(
                             data,
                             source = getSource(),
-                            coroutineContext = context
                         ).getByteArray()
 
                         else -> base64DecodeToByteArray(data)
@@ -838,7 +833,7 @@ interface JsExtensions : JsEncodeUtils {
                 is ByteArray -> {
                     if (useCache) {
                         key = MessageDigest.getInstance("SHA-256").digest(data).toHexString()
-                        qTTF = AppCacheManager.getQueryTTF(key)
+                        qTTF = CacheManager.getQueryTTF(key)
                         if (qTTF != null) return qTTF
                     }
                     qTTF = QueryTTF(data)
@@ -846,7 +841,7 @@ interface JsExtensions : JsEncodeUtils {
 
                 else -> return null
             }
-            if (key != null) AppCacheManager.put(key, qTTF)
+            if (key != null) CacheManager.put(key, qTTF)
             return qTTF
         } catch (e: Exception) {
             AppLog.put("[queryTTF] 获取字体处理类出错", e)
@@ -856,6 +851,111 @@ interface JsExtensions : JsEncodeUtils {
 
     fun queryTTF(data: Any?): QueryTTF? {
         return queryTTF(data, true)
+    }
+
+    /**
+     * 返回字体解析类
+     * @param data 支持url,本地文件,base64,ByteArray,自动判断,自动缓存
+     * @param useCache 可选开关缓存,不传入该值默认开启缓存
+     */
+    @OptIn(ExperimentalStdlibApi::class)
+    fun queryWOFF(data: Any?, useCache: Boolean): QueryWOFF? {
+        try {
+            var key: String? = null
+            var qTTF: QueryTTF?
+            when (data) {
+                is String -> {
+                    if (useCache) {
+                        key = MessageDigest.getInstance("SHA-256").digest(data.toByteArray())
+                            .toHexString()
+                        qTTF = CacheManager.getQueryTTF(key)
+                        if (qTTF != null) return qTTF as QueryWOFF?
+                    }
+                    val font: ByteArray? = when {
+                        data.isAbsUrl() -> AnalyzeUrl(
+                            data,
+                            source = getSource(),
+                        ).getByteArray()
+
+                        else -> base64DecodeToByteArray(data)
+                    }
+                    font ?: return null
+                    qTTF = QueryWOFF(font)
+                }
+
+                is ByteArray -> {
+                    if (useCache) {
+                        key = MessageDigest.getInstance("SHA-256").digest(data).toHexString()
+                        qTTF = CacheManager.getQueryTTF(key)
+                        if (qTTF != null) return qTTF as QueryWOFF?
+                    }
+                    qTTF = QueryWOFF(data)
+                }
+
+                else -> return null
+            }
+            if (key != null) CacheManager.put(key, qTTF)
+            return qTTF
+        } catch (e: Exception) {
+            AppLog.put("[QueryWOFF] 获取字体处理类出错", e)
+            throw e
+        }
+    }
+
+    fun queryWOFF(data: Any?): QueryWOFF? {
+        return queryWOFF(data, true)
+    }
+
+    /**
+     * 返回字体解析类
+     * @param data 支持url,本地文件,base64,ByteArray,自动判断,自动缓存
+     * @param useCache 可选开关缓存,不传入该值默认开启缓存
+     */
+    @OptIn(ExperimentalStdlibApi::class)
+    fun queryWOFF2(data: Any?, useCache: Boolean): QueryTTF? {
+        try {
+            var key: String? = null
+            var qTTF: QueryTTF?
+            when (data) {
+                is String -> {
+                    if (useCache) {
+                        key = MessageDigest.getInstance("SHA-256").digest(data.toByteArray())
+                            .toHexString()
+                        qTTF = CacheManager.getQueryTTF(key)
+                        if (qTTF != null) return qTTF
+                    }
+                    val font: ByteArray? = when {
+                        data.isAbsUrl() -> AnalyzeUrl(
+                            data,
+                            source = getSource(),
+                        ).getByteArray()
+
+                        else -> base64DecodeToByteArray(data)
+                    }
+                    font ?: return null
+                    qTTF = QueryTTF(Woff2Decoder.decodeBytes(font))
+                }
+
+                is ByteArray -> {
+                    if (useCache) {
+                        key = MessageDigest.getInstance("SHA-256").digest(data).toHexString()
+                        qTTF = CacheManager.getQueryTTF(key)
+                        if (qTTF != null) return qTTF
+                    }
+                    qTTF = QueryTTF(Woff2Decoder.decodeBytes(data))
+                }
+
+                else -> return null
+            }
+            if (key != null) CacheManager.put(key, qTTF)
+            return qTTF
+        } catch (e: Exception) {
+            AppLog.put("[QueryWOFF] 获取字体处理类出错", e)
+            throw e
+        }
+    }
+    fun queryWOFF2(data: Any?): QueryTTF? {
+        return queryWOFF(data, true)
     }
 
     /**
@@ -897,6 +997,50 @@ interface JsExtensions : JsEncodeUtils {
     }
 
     /**
+     * @param errorQueryTTF 错误的字体
+     * @param correctQueryTTF 正确的字体
+     * @param filter 删除 errorQueryTTF 中不存在的字符
+     */
+    fun fontMapping(
+        errorQueryTTF: QueryTTF?,
+        correctQueryTTF: QueryTTF?,
+    ): LinkedHashMap<Int, Int>? {
+        return fontMapping(errorQueryTTF, correctQueryTTF, false)
+    }
+
+    /**
+     * @param errorQueryTTF 错误的字体
+     * @param correctQueryTTF 正确的字体
+     * @param filter 删除 errorQueryTTF 中不存在的字符
+     */
+    fun fontMapping(
+        errorQueryTTF: QueryTTF?,
+        correctQueryTTF: QueryTTF?,
+        filter: Boolean
+    ): LinkedHashMap<Int, Int>? {
+        if (errorQueryTTF == null || correctQueryTTF == null) return null
+        val unicodeToGlyph = errorQueryTTF.unicodeToGlyph;
+        val fontMapping = LinkedHashMap<Int, Int>();
+        for ((oldCode, glyf) in unicodeToGlyph) {
+            if (errorQueryTTF.isBlankUnicode(oldCode)) {
+                continue
+            }
+            if (errorQueryTTF.getGlyfIdByUnicode(oldCode) == 0) continue // 轮廓数据指向保留索引0
+            // 删除轮廓数据不存在的字符
+            if (filter && (glyf == null)) {
+                continue
+            }
+            // 使用轮廓数据反查Unicode
+            val code = correctQueryTTF.getUnicodeByGlyf(glyf)
+            if (code != 0) {
+                fontMapping.put(oldCode, code)
+            }
+        }
+
+        return fontMapping
+    }
+
+    /**
      * @param text 包含错误字体的内容
      * @param errorQueryTTF 错误的字体
      * @param correctQueryTTF 正确的字体
@@ -917,8 +1061,7 @@ interface JsExtensions : JsEncodeUtils {
         s ?: return null
         val matcher = AppPattern.titleNumPattern.matcher(s)
         if (matcher.find()) {
-            val intStr = StringUtils.stringToInt(matcher.group(2))
-            return "${matcher.group(1)}${intStr}${matcher.group(3)}"
+            return "${matcher.group(1)}${StringUtils.stringToInt(matcher.group(2))}${matcher.group(3)}"
         }
         return s
     }
@@ -936,7 +1079,6 @@ interface JsExtensions : JsEncodeUtils {
      * 弹窗提示
      */
     fun toast(msg: Any?) {
-        rhinoContext.ensureActive()
         appCtx.toastOnUi("${getSource()?.getTag()}: ${msg.toString()}")
     }
 
@@ -944,7 +1086,6 @@ interface JsExtensions : JsEncodeUtils {
      * 弹窗提示 停留时间较长
      */
     fun longToast(msg: Any?) {
-        rhinoContext.ensureActive()
         appCtx.longToastOnUi("${getSource()?.getTag()}: ${msg.toString()}")
     }
 
@@ -952,11 +1093,10 @@ interface JsExtensions : JsEncodeUtils {
      * 输出调试日志
      */
     fun log(msg: Any?): Any? {
-        rhinoContextOrNull?.ensureActive()
         getSource()?.let {
             Debug.log(it.getKey(), msg.toString())
         } ?: Debug.log(msg.toString())
-        AppLog.putDebug("${getSource()?.getTag() ?: "源"}调试输出: $msg")
+        AppLog.putDebug("源调试输出：$msg")
         return msg
     }
 
@@ -981,23 +1121,4 @@ interface JsExtensions : JsEncodeUtils {
     fun androidId(): String {
         return AppConst.androidId
     }
-
-    fun openUrl(url: String) {
-        openUrl(url, null)
-    }
-
-    // 新增 mimeType 参数，默认为 null（保持兼容性）
-    fun openUrl(url: String, mimeType: String? = null) {
-        require(url.length < 64 * 1024) { "openUrl parameter url too long" }
-        rhinoContext.ensureActive()
-        val source = getSource() ?: throw NoStackTraceException("openUrl source cannot be null")
-        appCtx.startActivity<OpenUrlConfirmActivity> {
-            putExtra("uri", url)
-            putExtra("mimeType", mimeType)
-            putExtra("sourceOrigin", source.getKey())
-            putExtra("sourceName", source.getTag())
-            putExtra("sourceType", source.getSourceType())
-        }
-    }
-
 }

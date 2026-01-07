@@ -7,13 +7,12 @@ import android.icu.text.Collator
 import android.icu.util.ULocale
 import android.net.Uri
 import android.text.Editable
-import cn.hutool.core.net.URLEncodeUtil
 import io.legado.app.constant.AppPattern
 import io.legado.app.constant.AppPattern.dataUriRegex
 import java.io.File
 import java.lang.Character.codePointCount
 import java.lang.Character.offsetByCodePoints
-import java.util.Locale
+import java.util.*
 import java.util.regex.Pattern
 
 fun String?.safeTrim() = if (this.isNullOrBlank()) null else this.trim()
@@ -78,12 +77,6 @@ fun String?.isTrue(nullIsTrue: Boolean = false): Boolean {
     return !this.trim().matches("(?i)^(false|no|not|0)$".toRegex())
 }
 
-fun String.isHex(): Boolean {
-    return all {c ->
-        c in '0'..'9' || c in 'A'..'F' || c in 'a'..'f'
-    }
-}
-
 fun String.splitNotBlank(vararg delimiter: String, limit: Int = 0): Array<String> = run {
     this.split(*delimiter, limit = limit).map { it.trim() }.filterNot { it.isBlank() }
         .toTypedArray()
@@ -139,8 +132,3 @@ fun String.escapeRegex(): String {
     return replace(AppPattern.regexCharRegex, "\\\\$0")
 }
 
-fun String.encodeURI(): String = URLEncodeUtil.encodeQuery(this)
-
-fun String.normalizeFileName(): String {
-    return replace(AppPattern.fileNameRegex2, "_")
-}

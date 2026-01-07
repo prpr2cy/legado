@@ -4,26 +4,19 @@ import io.legado.app.constant.AppLog
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookSource
-import io.legado.app.data.entities.BookSourcePart
 import io.legado.app.data.entities.SearchBook
 import io.legado.app.exception.NoStackTraceException
-import io.legado.app.help.book.addType
-import io.legado.app.help.book.removeAllBookType
+import io.legado.app.help.book.getBookType
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.help.http.StrResponse
-import io.legado.app.help.source.getBookType
 import io.legado.app.model.Debug
 import io.legado.app.model.analyzeRule.AnalyzeRule
-import io.legado.app.model.analyzeRule.AnalyzeRule.Companion.setCoroutineContext
 import io.legado.app.model.analyzeRule.AnalyzeUrl
 import io.legado.app.model.analyzeRule.RuleData
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ensureActive
-import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.isActive
 import kotlin.coroutines.CoroutineContext
-import kotlin.coroutines.coroutineContext
 
 @Suppress("MemberVisibilityCanBePrivate")
 object WebBook {
@@ -37,10 +30,9 @@ object WebBook {
         key: String,
         page: Int? = 1,
         context: CoroutineContext = Dispatchers.IO,
-        start: CoroutineStart = CoroutineStart.DEFAULT,
         executeContext: CoroutineContext = Dispatchers.Main,
     ): Coroutine<ArrayList<SearchBook>> {
-        return Coroutine.async(scope, context, start = start, executeContext = executeContext) {
+        return Coroutine.async(scope, context, executeContext = executeContext) {
             searchBookAwait(bookSource, key, page)
         }
     }
@@ -49,8 +41,6 @@ object WebBook {
         bookSource: BookSource,
         key: String,
         page: Int? = 1,
-        filter: ((name: String, author: String) -> Boolean)? = null,
-        shouldBreak: ((size: Int) -> Boolean)? = null
     ): ArrayList<SearchBook> {
         val searchUrl = bookSource.searchUrl
         if (searchUrl.isNullOrBlank()) {
@@ -62,9 +52,9 @@ object WebBook {
             key = key,
             page = page,
             baseUrl = bookSource.bookSourceUrl,
+            headerMapF = bookSource.getHeaderMap(true),
             source = bookSource,
             ruleData = ruleData,
-            coroutineContext = coroutineContext
         )
         var res = analyzeUrl.getStrResponseAwait()
         //检测书源是否已登录
@@ -80,10 +70,7 @@ object WebBook {
             analyzeUrl = analyzeUrl,
             baseUrl = res.url,
             body = res.body,
-            isSearch = true,
-            isRedirect = res.raw.priorResponse?.isRedirect == true,
-            filter = filter,
-            shouldBreak = shouldBreak
+            isSearch = true
         )
     }
 
@@ -114,7 +101,7 @@ object WebBook {
             baseUrl = bookSource.bookSourceUrl,
             source = bookSource,
             ruleData = ruleData,
-            coroutineContext = coroutineContext
+            headerMapF = bookSource.getHeaderMap(true)
         )
         var res = analyzeUrl.getStrResponseAwait()
         //检测书源是否已登录
@@ -154,8 +141,7 @@ object WebBook {
         book: Book,
         canReName: Boolean = true,
     ): Book {
-        book.removeAllBookType()
-        book.addType(bookSource.getBookType())
+        book.type = bookSource.getBookType()
         if (!book.infoHtml.isNullOrEmpty()) {
             BookInfo.analyzeBookInfo(
                 bookSource = bookSource,
@@ -171,7 +157,7 @@ object WebBook {
                 baseUrl = bookSource.bookSourceUrl,
                 source = bookSource,
                 ruleData = book,
-                coroutineContext = coroutineContext
+                headerMapF = bookSource.getHeaderMap(true)
             )
             var res = analyzeUrl.getStrResponseAwait()
             //检测书源是否已登录
@@ -208,17 +194,19 @@ object WebBook {
         }
     }
 
-    suspend fun runPreUpdateJs(bookSource: BookSource, book: Book): Result<Unit> {
+    fun runPreUpdateJs(bookSource: BookSource, book: Book): Result<Boolean> {
         return kotlin.runCatching {
             val preUpdateJs = bookSource.ruleToc?.preUpdateJs
             if (!preUpdateJs.isNullOrBlank()) {
-                AnalyzeRule(book, bookSource, true)
-                    .setCoroutineContext(coroutineContext)
-                    .evalJS(preUpdateJs)
+                kotlin.runCatching {
+                    AnalyzeRule(book, bookSource).evalJS(preUpdateJs)
+                }.onFailure {
+                    AppLog.put("执行preUpdateJs规则失败 书源:${bookSource.bookSourceName}", it)
+                    throw it
+                }
+                return@runCatching true
             }
-        }.onFailure {
-            coroutineContext.ensureActive()
-            AppLog.put("执行preUpdateJs规则失败 书源:${bookSource.bookSourceName}", it)
+            return@runCatching false
         }
     }
 
@@ -227,8 +215,7 @@ object WebBook {
         book: Book,
         runPerJs: Boolean = false
     ): Result<List<BookChapter>> {
-        book.removeAllBookType()
-        book.addType(bookSource.getBookType())
+        book.type = bookSource.getBookType()
         return kotlin.runCatching {
             if (runPerJs) {
                 runPreUpdateJs(bookSource, book).getOrThrow()
@@ -247,7 +234,7 @@ object WebBook {
                     baseUrl = book.bookUrl,
                     source = bookSource,
                     ruleData = book,
-                    coroutineContext = coroutineContext
+                    headerMapF = bookSource.getHeaderMap(true)
                 )
                 var res = analyzeUrl.getStrResponseAwait()
                 //检测书源是否已登录
@@ -265,8 +252,6 @@ object WebBook {
                     body = res.body
                 )
             }
-        }.onFailure {
-            coroutineContext.ensureActive()
         }
     }
 
@@ -281,17 +266,9 @@ object WebBook {
         nextChapterUrl: String? = null,
         needSave: Boolean = true,
         context: CoroutineContext = Dispatchers.IO,
-        start: CoroutineStart = CoroutineStart.DEFAULT,
         executeContext: CoroutineContext = Dispatchers.Main,
-        semaphore: Semaphore? = null,
     ): Coroutine<String> {
-        return Coroutine.async(
-            scope,
-            context,
-            start = start,
-            executeContext = executeContext,
-            semaphore = semaphore
-        ) {
+        return Coroutine.async(scope, context, executeContext = executeContext) {
             getContentAwait(bookSource, book, bookChapter, nextChapterUrl, needSave)
         }
     }
@@ -329,7 +306,7 @@ object WebBook {
                 source = bookSource,
                 ruleData = book,
                 chapter = bookChapter,
-                coroutineContext = coroutineContext
+                headerMapF = bookSource.getHeaderMap(true)
             )
             var res = analyzeUrl.getStrResponseAwait(
                 jsStr = bookSource.getContentRule().webJs,
@@ -360,16 +337,14 @@ object WebBook {
      */
     fun preciseSearch(
         scope: CoroutineScope,
-        bookSourceParts: List<BookSourcePart>,
+        bookSources: List<BookSource>,
         name: String,
         author: String,
         context: CoroutineContext = Dispatchers.IO,
-        semaphore: Semaphore? = null,
     ): Coroutine<Pair<Book, BookSource>> {
-        return Coroutine.async(scope, context, semaphore = semaphore) {
-            for (s in bookSourceParts) {
-                val source = s.getBookSource() ?: continue
-                val book = preciseSearchAwait(source, name, author).getOrNull()
+        return Coroutine.async(scope, context) {
+            for (source in bookSources) {
+                val book = preciseSearchAwait(scope, source, name, author).getOrNull()
                 if (book != null) {
                     return@async Pair(book, source)
                 }
@@ -379,23 +354,24 @@ object WebBook {
     }
 
     suspend fun preciseSearchAwait(
+        scope: CoroutineScope,
         bookSource: BookSource,
         name: String,
         author: String,
     ): Result<Book> {
         return kotlin.runCatching {
-            coroutineContext.ensureActive()
-            searchBookAwait(
-                bookSource, name,
-                filter = { fName, fAuthor -> fName == name && fAuthor == author },
-                shouldBreak = { it > 0 }
-            ).firstOrNull()?.let { searchBook ->
-                coroutineContext.ensureActive()
-                return@runCatching searchBook.toBook()
+            scope.isActive
+            searchBookAwait(bookSource, name).firstOrNull {
+                it.name == name && it.author == author
+            }?.let { searchBook ->
+                scope.isActive
+                var book = searchBook.toBook()
+                if (book.tocUrl.isBlank()) {
+                    book = getBookInfoAwait(bookSource, book)
+                }
+                return@runCatching book
             }
             throw NoStackTraceException("未搜索到 $name($author) 书籍")
-        }.onFailure {
-            coroutineContext.ensureActive()
         }
     }
 

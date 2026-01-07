@@ -7,7 +7,6 @@ import android.view.MenuItem
 import android.view.View
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
-import androidx.appcompat.widget.PopupMenu
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.textfield.TextInputLayout
@@ -17,7 +16,6 @@ import io.legado.app.constant.AppConst.charsets
 import io.legado.app.constant.AppLog
 import io.legado.app.constant.EventBus
 import io.legado.app.constant.IntentAction
-import io.legado.app.data.AppDatabase
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
@@ -36,40 +34,18 @@ import io.legado.app.model.CacheBook
 import io.legado.app.service.ExportBookService
 import io.legado.app.ui.about.AppLogDialog
 import io.legado.app.ui.file.HandleFileContract
-import io.legado.app.utils.ACache
-import io.legado.app.utils.FileDoc
-import io.legado.app.utils.applyNavigationBarPadding
-import io.legado.app.utils.applyOpenTint
-import io.legado.app.utils.applyTint
-import io.legado.app.utils.checkWrite
-import io.legado.app.utils.cnCompare
-import io.legado.app.utils.enableCustomExport
-import io.legado.app.utils.flowWithLifecycleAndDatabaseChange
-import io.legado.app.utils.iconItemOnLongClick
-import io.legado.app.utils.isContentScheme
-import io.legado.app.utils.observeEvent
-import io.legado.app.utils.setIconCompat
-import io.legado.app.utils.showDialogFragment
-import io.legado.app.utils.startService
-import io.legado.app.utils.toastOnUi
-import io.legado.app.utils.verificationField
+import io.legado.app.utils.*
 import io.legado.app.utils.viewbindingdelegate.viewBinding
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.conflate
-import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import splitties.init.appCtx
-import kotlin.math.max
 
 /**
  * cache/download 缓存界面
  */
 class CacheActivity : VMBaseActivity<ActivityCacheBookBinding, CacheViewModel>(),
-    PopupMenu.OnMenuItemClickListener,
     CacheAdapter.CallBack {
 
     override val binding by viewBinding(ActivityCacheBookBinding::inflate)
@@ -125,13 +101,6 @@ class CacheActivity : VMBaseActivity<ActivityCacheBookBinding, CacheViewModel>()
 
     override fun onCompatCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.book_cache, menu)
-        menu.iconItemOnLongClick(R.id.menu_download) {
-            PopupMenu(this, it).apply {
-                inflate(R.menu.book_cache_download)
-                this.menu.applyOpenTint(this@CacheActivity)
-                setOnMenuItemClickListener(this@CacheActivity)
-            }.show()
-        }
         return super.onCompatCreateOptionsMenu(menu)
     }
 
@@ -170,30 +139,14 @@ class CacheActivity : VMBaseActivity<ActivityCacheBookBinding, CacheViewModel>()
      */
     override fun onCompatOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
-            R.id.menu_download,
-            R.id.menu_download_after -> {
-                if (!CacheBook.isRun) sureCacheBook {
+            R.id.menu_download -> {
+                if (!CacheBook.isRun) {
                     adapter.getItems().forEach { book ->
                         CacheBook.start(
                             this@CacheActivity,
                             book,
                             book.durChapterIndex,
-                            book.lastChapterIndex
-                        )
-                    }
-                } else {
-                    CacheBook.stop(this@CacheActivity)
-                }
-            }
-
-            R.id.menu_download_all -> {
-                if (!CacheBook.isRun) sureCacheBook {
-                    adapter.getItems().forEach { book ->
-                        CacheBook.start(
-                            this@CacheActivity,
-                            book,
-                            0,
-                            book.lastChapterIndex
+                            book.totalChapterNum
                         )
                     }
                 } else {
@@ -226,14 +179,9 @@ class CacheActivity : VMBaseActivity<ActivityCacheBookBinding, CacheViewModel>()
         return super.onCompatOptionsItemSelected(item)
     }
 
-    override fun onMenuItemClick(item: MenuItem): Boolean {
-        return onCompatOptionsItemSelected(item)
-    }
-
     private fun initRecyclerView() {
         binding.recyclerView.layoutManager = layoutManager
         binding.recyclerView.adapter = adapter
-        binding.recyclerView.applyNavigationBarPadding()
     }
 
     private fun initBookData() {
@@ -250,17 +198,9 @@ class CacheActivity : VMBaseActivity<ActivityCacheBookBinding, CacheViewModel>()
                     }
 
                     3 -> booksDownload.sortedBy { it.order }
-                    4 -> booksDownload.sortedByDescending {
-                        max(it.latestChapterTime, it.durChapterTime)
-                    }
-
                     else -> booksDownload.sortedByDescending { it.durChapterTime }
                 }
-            }.flowWithLifecycleAndDatabaseChange(
-                lifecycle, table = AppDatabase.BOOK_TABLE_NAME
-            ).catch {
-                AppLog.put("缓存管理界面获取书籍列表失败\n${it.localizedMessage}", it)
-            }.flowOn(IO).conflate().collect { books ->
+            }.conflate().collect { books ->
                 adapter.setItems(books)
                 viewModel.loadCacheFiles(books)
             }
@@ -270,9 +210,7 @@ class CacheActivity : VMBaseActivity<ActivityCacheBookBinding, CacheViewModel>()
     @SuppressLint("NotifyDataSetChanged")
     private fun initGroupData() {
         lifecycleScope.launch {
-            appDb.bookGroupDao.flowAll().catch {
-                AppLog.put("缓存管理界面获取分组数据失败\n${it.localizedMessage}", it)
-            }.flowOn(IO).conflate().collect {
+            appDb.bookGroupDao.flowAll().conflate().collect {
                 groupList.clear()
                 groupList.addAll(it)
                 adapter.notifyDataSetChanged()
@@ -300,22 +238,20 @@ class CacheActivity : VMBaseActivity<ActivityCacheBookBinding, CacheViewModel>()
             notifyItemChanged(it)
         }
         observeEvent<String>(EventBus.UP_DOWNLOAD) {
-            notifyItemChanged(it)
-        }
-        observeEvent<String>(EventBus.UP_DOWNLOAD_STATE) {
             if (!CacheBook.isRun) {
                 menu?.findItem(R.id.menu_download)?.let { item ->
-                    item.setIconCompat(R.drawable.ic_play_24dp)
+                    item.setIcon(R.drawable.ic_play_24dp)
                     item.setTitle(R.string.download_start)
                 }
                 menu?.applyTint(this)
             } else {
                 menu?.findItem(R.id.menu_download)?.let { item ->
-                    item.setIconCompat(R.drawable.ic_stop_black_24dp)
+                    item.setIcon(R.drawable.ic_stop_black_24dp)
                     item.setTitle(R.string.stop)
                 }
                 menu?.applyTint(this)
             }
+            notifyItemChanged(it)
         }
         observeEvent<Pair<Book, BookChapter>>(EventBus.SAVE_CONTENT) { (book, chapter) ->
             viewModel.cacheChapters[book.bookUrl]?.add(chapter.url)
@@ -325,16 +261,12 @@ class CacheActivity : VMBaseActivity<ActivityCacheBookBinding, CacheViewModel>()
 
     override fun export(position: Int) {
         val path = ACache.get().getAsString(exportBookPathKey)
-        lifecycleScope.launch {
-            if (path.isNullOrEmpty() ||
-                withContext(IO) { !FileDoc.fromDir(path).checkWrite() }
-            ) {
-                selectExportFolder(position)
-            } else if (enableCustomExport()) {// 启用自定义导出 and 导出类型为Epub
-                configExportSection(path, position)
-            } else {
-                startExport(path, position)
-            }
+        if (path.isNullOrEmpty()) {
+            selectExportFolder(position)
+        } else if (enableCustomExport()) {// 启用自定义导出 and 导出类型为Epub
+            configExportSection(path, position)
+        } else {
+            startExport(path, position)
         }
     }
 
@@ -448,21 +380,22 @@ class CacheActivity : VMBaseActivity<ActivityCacheBookBinding, CacheViewModel>()
                     alertDialog.hide()
                     return@apply
                 }
-                val epubScope = etInputScope.text.toString()
-                if (!verificationField(epubScope)) {
-                    etInputScope.error = appCtx.getString(R.string.error_scope_input)//"请输入正确的范围"
+                val text = etInputScope.text
+                if (!verificationField(text.toString())) {
+                    etInputScope.error =
+                        applicationContext.getString(R.string.error_scope_input)//"请输入正确的范围"
                     return@apply
                 }
                 etInputScope.error = null
-                val epubSize = etEpubSize.text.toString().toIntOrNull() ?: 1
+                val toInt = etEpubSize.text.toString().toInt()
                 adapter.getItem(position)?.let { book ->
                     startService<ExportBookService> {
                         action = IntentAction.start
                         putExtra("bookUrl", book.bookUrl)
                         putExtra("exportType", "epub")
                         putExtra("exportPath", path)
-                        putExtra("epubSize", epubSize)
-                        putExtra("epubScope", epubScope)
+                        putExtra("epubSize", toInt)
+                        putExtra("epubScope", text.toString())
                     }
                 }
                 alertDialog.hide()
@@ -554,16 +487,6 @@ class CacheActivity : VMBaseActivity<ActivityCacheBookBinding, CacheViewModel>()
                 AppConfig.exportCharset = alertBinding.editView.text?.toString() ?: "UTF-8"
             }
             cancelButton()
-        }
-    }
-
-    private fun sureCacheBook(action: () -> Unit) {
-        alert(R.string.draw) {
-            setMessage(R.string.sure_cache_book)
-            noButton()
-            yesButton {
-                action.invoke()
-            }
         }
     }
 

@@ -8,13 +8,11 @@ import android.view.MenuItem
 import androidx.activity.addCallback
 import androidx.activity.viewModels
 import androidx.appcompat.widget.PopupMenu
-import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import io.legado.app.R
 import io.legado.app.constant.PreferKey
-import io.legado.app.data.appDb
 import io.legado.app.databinding.DialogEditTextBinding
 import io.legado.app.help.config.AppConfig
 import io.legado.app.lib.dialogs.alert
@@ -24,14 +22,7 @@ import io.legado.app.lib.theme.backgroundColor
 import io.legado.app.ui.book.import.BaseImportBookActivity
 import io.legado.app.ui.file.HandleFileContract
 import io.legado.app.ui.widget.SelectActionBar
-import io.legado.app.utils.ArchiveUtils
-import io.legado.app.utils.FileDoc
-import io.legado.app.utils.gone
-import io.legado.app.utils.isContentScheme
-import io.legado.app.utils.isUri
-import io.legado.app.utils.launch
-import io.legado.app.utils.putPrefInt
-import io.legado.app.utils.visible
+import io.legado.app.utils.*
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Dispatchers.Main
 import kotlinx.coroutines.Job
@@ -102,7 +93,7 @@ class ImportBookActivity : BaseImportBookActivity<ImportBookViewModel>(),
 
     override fun onMenuItemClick(item: MenuItem?): Boolean {
         when (item?.itemId) {
-            R.id.menu_del_selection -> viewModel.deleteDoc(adapter.selected) {
+            R.id.menu_del_selection -> viewModel.deleteDoc(adapter.selectedUris) {
                 adapter.removeSelection()
             }
         }
@@ -119,11 +110,8 @@ class ImportBookActivity : BaseImportBookActivity<ImportBookViewModel>(),
 
     @SuppressLint("NotifyDataSetChanged")
     override fun onClickSelectBarMainAction() {
-        viewModel.addToBookshelf(adapter.selected) {
-            adapter.selected.forEach {
-                it.isOnBookShelf = true
-            }
-            adapter.selected.clear()
+        viewModel.addToBookshelf(adapter.selectedUris) {
+            adapter.selectedUris.clear()
             adapter.notifyDataSetChanged()
         }
     }
@@ -133,7 +121,6 @@ class ImportBookActivity : BaseImportBookActivity<ImportBookViewModel>(),
         binding.tvEmptyMsg.setText(R.string.empty_msg_import_book)
         binding.recyclerView.layoutManager = LinearLayoutManager(this)
         binding.recyclerView.adapter = adapter
-        binding.recyclerView.recycledViewPool.setMaxRecycledViews(0, 15)
         binding.selectActionBar.setMainActionText(R.string.add_to_bookshelf)
         binding.selectActionBar.inflateMenu(R.menu.import_book_sel)
         binding.selectActionBar.setOnMenuItemClickListener(this)
@@ -167,32 +154,30 @@ class ImportBookActivity : BaseImportBookActivity<ImportBookViewModel>(),
                 selectFolder.launch()
             } else {
                 val rootUri = if (lastPath.isUri()) {
-                    lastPath.toUri()
+                    Uri.parse(lastPath)
                 } else {
                     Uri.fromFile(File(lastPath))
                 }
                 when {
-                    rootUri.isContentScheme() -> initRootPath(rootUri)
+                    rootUri.isContentScheme() -> {
+                        kotlin.runCatching {
+                            val doc = DocumentFile.fromTreeUri(this, rootUri)
+                            if (doc == null || doc.name.isNullOrEmpty()) {
+                                binding.tvEmptyMsg.visible()
+                                selectFolder.launch()
+                            } else {
+                                viewModel.subDocs.clear()
+                                viewModel.rootDoc = FileDoc.fromDocumentFile(doc)
+                                upDocs(viewModel.rootDoc!!)
+                            }
+                        }.onFailure {
+                            binding.tvEmptyMsg.visible()
+                            selectFolder.launch()
+                        }
+                    }
                     else -> initRootPath(rootUri.path!!)
                 }
             }
-        }
-    }
-
-    private fun initRootPath(rootUri: Uri) {
-        kotlin.runCatching {
-            val doc = DocumentFile.fromTreeUri(this, rootUri)
-            if (doc == null || doc.name.isNullOrEmpty() || !doc.isDirectory) {
-                binding.tvEmptyMsg.visible()
-                selectFolder.launch()
-            } else {
-                viewModel.subDocs.clear()
-                viewModel.rootDoc = FileDoc.fromDocumentFile(doc)
-                upPath()
-            }
-        }.onFailure {
-            binding.tvEmptyMsg.visible()
-            selectFolder.launch()
         }
     }
 
@@ -203,15 +188,9 @@ class ImportBookActivity : BaseImportBookActivity<ImportBookViewModel>(),
             .rationale(R.string.tip_perm_request_storage)
             .onGranted {
                 kotlin.runCatching {
-                    val file = File(path)
-                    if (!file.isDirectory) {
-                        binding.tvEmptyMsg.visible()
-                        selectFolder.launch()
-                    } else {
-                        viewModel.subDocs.clear()
-                        viewModel.rootDoc = FileDoc.fromFile(file)
-                        upPath()
-                    }
+                    viewModel.rootDoc = FileDoc.fromFile(File(path))
+                    viewModel.subDocs.clear()
+                    upPath()
                 }.onFailure {
                     binding.tvEmptyMsg.visible()
                     selectFolder.launch()
@@ -224,7 +203,7 @@ class ImportBookActivity : BaseImportBookActivity<ImportBookViewModel>(),
         viewModel.sort = sort
         putPrefInt(PreferKey.localBookImportSort, sort)
         if (scanDocJob?.isActive != true) {
-            viewModel.dataCallback?.upAdapter()
+            viewModel.dataCallback?.setItems(adapter.getItems())
         }
     }
 
@@ -246,7 +225,7 @@ class ImportBookActivity : BaseImportBookActivity<ImportBookViewModel>(),
             path = path + doc.name + File.separator
         }
         binding.tvPath.text = path
-        adapter.selected.clear()
+        adapter.selectedUris.clear()
         adapter.clearItems()
         viewModel.loadDoc(lastDoc)
     }
@@ -261,9 +240,10 @@ class ImportBookActivity : BaseImportBookActivity<ImportBookViewModel>(),
             binding.refreshProgressBar.isAutoLoading = true
             scanDocJob?.cancel()
             scanDocJob = lifecycleScope.launch(IO) {
-                viewModel.scanDoc(lastDoc)
-                withContext(Main) {
-                    binding.refreshProgressBar.isAutoLoading = false
+                viewModel.scanDoc(lastDoc, true) {
+                    withContext(Main) {
+                        binding.refreshProgressBar.isAutoLoading = false
+                    }
                 }
             }
         }
@@ -306,19 +286,12 @@ class ImportBookActivity : BaseImportBookActivity<ImportBookViewModel>(),
     }
 
     override fun upCountView() {
-        binding.selectActionBar.upCountView(adapter.selected.size, adapter.checkableCount)
+        binding.selectActionBar.upCountView(adapter.selectedUris.size, adapter.checkableCount)
     }
 
     override fun startRead(fileDoc: FileDoc) {
         if (!ArchiveUtils.isArchive(fileDoc.name)) {
-            appDb.bookDao.getBookByFileName(fileDoc.name)?.let {
-                val filePath = fileDoc.toString()
-                if (it.bookUrl != filePath) {
-                    it.bookUrl = filePath
-                    appDb.bookDao.insert(it)
-                }
-                startReadBook(it)
-            }
+            startReadBook(fileDoc.toString())
         } else {
             onArchiveFileClick(fileDoc)
         }

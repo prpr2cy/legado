@@ -15,10 +15,15 @@ import io.legado.app.help.http.CookieManager.mergeCookiesToMap
 import io.legado.app.help.http.api.CookieManagerInterface
 import io.legado.app.utils.NetworkUtils
 import io.legado.app.utils.removeCookie
+import io.legado.app.utils.splitNotBlank
 
 @Keep
 object CookieStore : CookieManagerInterface {
 
+    private val webCookieManager: android.webkit.CookieManager by lazy {
+        android.webkit.CookieManager.getInstance()
+    }
+ 
     /**
      *保存cookie到数据库，会自动识别url的二级域名
      */
@@ -30,6 +35,20 @@ object CookieStore : CookieManagerInterface {
             appDb.cookieDao.insert(cookieBean)
         } catch (e: Exception) {
             AppLog.put("保存Cookie失败\n$e", e)
+        }
+    }
+
+    fun setWebCookie(url: String, cookie: String) {
+        try {
+            val baseUrl = NetworkUtils.getBaseUrl(url) ?: return
+            val cookies = cookie.splitNotBlank(";")
+            webCookieManager.removeSessionCookies(null)
+            cookies.forEach {
+                webCookieManager.setCookie(baseUrl, it)
+            }
+            webCookieManager.flush()
+        } catch (e: Exception) {
+            AppLog.put("设置WebCookie失败\n$e", e)
         }
     }
 
@@ -59,14 +78,14 @@ object CookieStore : CookieManagerInterface {
 
         val cookieMap = mergeCookiesToMap(cookie, sessionCookie)
 
-        var ck = mapToCookie(cookieMap) ?: ""
-        while (ck.length > 4096) {
+        var cookieString = mapToCookie(cookieMap) ?: ""
+        while (cookieString.length > 4096) {
             val removeKey = cookieMap.keys.random()
             CookieManager.removeCookie(url, removeKey)
             cookieMap.remove(removeKey)
-            ck = mapToCookie(cookieMap) ?: ""
+            cookieString = mapToCookie(cookieMap) ?: ""
         }
-        return ck
+        return cookieString
     }
 
     fun getKey(url: String, key: String): String {
@@ -76,17 +95,68 @@ object CookieStore : CookieManagerInterface {
         return cookieMap[key] ?: ""
     }
 
+    fun getWebCookie(url: String): String {
+        try {
+            return webCookieManager.getCookie(url) ?: ""
+        } catch (e: Exception) {
+            AppLog.put("获取WebCookie失败\n$e", e)
+        }
+    }
+
     override fun removeCookie(url: String) {
         val domain = NetworkUtils.getSubDomain(url)
         appDb.cookieDao.delete(domain)
         CacheManager.deleteMemory("${domain}_cookie")
         CacheManager.deleteMemory("${domain}_session_cookie")
-        android.webkit.CookieManager.getInstance().removeCookie(url)
+        removeWebCookie(url)
     }
 
-    override fun cookieToMap(cookie: String): MutableMap<String, String> {
+    fun removeWebCookie(url: String) {
+        val baseUrl = NetworkUtils.getBaseUrl(url) ?: return
+        removeWebCookie(baseUrl, null, null)
+    }
+
+    fun removeWebCookie(url: String, autoDomain: Boolean) {
+        val baseUrl = NetworkUtils.getBaseUrl(url) ?: return
+        val domain = if (autoDomain) {
+            NetworkUtils.getSubDomainOrNull(url)
+        } else null
+        removeWebCookie(baseUrl, null, domain)
+    }
+
+    fun removeWebCookie(
+        url: String,
+        path: String? = null,
+        domain: String? = null
+    ) {
+        try {
+            if (url.isNullOrBlank()) return
+            val cookie = getWebCookie(url)
+            if (cookie.isNullOrBlank()) return
+            val safePath = when {
+                path.isNullOrBlank() -> "/"
+                !path.startsWith("/") -> "/$path"
+                else -> path
+            }
+            cookie.splitNotBlank(";").forEach {
+                val name = it.substringBefore("=")
+                if (!name.isNullOrBlank()) {
+                    val cookieValue = buildString {
+                        append("$name=; Max-Age=0; Path=$safePath")
+                        if (!domain.isNullOrBlank()) append("; Domain=$domain")
+                    }
+                    webCookieManager.setCookie(url, cookieValue)
+                }
+            }
+            webCookieManager.flush()
+        } catch (e: Exception) {
+            AppLog.put("删除WebCookie失败\n$e", e)
+        }
+    }
+
+    override fun cookieToMap(cookie: String?): MutableMap<String, String> {
         val cookieMap = mutableMapOf<String, String>()
-        if (cookie.isBlank()) {
+        if (cookie.isNullOrBlank()) {
             return cookieMap
         }
         val pairArray = cookie.split(semicolonRegex).dropLastWhile { it.isEmpty() }.toTypedArray()

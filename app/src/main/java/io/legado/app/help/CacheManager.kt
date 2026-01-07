@@ -1,6 +1,5 @@
 package io.legado.app.help
 
-import androidx.annotation.Keep
 import androidx.collection.LruCache
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.Cache
@@ -8,47 +7,21 @@ import io.legado.app.model.analyzeRule.QueryTTF
 import io.legado.app.utils.ACache
 import io.legado.app.utils.memorySize
 
-private val queryTTFMap = LruCache<String, QueryTTF>(4)
-
-/**
- * 最多只缓存50M的数据,防止OOM
- */
-private val memoryLruCache = object : LruCache<String, Any>(1024 * 1024 * 50) {
-
-    override fun sizeOf(key: String, value: Any): Int {
-        return value.toString().memorySize()
-    }
-
-}
-
-object AppCacheManager {
-
-    fun put(key: String, queryTTF: QueryTTF) {
-        queryTTFMap.put(key, queryTTF)
-    }
-
-    fun getQueryTTF(key: String): QueryTTF? {
-        return queryTTFMap[key]
-    }
-
-    fun clearSourceVariables() {
-        memoryLruCache.snapshot().keys.forEach {
-            if (it.startsWith("v_")
-                || it.startsWith("userInfo_")
-                || it.startsWith("loginHeader_")
-                || it.startsWith("sourceVariable_")
-            ) {
-                memoryLruCache.remove(it)
-            }
-        }
-    }
-
-}
-
-
-@Keep
 @Suppress("unused")
 object CacheManager {
+
+    private val queryTTFMap = hashMapOf<String, Pair<Long, QueryTTF>>()
+
+    /**
+     * 最多只缓存50M的数据,防止OOM
+     */
+    private val memoryLruCache = object : LruCache<String, Any>(1024 * 1024 * 50) {
+
+        override fun sizeOf(key: String, value: Any): Int {
+            return value.toString().memorySize()
+        }
+
+    }
 
     /**
      * saveTime 单位为秒
@@ -58,9 +31,11 @@ object CacheManager {
         val deadline =
             if (saveTime == 0) 0 else System.currentTimeMillis() + saveTime * 1000
         when (value) {
+            is QueryTTF -> queryTTFMap[key] = Pair(deadline, value)
             is ByteArray -> ACache.get().put(key, value, saveTime)
             else -> {
                 val cache = Cache(key, value.toString(), deadline)
+                putMemory(key, value)
                 appDb.cacheDao.insert(cache)
             }
         }
@@ -72,7 +47,7 @@ object CacheManager {
 
     //从内存中获取数据 使用lruCache
     fun getFromMemory(key: String): Any? {
-        return memoryLruCache[key]
+        return memoryLruCache.get(key)
     }
 
     fun deleteMemory(key: String) {
@@ -80,8 +55,12 @@ object CacheManager {
     }
 
     fun get(key: String): String? {
+        getFromMemory(key)?.let {
+            if (it is String) return it
+        }
         val cache = appDb.cacheDao.get(key)
         if (cache != null && (cache.deadline == 0L || cache.deadline > System.currentTimeMillis())) {
+            putMemory(key, cache.value ?: "")
             return cache.value
         }
         return null
@@ -105,6 +84,16 @@ object CacheManager {
 
     fun getByteArray(key: String): ByteArray? {
         return ACache.get().getAsBinary(key)
+    }
+
+    fun getQueryTTF(key: String): QueryTTF? {
+        val cache = queryTTFMap[key] ?: return null
+        if (cache.first == 0L || cache.first > System.currentTimeMillis()) {
+            return cache.second
+        } else {
+            queryTTFMap.remove(key)
+        }
+        return null
     }
 
     fun putFile(key: String, value: String, saveTime: Int = 0) {

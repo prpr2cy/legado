@@ -1,11 +1,13 @@
 package io.legado.app.ui.book.read.page.delegate
 
 import android.graphics.Canvas
-import androidx.core.graphics.withTranslation
+import android.graphics.Matrix
 import io.legado.app.ui.book.read.page.ReadView
 import io.legado.app.ui.book.read.page.entities.PageDirection
 
 class SlidePageDelegate(readView: ReadView) : HorizontalPageDelegate(readView) {
+
+    private val bitmapMatrix = Matrix()
 
     override fun onAnimStart(animationSpeed: Int) {
         val distanceX: Float
@@ -20,7 +22,6 @@ class SlidePageDelegate(readView: ReadView) : HorizontalPageDelegate(readView) {
                 } else {
                     -(touchX + (viewWidth - startX))
                 }
-
             else -> distanceX =
                 if (isCancel) {
                     -(touchX - startX)
@@ -40,19 +41,15 @@ class SlidePageDelegate(readView: ReadView) : HorizontalPageDelegate(readView) {
         val distanceX = if (offsetX > 0) offsetX - viewWidth else offsetX + viewWidth
         if (!isRunning) return
         if (mDirection == PageDirection.PREV) {
-            canvas.withTranslation(distanceX + viewWidth) {
-                curRecorder.draw(this)
-            }
-            canvas.withTranslation(distanceX) {
-                prevRecorder.draw(this)
-            }
+            bitmapMatrix.setTranslate(distanceX + viewWidth, 0.toFloat())
+            curBitmap?.let { canvas.drawBitmap(it, bitmapMatrix, null) }
+            bitmapMatrix.setTranslate(distanceX, 0.toFloat())
+            prevBitmap?.let { canvas.drawBitmap(it, bitmapMatrix, null) }
         } else if (mDirection == PageDirection.NEXT) {
-            canvas.withTranslation(distanceX) {
-                nextRecorder.draw(this)
-            }
-            canvas.withTranslation(distanceX - viewWidth) {
-                curRecorder.draw(this)
-            }
+            bitmapMatrix.setTranslate(distanceX, 0.toFloat())
+            nextBitmap?.let { canvas.drawBitmap(it, bitmapMatrix, null) }
+            bitmapMatrix.setTranslate(distanceX - viewWidth, 0.toFloat())
+            curBitmap?.let { canvas.drawBitmap(it, bitmapMatrix, null) }
         }
     }
 

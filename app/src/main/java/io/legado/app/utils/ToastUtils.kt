@@ -4,14 +4,16 @@ package io.legado.app.utils
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.widget.TextView
 import android.widget.Toast
+import androidx.cardview.widget.CardView
 import androidx.fragment.app.Fragment
 import io.legado.app.BuildConfig
-import io.legado.app.databinding.ViewToastBinding
+import io.legado.app.R
 import io.legado.app.help.config.AppConfig
 import io.legado.app.lib.theme.bottomBackground
 import io.legado.app.lib.theme.getPrimaryTextColor
-import splitties.systemservices.layoutInflater
+import splitties.views.inflate
 
 private var toast: Toast? = null
 
@@ -26,15 +28,18 @@ fun Context.toastOnUi(message: Int, duration: Int = Toast.LENGTH_SHORT) {
 fun Context.toastOnUi(message: CharSequence?, duration: Int = Toast.LENGTH_SHORT) {
     runOnUI {
         kotlin.runCatching {
-            toast?.cancel()
-            toast = Toast(this)
-            val isLight = ColorUtils.isColorLight(bottomBackground)
-            ViewToastBinding.inflate(layoutInflater).run {
-                toast?.view = root
-                cvToast.setCardBackgroundColor(bottomBackground)
-                tvText.setTextColor(getPrimaryTextColor(isLight))
-                tvText.text = message
+            if (toast == null || BuildConfig.DEBUG || AppConfig.recordLog) {
+                toast?.cancel()
+                toast = Toast(this)
+                toast?.view = inflate(R.layout.view_toast)
             }
+            val toastView = toast?.view!!
+            val cardView = toastView.findViewById<CardView>(R.id.cv_content)
+            cardView.setCardBackgroundColor(bottomBackground)
+            val isLight = ColorUtils.isColorLight(bottomBackground)
+            val textView = toastView.findViewById<TextView>(R.id.tv_text)
+            textView.setTextColor(getPrimaryTextColor(isLight))
+            textView.text = message
             toast?.duration = duration
             toast?.show()
         }

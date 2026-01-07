@@ -4,13 +4,10 @@ import android.annotation.SuppressLint
 import android.content.pm.PackageManager
 import android.provider.Settings
 import androidx.annotation.Keep
-import cn.hutool.crypto.digest.DigestUtil
 import io.legado.app.BuildConfig
-import io.legado.app.help.update.AppVariant
-import org.apache.commons.lang3.time.FastDateFormat
 import splitties.init.appCtx
+import java.text.SimpleDateFormat
 
-@Suppress("ConstPropertyName")
 @SuppressLint("SimpleDateFormat")
 object AppConst {
 
@@ -26,21 +23,16 @@ object AppConst {
 
     const val DEFAULT_WEBDAV_ID = -1L
 
-    private const val OFFICIAL_SIGNATURE =
-        "8DACBF25EC667C9B1374DB1450C1A866C2AAA1173016E80BF6AD2F06FABDDC08"
-    private const val BETA_SIGNATURE =
-        "93A28468B0F69E8D14C8A99AB45841CEF902BBBA3761BBFEE02E67CBA801563E"
-
-    val timeFormat: FastDateFormat by lazy {
-        FastDateFormat.getInstance("HH:mm")
+    val timeFormat: SimpleDateFormat by lazy {
+        SimpleDateFormat("HH:mm")
     }
 
-    val dateFormat: FastDateFormat by lazy {
-        FastDateFormat.getInstance("yyyy/MM/dd HH:mm")
+    val dateFormat: SimpleDateFormat by lazy {
+        SimpleDateFormat("yyyy/MM/dd HH:mm")
     }
 
-    val fileNameFormat: FastDateFormat by lazy {
-        FastDateFormat.getInstance("yy-MM-dd-HH-mm-ss")
+    val fileNameFormat: SimpleDateFormat by lazy {
+        SimpleDateFormat("yy-MM-dd-HH-mm-ss")
     }
 
     const val imagePathKey = "imagePath"
@@ -64,14 +56,7 @@ object AppConst {
         @Suppress("DEPRECATION")
         appCtx.packageManager.getPackageInfo(appCtx.packageName, PackageManager.GET_ACTIVITIES)
             ?.let {
-                appInfo.versionName = it.versionName!!
-                appInfo.appVariant = when {
-                    it.packageName.contains("releaseA") -> AppVariant.BETA_RELEASEA
-                    isBeta -> AppVariant.BETA_RELEASE
-                    isOfficial -> AppVariant.OFFICIAL
-                    else -> AppVariant.UNKNOWN
-                }
-
+                appInfo.versionName = it.versionName
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
                     appInfo.versionCode = it.longVersionCode
                 } else {
@@ -82,25 +67,13 @@ object AppConst {
         appInfo
     }
 
-    @Suppress("DEPRECATION")
-    private val sha256Signature: String by lazy {
-        val packageInfo =
-            appCtx.packageManager.getPackageInfo(appCtx.packageName, PackageManager.GET_SIGNATURES)
-        DigestUtil.sha256Hex(packageInfo.signatures!![0].toByteArray()).uppercase()
-    }
-
-    private val isOfficial = sha256Signature == OFFICIAL_SIGNATURE
-
-    private val isBeta = sha256Signature == BETA_SIGNATURE || BuildConfig.DEBUG
-
     val charsets =
         arrayListOf("UTF-8", "GB2312", "GB18030", "GBK", "Unicode", "UTF-16", "UTF-16LE", "ASCII")
 
     @Keep
     data class AppInfo(
         var versionCode: Long = 0L,
-        var versionName: String = "",
-        var appVariant: AppVariant = AppVariant.UNKNOWN
+        var versionName: String = ""
     )
 
     /**

@@ -6,7 +6,6 @@ import io.legado.app.constant.AppPattern.bookFileRegex
 import io.legado.app.constant.BookType
 import io.legado.app.data.entities.Book
 import io.legado.app.exception.NoStackTraceException
-import io.legado.app.help.book.update
 import io.legado.app.help.config.AppConfig
 import io.legado.app.lib.webdav.Authorization
 import io.legado.app.lib.webdav.WebDav
@@ -15,7 +14,10 @@ import io.legado.app.model.analyzeRule.CustomUrl
 import io.legado.app.model.localBook.LocalBook
 import io.legado.app.utils.NetworkUtils
 import io.legado.app.utils.isContentScheme
+import io.legado.app.utils.readBytes
 import kotlinx.coroutines.runBlocking
+import splitties.init.appCtx
+import java.io.File
 
 class RemoteBookWebDav(
     val rootBookUrl: String,
@@ -69,17 +71,20 @@ class RemoteBookWebDav(
     override suspend fun upload(book: Book) {
         if (!NetworkUtils.isAvailable()) throw NoStackTraceException("网络不可用")
         val localBookUri = Uri.parse(book.bookUrl)
-        val putUrl = "$rootBookUrl${book.originName}"
+        val putUrl = "$rootBookUrl${File.separator}${book.originName}"
         val webDav = WebDav(putUrl, authorization)
         if (localBookUri.isContentScheme()) {
-            webDav.upload(localBookUri)
+            webDav.upload(
+                byteArray = localBookUri.readBytes(appCtx),
+                contentType = "application/octet-stream"
+            )
         } else {
             webDav.upload(localBookUri.path!!)
         }
         book.origin = BookType.webDavTag + CustomUrl(putUrl)
             .putAttribute("serverID", serverID)
             .toString()
-        book.update()
+        book.save()
     }
 
     override suspend fun delete(remoteBookUrl: String) {

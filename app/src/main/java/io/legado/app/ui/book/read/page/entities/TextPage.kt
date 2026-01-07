@@ -1,27 +1,15 @@
 package io.legado.app.ui.book.read.page.entities
 
-import android.graphics.Canvas
-import android.graphics.Paint
-import android.os.Build
 import android.text.Layout
 import android.text.StaticLayout
 import androidx.annotation.Keep
-import androidx.core.graphics.withTranslation
 import io.legado.app.R
-import io.legado.app.help.PaintPool
-import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.ReadBookConfig
-import io.legado.app.ui.book.read.page.ContentTextView
-import io.legado.app.ui.book.read.page.entities.TextChapter.Companion.emptyTextChapter
+import io.legado.app.model.ReadBook
 import io.legado.app.ui.book.read.page.entities.column.TextColumn
 import io.legado.app.ui.book.read.page.provider.ChapterProvider
-import io.legado.app.utils.canvasrecorder.CanvasRecorderFactory
-import io.legado.app.utils.canvasrecorder.recordIfNeeded
-import io.legado.app.utils.dpToPx
 import splitties.init.appCtx
 import java.text.DecimalFormat
-import kotlin.math.ceil
-import kotlin.math.max
 import kotlin.math.min
 
 /**
@@ -34,54 +22,37 @@ data class TextPage(
     var text: String = appCtx.getString(R.string.data_loading),
     var title: String = appCtx.getString(R.string.data_loading),
     private val textLines: ArrayList<TextLine> = arrayListOf(),
+    var pageSize: Int = 0,
     var chapterSize: Int = 0,
     var chapterIndex: Int = 0,
     var height: Float = 0f,
-    var leftLineSize: Int = 0,
-    var renderHeight: Int = 0
+    var leftLineSize: Int = 0
 ) {
-
-    companion object {
-        val readProgressFormatter = DecimalFormat("0.0%")
-        val emptyTextPage = TextPage()
-    }
 
     val lines: List<TextLine> get() = textLines
     val lineSize: Int get() = textLines.size
-    val charSize: Int get() = text.length.coerceAtLeast(1)
-    val chapterPosition: Int get() = textLines.first().chapterPosition
+    val charSize: Int get() = text.length
     val searchResult = hashSetOf<TextColumn>()
     var isMsgPage: Boolean = false
-    var canvasRecorder = CanvasRecorderFactory.create(true)
-    var doublePage = false
-    var paddingTop = ChapterProvider.paddingTop
-    var isCompleted = false
-    var hasReadAloudSpan = false
-
-    @JvmField
-    var textChapter = emptyTextChapter
-    val pageSize get() = textChapter.pageSize
 
     val paragraphs by lazy {
         paragraphsInternal
     }
 
-    val paragraphsInternal: ArrayList<TextParagraph>
-        get() {
-            val paragraphs = arrayListOf<TextParagraph>()
-            val lines = textLines.filter { it.paragraphNum > 0 }
-            val offset = lines.first().paragraphNum - 1
-            lines.forEach { line ->
-                if (paragraphs.lastIndex < line.paragraphNum - offset - 1) {
-                    paragraphs.add(TextParagraph(0))
-                }
-                paragraphs[line.paragraphNum - offset - 1].textLines.add(line)
+    val paragraphsInternal: ArrayList<TextParagraph> get() {
+        val paragraphs = arrayListOf<TextParagraph>()
+        val lines = textLines.filter { it.paragraphNum > 0 }
+        val offset = lines.first().paragraphNum - 1
+        lines.forEach { line ->
+            if (paragraphs.lastIndex < line.paragraphNum - offset - 1) {
+                paragraphs.add(TextParagraph(0))
             }
-            return paragraphs
+            paragraphs[line.paragraphNum - offset - 1].textLines.add(line)
         }
+        return paragraphs
+    }
 
     fun addLine(line: TextLine) {
-        line.textPage = this
         textLines.add(line)
     }
 
@@ -112,9 +83,9 @@ data class TextPage(
             val tj = surplus / (leftLineSize - 1)
             for (i in 1 until leftLineSize) {
                 val line = textLines[i]
-                line.lineTop += tj * i
-                line.lineBase += tj * i
-                line.lineBottom += tj * i
+                line.lineTop = line.lineTop + tj * i
+                line.lineBase = line.lineBase + tj * i
+                line.lineBottom = line.lineBottom + tj * i
             }
         }
         if (leftLineSize == lineSize) return
@@ -130,9 +101,9 @@ data class TextPage(
             for (i in leftLineSize + 1 until textLines.size) {
                 val line = textLines[i]
                 val surplusIndex = i - leftLineSize
-                line.lineTop += tj * surplusIndex
-                line.lineBase += tj * surplusIndex
-                line.lineBottom += tj * surplusIndex
+                line.lineTop = line.lineTop + tj * surplusIndex
+                line.lineBase = line.lineBase + tj * surplusIndex
+                line.lineBottom = line.lineBottom + tj * surplusIndex
             }
         }
     }
@@ -146,12 +117,10 @@ data class TextPage(
         if (isMsgPage && ChapterProvider.viewWidth > 0) {
             textLines.clear()
             val visibleWidth = ChapterProvider.visibleRight - ChapterProvider.paddingLeft
-            val paint = ChapterProvider.contentPaint
             val layout = StaticLayout(
-                text, paint, visibleWidth,
+                text, ChapterProvider.contentPaint, visibleWidth,
                 Layout.Alignment.ALIGN_NORMAL, 1f, 0f, false
             )
-            val letterSpacing = paint.letterSpacing * paint.textSize
             var y = (ChapterProvider.visibleHeight - layout.height) / 2f
             if (y < 0) y = 0f
             for (lineIndex in 0 until layout.lineCount) {
@@ -167,22 +136,16 @@ data class TextPage(
                     text.substring(layout.getLineStart(lineIndex), layout.getLineEnd(lineIndex))
                 for (i in textLine.text.indices) {
                     val char = textLine.text[i].toString()
-                    var cw = StaticLayout.getDesiredWidth(char, paint)
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
-                        cw += letterSpacing
-                    }
+                    val cw = StaticLayout.getDesiredWidth(char, ChapterProvider.contentPaint)
                     val x1 = x + cw
                     textLine.addColumn(
                         TextColumn(start = x, end = x1, char)
                     )
                     x = x1
                 }
-                addLine(textLine)
+                textLines.add(textLine)
             }
             height = ChapterProvider.visibleHeight.toFloat()
-            upRenderHeight()
-            invalidate()
-            isCompleted = true
         }
         return this
     }
@@ -191,12 +154,8 @@ data class TextPage(
      * 移除朗读标志
      */
     fun removePageAloudSpan(): TextPage {
-        if (!hasReadAloudSpan) {
-            return this
-        }
-        hasReadAloudSpan = false
-        for (i in textLines.indices) {
-            textLines[i].isReadAloud = false
+        textLines.forEach { textLine ->
+            textLine.isReadAloud = false
         }
         return this
     }
@@ -208,10 +167,9 @@ data class TextPage(
     fun upPageAloudSpan(aloudSpanStart: Int) {
         removePageAloudSpan()
         var lineStart = 0
-        for (index in textLines.indices) {
-            val textLine = textLines[index]
+        for ((index, textLine) in textLines.withIndex()) {
             val lineLength = textLine.text.length + if (textLine.isParagraphEnd) 1 else 0
-            if (aloudSpanStart >= lineStart && aloudSpanStart < lineStart + lineLength) {
+            if (aloudSpanStart > lineStart && aloudSpanStart < lineStart + lineLength) {
                 for (i in index - 1 downTo 0) {
                     if (textLines[i].isParagraphEnd) {
                         break
@@ -238,7 +196,7 @@ data class TextPage(
      */
     val readProgress: String
         get() {
-            val df = readProgressFormatter
+            val df = DecimalFormat("0.0%")
             if (chapterSize == 0 || pageSize == 0 && chapterIndex == 0) {
                 return "0.0%"
             } else if (pageSize == 0) {
@@ -260,114 +218,39 @@ data class TextPage(
      */
     fun getPosByLineColumn(lineIndex: Int, columnIndex: Int): Int {
         var length = 0
-        val maxIndex = min(lineIndex, lineSize - 1)
+        val maxIndex = min(lineIndex, lineSize)
         for (index in 0 until maxIndex) {
             length += textLines[index].charSize
             if (textLines[index].isParagraphEnd) {
                 length++
             }
         }
-        val columns = textLines[maxIndex].columns
-        for (index in 0 until columnIndex) {
-            val column = columns[index]
-            if (column is TextColumn) {
-                length += column.charData.length
-            }
-        }
-        return length
+        return length + columnIndex
     }
 
     /**
      * @return 页面所在章节
      */
-    fun getTextChapter(): TextChapter {
-        return textChapter
-    }
-
-    /**
-     * 判断章节字符位置是否在这一页中
-     *
-     * @param chapterPos 章节字符位置
-     * @return
-     */
-    fun containPos(chapterPos: Int): Boolean {
-        val line = lines.first()
-        val startPos = line.chapterPosition
-        val endPos = startPos + charSize
-        return chapterPos in startPos..<endPos
-    }
-
-    fun draw(view: ContentTextView, canvas: Canvas, relativeOffset: Float) {
-        if (AppConfig.optimizeRender) {
-            render(view)
-            canvas.withTranslation(0f, relativeOffset) {
-                canvasRecorder.draw(this)
-            }
-        } else {
-            canvas.withTranslation(0f, relativeOffset) {
-                drawPage(view, this)
+    fun getTextChapter(): TextChapter? {
+        ReadBook.curTextChapter?.let {
+            if (it.position == chapterIndex) {
+                return it
             }
         }
-    }
-
-    private fun drawDebugInfo(canvas: Canvas) {
-        ChapterProvider.run {
-            val paint = PaintPool.obtain()
-            paint.style = Paint.Style.STROKE
-            canvas.drawRect(
-                paddingLeft.toFloat(),
-                0f,
-                (paddingLeft + visibleWidth).toFloat(),
-                height - 1.dpToPx(),
-                paint
-            )
-            PaintPool.recycle(paint)
-        }
-    }
-
-    private fun drawPage(view: ContentTextView, canvas: Canvas) {
-        for (i in lines.indices) {
-            val line = lines[i]
-            canvas.withTranslation(0f, line.lineTop) {
-                line.draw(view, this)
+        ReadBook.nextTextChapter?.let {
+            if (it.position == chapterIndex) {
+                return it
             }
         }
-    }
-
-    fun render(view: ContentTextView): Boolean {
-        if (!isCompleted) return false
-        return canvasRecorder.recordIfNeeded(view.width, renderHeight) {
-            drawPage(view, this)
+        ReadBook.prevTextChapter?.let {
+            if (it.position == chapterIndex) {
+                return it
+            }
         }
-    }
-
-    fun invalidate() {
-        canvasRecorder.invalidate()
-    }
-
-    fun invalidateAll() {
-        for (i in lines.indices) {
-            lines[i].invalidateSelf()
-        }
-        invalidate()
-    }
-
-    fun recycleRecorders() {
-        canvasRecorder.recycle()
-        for (i in lines.indices) {
-            lines[i].recycleRecorder()
-        }
+        return null
     }
 
     fun hasImageOrEmpty(): Boolean {
         return textLines.any { it.isImage } || textLines.isEmpty()
-    }
-
-    fun upRenderHeight() {
-        renderHeight = ceil(lines.last().lineBottom).toInt()
-        if (leftLineSize > 0 && leftLineSize != lines.size) {
-            val leftHeight = ceil(lines[leftLineSize - 1].lineBottom).toInt()
-            renderHeight = max(renderHeight, leftHeight)
-        }
     }
 }

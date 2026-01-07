@@ -55,8 +55,7 @@ data class HttpTTS(
                     loginUrl = doc.readString("$.loginUrl"),
                     loginUi = if (loginUi is List<*>) GSON.toJson(loginUi) else loginUi?.toString(),
                     header = doc.readString("$.header"),
-                    loginCheckJs = doc.readString("$.loginCheckJs"),
-                    lastUpdateTime = doc.readLong("$.lastUpdateTime") ?: System.currentTimeMillis()
+                    loginCheckJs = doc.readString("$.loginCheckJs")
                 )
             }
         }

@@ -22,16 +22,16 @@ class JsURL(url: String, baseUrl: String? = null) {
         }
         host = mUrl.host
         origin = if (mUrl.port > 0) {
-            "${mUrl.protocol}://$host:${mUrl.port}"
+            "${mUrl.protocol}://$host:${mUrl}:${mUrl.port}"
         } else {
-            "${mUrl.protocol}://$host"
+            "${mUrl.protocol}://$host:${mUrl}"
         }
         pathname = mUrl.path
         val query = mUrl.query
         searchParams = query?.let { _ ->
             val map = hashMapOf<String, String>()
             query.split("&").forEach {
-                val x = it.split("=", limit = 2)
+                val x = it.split("=")
                 map[x[0]] = URLDecoder.decode(x[1], "utf-8")
             }
             map

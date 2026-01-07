@@ -4,55 +4,33 @@ import android.app.Application
 import android.os.Bundle
 import androidx.annotation.CallSuper
 import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.viewModelScope
 import io.legado.app.base.BaseViewModel
 import io.legado.app.constant.AppConst
 import io.legado.app.constant.AppLog
 import io.legado.app.constant.AppPattern
+import io.legado.app.constant.EventBus
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookSource
-import io.legado.app.data.entities.BookSourcePart
 import io.legado.app.data.entities.SearchBook
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.ContentProcessor
-import io.legado.app.help.book.primaryStr
-import io.legado.app.help.book.releaseHtmlData
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.SourceConfig
+import io.legado.app.help.coroutine.CompositeCoroutine
 import io.legado.app.help.coroutine.Coroutine
-import io.legado.app.help.source.SourceHelp
 import io.legado.app.model.webBook.WebBook
-import io.legado.app.utils.internString
-import io.legado.app.utils.mapParallel
-import io.legado.app.utils.mapParallelSafe
-import io.legado.app.utils.onEachIndexed
+import io.legado.app.utils.postEvent
 import io.legado.app.utils.toastOnUi
-import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.*
 import kotlinx.coroutines.Dispatchers.IO
-import kotlinx.coroutines.ExecutorCoroutineDispatcher
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.channels.awaitClose
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.ensureActive
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.onCompletion
-import kotlinx.coroutines.flow.onStart
-import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeout
-import java.util.Collections
+import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import kotlin.math.min
@@ -67,20 +45,17 @@ open class ChangeBookSourceViewModel(application: Application) : BaseViewModel(a
     var author: String = ""
     private var fromReadBookActivity = false
     private var oldBook: Book? = null
+    private var tasks = CompositeCoroutine()
     private var screenKey: String = ""
-    private var bookSourceParts = arrayListOf<BookSourcePart>()
-    val totalSourceCount: Int
-        get() = bookSourceParts.size
+    private var bookSourceList = arrayListOf<BookSource>()
     private var searchBookList = arrayListOf<SearchBook>()
     private val searchBooks = Collections.synchronizedList(arrayListOf<SearchBook>())
     private val tocMap = ConcurrentHashMap<String, List<BookChapter>>()
-    private val _changeSourceProgress = MutableStateFlow(0 to "")
-    val changeSourceProgress = _changeSourceProgress.asStateFlow()
-    private var tocMapChapterCount = 0
     private val contentProcessor by lazy {
         ContentProcessor.get(oldBook!!)
     }
     private var searchCallback: SourceCallback? = null
+    private val emptyBookSource = BookSource()
     private val chapterNumRegex = "^\\[(\\d+)]".toRegex()
     private val comparatorBase by lazy {
         compareByDescending<SearchBook> { getBookScore(it) }
@@ -95,14 +70,12 @@ open class ChangeBookSourceViewModel(application: Application) : BaseViewModel(a
             .thenByDescending { it.chapterWordCount }
             .thenBy { it.originOrder }
     }
-    private var task: Job? = null
     val bookMap = ConcurrentHashMap<String, Book>()
     val searchDataFlow = callbackFlow {
 
         searchCallback = object : SourceCallback {
 
             override fun searchSuccess(searchBook: SearchBook) {
-                searchBook.releaseHtmlData()
                 appDb.searchBookDao.insert(searchBook)
                 when {
                     screenKey.isEmpty() -> searchBooks.add(searchBook)
@@ -144,6 +117,9 @@ open class ChangeBookSourceViewModel(application: Application) : BaseViewModel(a
         }.getOrDefault(searchBooks)
     }.flowOn(IO)
 
+    @Volatile
+    private var searchIndex = 0
+
     override fun onCleared() {
         super.onCleared()
         searchPool?.close()
@@ -166,6 +142,7 @@ open class ChangeBookSourceViewModel(application: Application) : BaseViewModel(a
     private fun initSearchPool() {
         searchPool = Executors
             .newFixedThreadPool(min(threadCount, AppConst.MAX_THREAD)).asCoroutineDispatcher()
+        searchIndex = 0
     }
 
     fun refresh(): Boolean {
@@ -180,110 +157,82 @@ open class ChangeBookSourceViewModel(application: Application) : BaseViewModel(a
     /**
      * 搜索书籍
      */
-    fun startSearch() {
+    fun startSearch(origin: String? = null) {
         execute {
             stopSearch()
-            if (searchBooks.isNotEmpty()) {
-                appDb.searchBookDao.delete(*searchBooks.toTypedArray())
-                searchBooks.clear()
+            origin?.let {
+                bookSourceList.clear()
+                bookSourceList.add(appDb.bookSourceDao.getBookSource(origin)!!)
+                searchStateData.postValue(true)
+                searchBooks.removeIf { it.origin == origin }
+                initSearchPool()
+                search()
+                return@execute
             }
+            appDb.searchBookDao.clear(name, author)
+            searchBooks.clear()
             searchCallback?.upAdapter()
-            bookSourceParts.clear()
-            tocMap.clear()
-            bookMap.clear()
-            tocMapChapterCount = 0
-            _changeSourceProgress.value = 0 to ""
+            bookSourceList.clear()
             val searchGroup = AppConfig.searchGroup
             if (searchGroup.isBlank()) {
-                bookSourceParts.addAll(appDb.bookSourceDao.allEnabledPart)
+                bookSourceList.addAll(appDb.bookSourceDao.allEnabled)
             } else {
-                val sources = appDb.bookSourceDao.getEnabledPartByGroup(searchGroup)
+                val sources = appDb.bookSourceDao.getEnabledByGroup(searchGroup)
                 if (sources.isEmpty()) {
                     AppConfig.searchGroup = ""
-                    bookSourceParts.addAll(appDb.bookSourceDao.allEnabledPart)
+                    bookSourceList.addAll(appDb.bookSourceDao.allEnabled)
                 } else {
-                    bookSourceParts.addAll(sources)
+                    bookSourceList.addAll(sources)
                 }
             }
+            searchStateData.postValue(true)
             initSearchPool()
-            search()
-        }
-    }
-
-    fun startSearch(origin: String) {
-        execute {
-            stopSearch()
-            bookSourceParts.clear()
-            tocMap.clear()
-            bookMap.clear()
-            tocMapChapterCount = 0
-            bookSourceParts.add(appDb.bookSourceDao.getBookSourcePart(origin)!!)
-            searchBooks.removeIf { it.origin == origin }
-            initSearchPool()
-            search()
+            for (i in 0 until threadCount) {
+                search()
+            }
         }
     }
 
     private fun search() {
-        task = viewModelScope.launch(searchPool!!) {
-            flow {
-                for (bs in bookSourceParts) {
-                    bs.getBookSource()?.let {
-                        emit(it)
-                    }
-                }
-            }.onStart {
-                searchStateData.postValue(true)
-            }.mapParallel(threadCount) {
-                try {
-                    withTimeout(60000L) {
-                        search(it)
-                    }
-                } catch (_: Throwable) {
-                    currentCoroutineContext().ensureActive()
-                }
-                it
-            }.onEachIndexed { index, value ->
-                _changeSourceProgress.update { _ ->
-                    index + 1 to value.bookSourceName
-                }
-            }.onCompletion {
-                ensureActive()
-                searchStateData.postValue(false)
-                searchFinishCallback?.invoke(searchBooks.isEmpty())
-            }.catch {
-                AppLog.put("换源搜索出错\n${it.localizedMessage}", it)
-            }.collect()
+        val searchIndex = synchronized(this) {
+            if (searchIndex > bookSourceList.lastIndex) {
+                return
+            }
+            searchIndex++
         }
-    }
-
-    private suspend fun search(source: BookSource) {
-        val checkAuthor = AppConfig.changeSourceCheckAuthor
-        val loadInfo = AppConfig.changeSourceLoadInfo
-        val loadToc = AppConfig.changeSourceLoadToc
-        val loadWordCount = AppConfig.changeSourceLoadWordCount
-        val resultBooks = WebBook.searchBookAwait(
-            source, name,
-            filter = { fName, fAuthor ->
-                fName == name && (!checkAuthor || fAuthor.contains(author))
-            })
-        resultBooks.forEach { searchBook ->
-            when {
-                loadInfo || loadToc || loadWordCount -> {
-                    loadBookInfo(source, searchBook.toBook())
+        val source = bookSourceList[searchIndex]
+        bookSourceList[searchIndex] = emptyBookSource
+        val task = execute(context = searchPool!!, executeContext = searchPool!!) {
+            val resultBooks = WebBook.searchBookAwait(source, name)
+            resultBooks.forEach { searchBook ->
+                if (searchBook.name != name) {
+                    return@forEach
                 }
+                if (AppConfig.changeSourceCheckAuthor && !searchBook.author.contains(author)) {
+                    return@forEach
+                }
+                when {
+                    AppConfig.changeSourceLoadInfo || AppConfig.changeSourceLoadToc || AppConfig.changeSourceLoadWordCount -> {
+                        loadBookInfo(source, searchBook.toBook())
+                    }
 
-                else -> {
-                    searchCallback?.searchSuccess(searchBook)
+                    else -> {
+                        searchCallback?.searchSuccess(searchBook)
+                    }
                 }
             }
-        }
+        }.timeout(60000L)
+            .onError {
+                nextSearch()
+            }
+            .onSuccess {
+                nextSearch()
+            }
+        tasks.add(task)
     }
 
     private suspend fun loadBookInfo(source: BookSource, book: Book) {
-        if (book.tocUrl.isEmpty()) {
-            WebBook.getBookInfoAwait(source, book)
-        }
+        WebBook.getBookInfoAwait(source, book)
         if (AppConfig.changeSourceLoadToc || AppConfig.changeSourceLoadWordCount) {
             loadBookToc(source, book)
         } else {
@@ -295,15 +244,8 @@ open class ChangeBookSourceViewModel(application: Application) : BaseViewModel(a
 
     private suspend fun loadBookToc(source: BookSource, book: Book) {
         val chapters = WebBook.getChapterListAwait(source, book).getOrThrow()
-        for (chapter in chapters) {
-            chapter.internString()
-        }
-        if (tocMapChapterCount < 30000) {
-            tocMapChapterCount += chapters.size
-            tocMap[book.primaryStr()] = chapters
-        }
-        bookMap[book.primaryStr()] = book
-        book.releaseHtmlData()
+        tocMap[book.bookUrl] = chapters
+        bookMap[book.bookUrl] = book
         if (AppConfig.changeSourceLoadWordCount) {
             loadBookWordCount(source, book, chapters)
         } else {
@@ -318,15 +260,17 @@ open class ChangeBookSourceViewModel(application: Application) : BaseViewModel(a
         chapters: List<BookChapter>
     ) = coroutineScope {
         val chapterIndex = if (fromReadBookActivity) {
-            BookHelp.getDurChapter(oldBook!!, chapters)
-        } else {
-            chapters.lastIndex
-        }
+            oldBook?.let {
+                BookHelp.getDurChapter(
+                    it.durChapterIndex,
+                    it.durChapterTitle,
+                    chapters,
+                    it.totalChapterNum
+                )
+            } ?: chapters.lastIndex
+        } else chapters.lastIndex
         val bookChapter = chapters[chapterIndex]
-        var title = bookChapter.title.trim()
-        if (title.length > 20) {
-            title = title.substring(0, 20) + "…"
-        }
+        val title = bookChapter.title.trim()
         val startTime = System.currentTimeMillis()
         val pair = try {
             val nextChapterUrl = chapters.getOrNull(chapterIndex + 1)?.url
@@ -347,52 +291,81 @@ open class ChangeBookSourceViewModel(application: Application) : BaseViewModel(a
         searchCallback?.searchSuccess(searchBook)
     }
 
+    private fun nextSearch() {
+        synchronized(this) {
+            if (searchIndex < bookSourceList.lastIndex) {
+                search()
+            } else {
+                searchIndex++
+            }
+            if (searchIndex >= bookSourceList.lastIndex + bookSourceList.size
+                || searchIndex >= bookSourceList.lastIndex + threadCount
+            ) {
+                searchStateData.postValue(false)
+                tasks.clear()
+                searchFinishCallback?.invoke(searchBooks.isEmpty())
+            }
+        }
+    }
+
     fun onLoadWordCountChecked(isChecked: Boolean) {
+        postEvent(EventBus.SOURCE_CHANGED, "")
         if (isChecked) {
-            startRefreshList(true)
+            startRefreshList(searchBooks.filter { it.chapterWordCountText == null })
         }
     }
 
     /**
      * 刷新列表
      */
-    fun startRefreshList(onlyRefreshNoWordCountBook: Boolean = false) {
+    fun startRefreshList(refreshList: List<SearchBook> = searchBooks) {
         execute {
+            if (refreshList.isEmpty()) return@execute
             stopSearch()
             searchBookList.clear()
-            if (onlyRefreshNoWordCountBook) {
-                searchBooks.filterTo(searchBookList) {
-                    it.chapterWordCountText == null
-                }
-                searchBooks.removeIf { it.chapterWordCountText == null }
-            } else {
-                searchBookList.addAll(searchBooks)
-                searchBooks.clear()
-            }
+            searchBookList.addAll(refreshList)
+            searchBooks.removeAll(refreshList)
             searchCallback?.upAdapter()
+            searchStateData.postValue(true)
             initSearchPool()
-            refreshList()
+            for (i in 0 until threadCount) {
+                refreshList()
+            }
         }
     }
 
     private fun refreshList() {
-        task = viewModelScope.launch(searchPool!!) {
-            flow {
-                for (searchBook in searchBookList) {
-                    emit(searchBook)
-                }
-            }.onStart {
-                searchStateData.postValue(true)
-            }.mapParallelSafe(threadCount) {
-                val source = appDb.bookSourceDao.getBookSource(it.origin)!!
-                withTimeout(60000L) {
-                    loadBookInfo(source, it.toBook())
-                }
-            }.onCompletion {
+        synchronized(this) {
+            if (searchIndex >= searchBookList.lastIndex) {
+                return
+            }
+            searchIndex++
+        }
+        val searchBook = searchBookList[searchIndex]
+        val task = execute(context = searchPool!!, executeContext = searchPool!!) {
+            val source = appDb.bookSourceDao.getBookSource(searchBook.origin) ?: return@execute
+            loadBookInfo(source, searchBook.toBook())
+        }.timeout(60000L)
+            .onError {
+                nextRefreshList()
+            }
+            .onSuccess {
+                nextRefreshList()
+            }
+        tasks.add(task)
+    }
+
+    private fun nextRefreshList() {
+        synchronized(this) {
+            if (searchIndex < searchBookList.lastIndex) {
+                refreshList()
+            } else {
+                searchIndex++
+            }
+            if (searchIndex >= searchBookList.lastIndex + min(searchBookList.size, threadCount)) {
                 searchStateData.postValue(false)
-            }.catch {
-                AppLog.put("换源刷新列表出错\n${it.localizedMessage}", it)
-            }.collect()
+                tasks.clear()
+            }
         }
     }
 
@@ -435,7 +408,7 @@ open class ChangeBookSourceViewModel(application: Application) : BaseViewModel(a
     }
 
     fun startOrStopSearch() {
-        if (task == null || !task!!.isActive) {
+        if (tasks.isEmpty) {
             startSearch()
         } else {
             stopSearch()
@@ -443,29 +416,29 @@ open class ChangeBookSourceViewModel(application: Application) : BaseViewModel(a
     }
 
     fun stopSearch() {
-        task?.cancel()
+        tasks.clear()
         searchPool?.close()
         searchStateData.postValue(false)
     }
 
     fun getToc(
         book: Book,
-        onSuccess: (toc: List<BookChapter>, source: BookSource) -> Unit,
-        onError: (e: Throwable) -> Unit
+        onError: (msg: String) -> Unit,
+        onSuccess: (toc: List<BookChapter>, source: BookSource) -> Unit
     ): Coroutine<Pair<List<BookChapter>, BookSource>> {
         return execute {
-            val toc = tocMap[book.primaryStr()]
+            val toc = tocMap[book.bookUrl]
             if (toc != null) {
                 val source = appDb.bookSourceDao.getBookSource(book.origin)
                 return@execute Pair(toc, source!!)
             }
             val result = getToc(book).getOrThrow()
-            tocMap[book.primaryStr()] = result.first
+            tocMap[book.bookUrl] = result.first
             return@execute result
         }.onSuccess {
             onSuccess.invoke(it.first, it.second)
         }.onError {
-            onError.invoke(it)
+            onError.invoke(it.localizedMessage ?: "获取目录出错")
         }
     }
 
@@ -524,8 +497,11 @@ open class ChangeBookSourceViewModel(application: Application) : BaseViewModel(a
 
     fun del(searchBook: SearchBook) {
         execute {
-            SourceHelp.deleteBookSource(searchBook.origin)
-            appDb.searchBookDao.delete(searchBook)
+            appDb.bookSourceDao.getBookSource(searchBook.origin)?.let { source ->
+                appDb.bookSourceDao.delete(source)
+                appDb.searchBookDao.delete(searchBook)
+                SourceConfig.removeSource(source.bookSourceUrl)
+            }
         }
         searchBooks.remove(searchBook)
         searchCallback?.upAdapter()

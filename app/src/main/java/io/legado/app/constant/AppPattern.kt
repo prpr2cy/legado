@@ -9,15 +9,14 @@ object AppPattern {
     val EXP_PATTERN: Pattern = Pattern.compile("\\{\\{([\\w\\W]*?)\\}\\}")
 
     //匹配格式化后的图片格式
-    val imgPattern: Pattern = Pattern.compile("<img[^>]*src=['\"]([^'\"]*(?:['\"][^>]+\\})?)['\"][^>]*>")
+    val imgPattern: Pattern = Pattern.compile("<img[^>]*src=\"([^\"]*(?:\"[^>]+\\})?)\"[^>]*>")
 
     //dataURL图片类型
-    val dataUriRegex = Regex("^data:.*?;base64,(.*)")
+    val dataUriRegex = Regex("data:.*?;base64,(.*)")
 
     val nameRegex = Regex("\\s+作\\s*者.*|\\s+\\S+\\s+著")
     val authorRegex = Regex("^\\s*作\\s*者[:：\\s]+|\\s+著")
     val fileNameRegex = Regex("[\\\\/:*?\"<>|.]")
-    val fileNameRegex2 = Regex("[\\\\/:*?\"<>|]")
     val splitGroupRegex = Regex("[,;，；]")
     val titleNumPattern: Pattern = Pattern.compile("(第)(.+?)(章)")
 
@@ -25,7 +24,7 @@ object AppPattern {
     val debugMessageSymbolRegex = Regex("[⇒◇┌└≡]")
 
     //本地书籍支持类型
-    val bookFileRegex = Regex(".*\\.(txt|epub|umd|pdf|mobi|azw3|azw)", RegexOption.IGNORE_CASE)
+    val bookFileRegex = Regex(".*\\.(txt|epub|umd|pdf)", RegexOption.IGNORE_CASE)
     //压缩文件支持类型
     val archiveFileRegex = Regex(".*\\.(zip|rar|7z)$", RegexOption.IGNORE_CASE)
 
@@ -53,6 +52,4 @@ object AppPattern {
     val spaceRegex = "\\s+".toRegex()
 
     val regexCharRegex = "[{}()\\[\\].+*?^$\\\\|]".toRegex()
-
-    val LFRegex = "\n".toRegex()
 }

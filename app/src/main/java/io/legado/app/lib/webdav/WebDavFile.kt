@@ -16,14 +16,7 @@ class WebDavFile(
 ) : WebDav(urlStr, authorization) {
 
     val isDir by lazy {
-        isDir(contentType, resourceType)
-    }
-
-    companion object {
-        fun isDir(contentType: String, resourceType: String): Boolean {
-            return contentType == "httpd/unix-directory"
-                    || resourceType.lowercase().contains("collection")
-        }
+        contentType == "httpd/unix-directory" || resourceType.lowercase().contains("collection")
     }
 
 }

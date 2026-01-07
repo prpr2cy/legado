@@ -5,23 +5,19 @@
     <source-tab-tools class="right" />
   </div>
 </template>
-<script setup lang="ts">
-import bookSourceConfig from '@/config/bookSourceEditConfig'
-import rssSourceConfig from '@/config/rssSourceEditConfig'
-import '@/assets/sourceeditor.css'
-import { useDark } from '@vueuse/core'
-import type { SourceConfig } from '@/config/sourceConfig'
+<script setup>
+import bookSourceConfig from "@/config/bookSourceEditConfig";
+import rssSourceConfig from "@/config/rssSourceEditConfig";
+import "@/assets/main.css";
 
-useDark()
-
-let config: SourceConfig
+let config;
 
 if (/bookSource/i.test(location.href)) {
-  config = bookSourceConfig as SourceConfig
-  document.title = '书源管理'
+  config = bookSourceConfig;
+  document.title = "书源管理";
 } else {
-  config = rssSourceConfig as SourceConfig
-  document.title = '订阅源管理'
+  config = rssSourceConfig;
+  document.title = "订阅源管理";
 }
 </script>
 <style lang="scss" scoped>

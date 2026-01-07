@@ -20,10 +20,9 @@
         android:id="@+id/recycler_view"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:clipToPadding="false"
-        app:layoutManager="io.legado.app.ui.widget.recycler.NoChildScrollLinearLayoutManager"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/title_bar" />
+        app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+        app:layout_constraintTop_toBottomOf="@+id/title_bar"
+        app:layout_constraintBottom_toBottomOf="parent" />
 
     <io.legado.app.ui.widget.anima.RotateLoading
         android:id="@+id/rotate_loading"
@@ -36,7 +35,7 @@
         app:layout_constraintTop_toBottomOf="@+id/title_bar"
         app:loading_width="2dp" />
 
-    <io.legado.app.ui.widget.NoChildScrollNestedScrollView
+    <androidx.core.widget.NestedScrollView
         android:id="@+id/help"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -46,15 +45,15 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:padding="16dp"
             android:background="@color/background"
-            android:orientation="vertical"
-            android:padding="16dp">
+            android:orientation="vertical">
 
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="调试搜索>>输入关键字，如："
                 android:textColor="@color/secondaryText"
+                android:text="调试搜索>>输入关键字，如："
                 tools:ignore="HardcodedText" />
 
             <LinearLayout
@@ -70,14 +69,14 @@
                     android:background="@drawable/selector_fillet_btn_bg"
                     android:ellipsize="end"
                     android:gravity="center"
-                    android:maxLines="1"
-                    android:paddingLeft="12dp"
                     android:paddingTop="4dp"
-                    android:paddingRight="12dp"
                     android:paddingBottom="4dp"
-                    android:text="我的"
+                    android:paddingLeft="12dp"
+                    android:paddingRight="12dp"
+                    android:maxLines="1"
                     android:textColor="@color/primaryText"
                     android:textSize="14sp"
+                    android:text="我的"
                     tools:ignore="HardcodedText,UnusedAttribute" />
 
                 <TextView
@@ -88,14 +87,14 @@
                     android:background="@drawable/selector_fillet_btn_bg"
                     android:ellipsize="end"
                     android:gravity="center"
-                    android:maxLines="1"
-                    android:paddingLeft="12dp"
                     android:paddingTop="4dp"
-                    android:paddingRight="12dp"
                     android:paddingBottom="4dp"
-                    android:text="系统"
+                    android:paddingLeft="12dp"
+                    android:paddingRight="12dp"
+                    android:maxLines="1"
                     android:textColor="@color/primaryText"
                     android:textSize="14sp"
+                    android:text="系统"
                     tools:ignore="HardcodedText,UnusedAttribute" />
             </LinearLayout>
 
@@ -103,8 +102,8 @@
                 android:id="@+id/text_fx_title"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="调试发现>>输入发现URL，如："
                 android:textColor="@color/secondaryText"
+                android:text="调试发现>>输入发现URL，如："
                 tools:ignore="HardcodedText" />
 
             <TextView
@@ -115,21 +114,21 @@
                 android:background="@drawable/selector_fillet_btn_bg"
                 android:ellipsize="end"
                 android:gravity="center"
-                android:maxLines="1"
-                android:paddingLeft="12dp"
                 android:paddingTop="4dp"
-                android:paddingRight="12dp"
                 android:paddingBottom="4dp"
-                android:text="系统::http://xxx"
+                android:paddingLeft="12dp"
+                android:paddingRight="12dp"
+                android:maxLines="1"
                 android:textColor="@color/primaryText"
                 android:textSize="14sp"
+                android:text="系统::http://xxx"
                 tools:ignore="HardcodedText,UnusedAttribute" />
 
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="调试详情页>>输入详情页URL，如："
                 android:textColor="@color/secondaryText"
+                android:text="调试详情页>>输入详情页URL，如："
                 tools:ignore="HardcodedText" />
 
             <TextView
@@ -140,21 +139,21 @@
                 android:background="@drawable/selector_fillet_btn_bg"
                 android:ellipsize="end"
                 android:gravity="center"
-                android:maxLines="1"
-                android:paddingLeft="12dp"
                 android:paddingTop="4dp"
-                android:paddingRight="12dp"
                 android:paddingBottom="4dp"
-                android:text="https://m.qidian.com/book/1015609210"
+                android:paddingLeft="12dp"
+                android:paddingRight="12dp"
+                android:maxLines="1"
                 android:textColor="@color/primaryText"
                 android:textSize="14sp"
+                android:text="https://m.qidian.com/book/1015609210"
                 tools:ignore="HardcodedText,UnusedAttribute" />
 
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="调试目录页>>输入目录页URL，如："
                 android:textColor="@color/secondaryText"
+                android:text="调试目录页>>输入目录页URL，如："
                 tools:ignore="HardcodedText" />
 
             <TextView
@@ -165,21 +164,21 @@
                 android:background="@drawable/selector_fillet_btn_bg"
                 android:ellipsize="end"
                 android:gravity="center"
-                android:maxLines="1"
-                android:paddingLeft="12dp"
                 android:paddingTop="4dp"
-                android:paddingRight="12dp"
                 android:paddingBottom="4dp"
-                android:text="++https://www.zhaishuyuan.com/read/30394"
+                android:paddingLeft="12dp"
+                android:paddingRight="12dp"
+                android:maxLines="1"
                 android:textColor="@color/primaryText"
                 android:textSize="14sp"
+                android:text="++https://www.zhaishuyuan.com/read/30394"
                 tools:ignore="HardcodedText,UnusedAttribute" />
 
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="调试正文页>>输入正文页URL，如："
                 android:textColor="@color/secondaryText"
+                android:text="调试正文页>>输入正文页URL，如："
                 tools:ignore="HardcodedText" />
 
             <TextView
@@ -190,18 +189,18 @@
                 android:background="@drawable/selector_fillet_btn_bg"
                 android:ellipsize="end"
                 android:gravity="center"
-                android:maxLines="1"
-                android:paddingLeft="12dp"
                 android:paddingTop="4dp"
-                android:paddingRight="12dp"
                 android:paddingBottom="4dp"
-                android:text="--https://www.zhaishuyuan.com/chapter/30394/20940996"
+                android:paddingLeft="12dp"
+                android:paddingRight="12dp"
+                android:maxLines="1"
                 android:textColor="@color/primaryText"
                 android:textSize="14sp"
+                android:text="--https://www.zhaishuyuan.com/chapter/30394/20940996"
                 tools:ignore="HardcodedText,UnusedAttribute" />
 
         </LinearLayout>
 
-    </io.legado.app.ui.widget.NoChildScrollNestedScrollView>
+    </androidx.core.widget.NestedScrollView>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -1,8 +1,6 @@
 package io.legado.app.api
 
-import androidx.annotation.Keep
 
-@Keep
 class ReturnData {
 
     var isSuccess: Boolean = false

@@ -1,7 +1,7 @@
 package io.legado.app.utils
 
 import androidx.core.os.postDelayed
-import com.script.ScriptBindings
+import com.script.SimpleBindings
 import com.script.rhino.RhinoScriptEngine
 import io.legado.app.exception.RegexTimeoutException
 import io.legado.app.help.CrashHandler
@@ -10,7 +10,6 @@ import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.suspendCancellableCoroutine
 import splitties.init.appCtx
-import java.util.regex.Matcher
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
@@ -33,12 +32,11 @@ fun CharSequence.replace(regex: Regex, replacement: String, timeout: Long): Stri
                     while (matcher.find()) {
                         if (isJs) {
                             val jsResult = RhinoScriptEngine.run {
-                                val bindings = ScriptBindings()
+                                val bindings = SimpleBindings()
                                 bindings["result"] = matcher.group()
                                 eval(replacement1, bindings)
                             }.toString()
-                            val quotedResult = Matcher.quoteReplacement(jsResult)
-                            matcher.appendReplacement(stringBuffer, quotedResult)
+                            matcher.appendReplacement(stringBuffer, jsResult)
                         } else {
                             matcher.appendReplacement(stringBuffer, replacement1)
                         }
@@ -51,8 +49,7 @@ fun CharSequence.replace(regex: Regex, replacement: String, timeout: Long): Stri
             }
             handler.postDelayed(timeout) {
                 if (coroutine.isActive) {
-                    val timeoutMsg =
-                        "替换超时,3秒后还未结束将重启应用\n替换规则$regex\n替换内容:$charSequence"
+                    val timeoutMsg = "替换超时,3秒后还未结束将重启应用\n替换规则$regex\n替换内容:${this}"
                     val exception = RegexTimeoutException(timeoutMsg)
                     block.cancel(exception)
                     appCtx.longToastOnUi(timeoutMsg)

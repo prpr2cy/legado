@@ -5,6 +5,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
+import android.view.MotionEvent
 import android.widget.EditText
 import androidx.activity.viewModels
 import androidx.appcompat.widget.SearchView
@@ -26,17 +27,12 @@ import io.legado.app.lib.theme.getPrimaryTextColor
 import io.legado.app.lib.theme.primaryTextColor
 import io.legado.app.ui.widget.recycler.UpLinearLayoutManager
 import io.legado.app.ui.widget.recycler.VerticalDivider
-import io.legado.app.utils.ColorUtils
-import io.legado.app.utils.applyNavigationBarMargin
-import io.legado.app.utils.applyTint
-import io.legado.app.utils.invisible
-import io.legado.app.utils.observeEvent
-import io.legado.app.utils.postEvent
-import io.legado.app.utils.showSoftInput
+import io.legado.app.utils.*
 import io.legado.app.utils.viewbindingdelegate.viewBinding
-import io.legado.app.utils.visible
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -55,20 +51,19 @@ class SearchContentActivity :
     }
     private var durChapterIndex = 0
     private var searchJob: Job? = null
-    private var initJob: Job? = null
+    private var initJob: Deferred<*>? = null
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         val bbg = bottomBackground
         val btc = getPrimaryTextColor(ColorUtils.isColorLight(bbg))
         binding.llSearchBaseInfo.setBackgroundColor(bbg)
-        binding.llSearchBaseInfo.applyNavigationBarMargin()
         binding.tvCurrentSearchInfo.setTextColor(btc)
         binding.ivSearchContentTop.setColorFilter(btc)
         binding.ivSearchContentBottom.setColorFilter(btc)
         val searchResultList = IntentData.get<List<SearchResult>>("searchResultList")
         val position = intent.getIntExtra("searchResultIndex", 0)
         val noSearchResult = searchResultList == null
-        initSearchView(noSearchResult)
+        initSearchView(!noSearchResult)
         initRecyclerView()
         initView()
         val bookUrl = intent.getStringExtra("bookUrl") ?: return
@@ -98,6 +93,17 @@ class SearchContentActivity :
         return super.onCompatOptionsItemSelected(item)
     }
 
+    override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
+        if (ev.action == MotionEvent.ACTION_DOWN) {
+            currentFocus?.let {
+                if (it.shouldHideSoftInput(ev)) {
+                    it.hideSoftInput()
+                }
+            }
+        }
+        return super.dispatchTouchEvent(ev)
+    }
+
     private fun initSearchResultList(list: List<SearchResult>?, position: Int) {
         list ?: return
         viewModel.searchResultList.addAll(list)
@@ -106,11 +112,12 @@ class SearchContentActivity :
         binding.recyclerView.scrollToPosition(position)
     }
 
-    private fun initSearchView(requestFocus: Boolean) {
+    private fun initSearchView(clearFocus: Boolean) {
         searchView.applyTint(primaryTextColor)
+        searchView.onActionViewExpanded()
         searchView.isSubmitButtonEnabled = true
         searchView.queryHint = getString(R.string.search)
-        if (requestFocus) searchView.isIconified = false
+        if (clearFocus) searchView.clearFocus()
         searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
             override fun onQueryTextSubmit(query: String): Boolean {
                 startContentSearch(query.trim())
@@ -166,7 +173,7 @@ class SearchContentActivity :
     }
 
     private fun initCacheFileNames(book: Book) {
-        initJob = lifecycleScope.launch {
+        initJob = lifecycleScope.async {
             withContext(IO) {
                 viewModel.cacheChapterNames.addAll(BookHelp.getChapterFiles(book))
             }
@@ -197,7 +204,7 @@ class SearchContentActivity :
         binding.refreshProgressBar.isAutoLoading = true
         binding.fbStop.visible()
         searchJob = lifecycleScope.launch(IO) {
-            initJob?.join()
+            initJob?.await()
             kotlin.runCatching {
                 appDb.bookChapterDao.getChapterList(viewModel.bookUrl).forEach { bookChapter ->
                     ensureActive()

@@ -16,11 +16,9 @@ import okhttp3.RequestBody.Companion.asRequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import okhttp3.ResponseBody
-import okhttp3.internal.http.RealResponseBody
-import okio.buffer
-import okio.source
 import java.io.File
 import java.io.IOException
+import java.io.InputStream
 import java.nio.charset.Charset
 import java.util.zip.ZipInputStream
 import kotlin.coroutines.resume
@@ -46,7 +44,9 @@ suspend fun OkHttpClient.newCallResponseBody(
     retry: Int = 0,
     builder: Request.Builder.() -> Unit
 ): ResponseBody {
-    return newCallResponse(retry, builder).body
+    return newCallResponse(retry, builder).let {
+        it.body ?: throw IOException(it.message)
+    }
 }
 
 suspend fun OkHttpClient.newCallStrResponse(
@@ -54,7 +54,7 @@ suspend fun OkHttpClient.newCallStrResponse(
     builder: Request.Builder.() -> Unit
 ): StrResponse {
     return newCallResponse(retry, builder).let {
-        StrResponse(it, it.body.text())
+        StrResponse(it, it.body?.text() ?: it.message)
     }
 }
 
@@ -77,37 +77,36 @@ suspend fun Call.await(): Response = suspendCancellableCoroutine { block ->
 }
 
 fun ResponseBody.text(encode: String? = null): String {
-    val responseBytes = Utf8BomUtils.removeUTF8BOM(bytes())
-    var charsetName: String? = encode
+    return unCompress {
+        val responseBytes = Utf8BomUtils.removeUTF8BOM(it.readBytes())
+        var charsetName: String? = encode
 
-    charsetName?.let {
-        return String(responseBytes, Charset.forName(charsetName))
+        charsetName?.let {
+            return@unCompress String(responseBytes, Charset.forName(charsetName))
+        }
+
+        //根据http头判断
+        contentType()?.charset()?.let { charset ->
+            return@unCompress String(responseBytes, charset)
+        }
+
+        //根据内容判断
+        charsetName = EncodingDetect.getHtmlEncode(responseBytes)
+        return@unCompress String(responseBytes, Charset.forName(charsetName))
     }
-
-    //根据http头判断
-    contentType()?.charset()?.let { charset ->
-        return String(responseBytes, charset)
-    }
-
-    //根据内容判断
-    charsetName = EncodingDetect.getHtmlEncode(responseBytes)
-    return String(responseBytes, Charset.forName(charsetName))
 }
 
-fun ResponseBody.decompressed(): ResponseBody {
-    val contentType = contentType()?.toString()
-    if (contentType != "application/zip") {
-        return this
-    }
-    val source = ZipInputStream(byteStream()).apply {
-        try {
-            nextEntry
-        } catch (e: Exception) {
-            close()
-            throw e
+fun <T> ResponseBody.unCompress(success: (inputStream: InputStream) -> T): T {
+    return if (contentType() == "application/zip".toMediaType()) {
+        byteStream().use { byteStream ->
+            ZipInputStream(byteStream).use {
+                it.nextEntry
+                success.invoke(it)
+            }
         }
-    }.source().buffer()
-    return RealResponseBody(null, -1, source)
+    } else {
+        byteStream().use(success)
+    }
 }
 
 fun Request.Builder.addHeaders(headers: Map<String, String>) {
@@ -128,19 +127,6 @@ fun Request.Builder.get(url: String, queryMap: Map<String, String>, encoded: Boo
     url(httpBuilder.build())
 }
 
-fun Request.Builder.get(url: String, encodedQuery: String?) {
-    val httpBuilder = url.toHttpUrl().newBuilder()
-    httpBuilder.encodedQuery(encodedQuery)
-    url(httpBuilder.build())
-}
-
-private val formContentType = "application/x-www-form-urlencoded".toMediaType()
-
-fun Request.Builder.postForm(encodedForm: String) {
-    post(encodedForm.toRequestBody(formContentType))
-}
-
-@Suppress("unused")
 fun Request.Builder.postForm(form: Map<String, String>, encoded: Boolean = false) {
     val formBody = FormBody.Builder()
     form.forEach {

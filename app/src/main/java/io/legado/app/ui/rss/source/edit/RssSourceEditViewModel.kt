@@ -7,17 +7,10 @@ import io.legado.app.base.BaseViewModel
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.RssSource
 import io.legado.app.exception.NoStackTraceException
-import io.legado.app.help.AppCacheManager
 import io.legado.app.help.RuleComplete
 import io.legado.app.help.http.CookieStore
-import io.legado.app.help.source.removeSortCache
-import io.legado.app.model.SharedJsScope
-import io.legado.app.utils.GSON
-import io.legado.app.utils.fromJsonObject
-import io.legado.app.utils.getClipText
-import io.legado.app.utils.printOnDebug
-import io.legado.app.utils.stackTraceStr
-import io.legado.app.utils.toastOnUi
+import io.legado.app.utils.*
+
 import kotlinx.coroutines.Dispatchers
 
 
@@ -43,25 +36,8 @@ class RssSourceEditViewModel(application: Application) : BaseViewModel(applicati
             if (source.sourceName.isBlank() || source.sourceName.isBlank()) {
                 throw NoStackTraceException(context.getString(R.string.non_null_name_url))
             }
-            val oldSource = rssSource ?: RssSource()
-            if (!source.equal(oldSource)) {
-                source.lastUpdateTime = System.currentTimeMillis()
-                if (oldSource.sortUrl != source.sortUrl) {
-                    oldSource.removeSortCache()
-                }
-                if (oldSource.jsLib != source.jsLib) {
-                    SharedJsScope.remove(oldSource.jsLib)
-                }
-            }
             rssSource?.let {
                 appDb.rssSourceDao.delete(it)
-                //更新收藏的源地址
-                if (it.sourceUrl != source.sourceUrl) {
-                    appDb.rssStarDao.updateOrigin(source.sourceUrl, it.sourceUrl)
-                    appDb.rssArticleDao.updateOrigin(source.sourceUrl, it.sourceUrl)
-                    appDb.cacheDao.deleteSourceVariables(it.sourceUrl)
-                    AppCacheManager.clearSourceVariables()
-                }
             }
             appDb.rssSourceDao.insert(source)
             rssSource = source

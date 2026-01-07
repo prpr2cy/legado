@@ -2,17 +2,11 @@ package io.legado.app.ui.widget.keyboard
 
 import android.content.Context
 import android.graphics.Rect
-import android.view.Gravity
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
-import android.view.ViewTreeObserver
-import android.view.Window
+import android.view.*
 import android.widget.PopupWindow
 import io.legado.app.R
 import io.legado.app.base.adapter.ItemViewHolder
 import io.legado.app.base.adapter.RecyclerAdapter
-import io.legado.app.constant.AppLog
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.KeyboardAssist
 import io.legado.app.databinding.ItemFilletTextBinding
@@ -23,9 +17,6 @@ import io.legado.app.utils.activity
 import io.legado.app.utils.showDialogFragment
 import io.legado.app.utils.windowSize
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers.IO
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
 import splitties.systemservices.layoutInflater
 import splitties.systemservices.windowManager
@@ -47,7 +38,6 @@ class KeyboardToolPop(
     private val binding = PopupKeyboardToolBinding.inflate(LayoutInflater.from(context))
     private val adapter = Adapter(context)
     private var mIsSoftKeyBoardShowing = false
-    var initialPadding = 0
 
     init {
         contentView = binding.root
@@ -77,7 +67,7 @@ class KeyboardToolPop(
         val preShowing = mIsSoftKeyBoardShowing
         if (abs(keyboardHeight) > screenHeight / 5) {
             mIsSoftKeyBoardShowing = true // 超过屏幕五分之一则表示弹出了输入法
-            rootView.setPadding(0, 0, 0, initialPadding + contentView.measuredHeight)
+            rootView.setPadding(0, 0, 0, contentView.measuredHeight)
             if (!isShowing) {
                 showAtLocation(rootView, Gravity.BOTTOM, 0, 0)
             }
@@ -105,9 +95,7 @@ class KeyboardToolPop(
     @Suppress("MemberVisibilityCanBePrivate")
     fun upAdapterData() {
         scope.launch {
-            appDb.keyboardAssistsDao.flowByType(0).catch {
-                AppLog.put("键盘帮助浮窗获取数据失败\n${it.localizedMessage}", it)
-            }.flowOn(IO).collect {
+            appDb.keyboardAssistsDao.flowByType(0).collect {
                 adapter.setItems(it)
             }
         }

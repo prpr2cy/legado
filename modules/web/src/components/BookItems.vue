@@ -10,9 +10,8 @@
         <div class="cover-img">
           <img
             class="cover"
-            :src="getCover(book)"
+            :src="getCover(book.coverUrl)"
             :key="book.coverUrl"
-            @error.once="proxyImage"
             alt=""
             loading="lazy"
           />
@@ -33,17 +32,15 @@
             </div>
             <div class="update-info" v-if="!isSearch">
               <div class="dot">•</div>
-              <div class="size">共{{ (book as Book).totalChapterNum }}章</div>
+              <div class="size">共{{ book.totalChapterNum }}章</div>
               <div class="dot">•</div>
-              <div class="date">
-                {{ dateFormat((book as Book).lastCheckTime) }}
-              </div>
+              <div class="date">{{ dateFormat(book.lastCheckTime) }}</div>
             </div>
           </div>
           <div class="intro" v-if="isSearch">{{ book.intro }}</div>
 
           <div class="dur-chapter" v-if="!isSearch">
-            已读：{{ (book as Book).durChapterTitle }}
+            已读：{{ book.durChapterTitle }}
           </div>
           <div class="last-chapter">最新：{{ book.latestChapterTitle }}</div>
         </div>
@@ -51,29 +48,22 @@
     </div>
   </div>
 </template>
-<script setup lang="ts">
-import type { Book, SeachBook } from '@/book'
-import { dateFormat, isLegadoUrl } from '../utils/utils'
-import API from '@api'
-const props = defineProps<{
-  books: Array<Book | SeachBook>
-  isSearch: boolean
-}>()
-
-const emit = defineEmits(['bookClick'])
-const handleClick = (book: Book | SeachBook) => emit('bookClick', book)
-const getCover = ({ bookUrl, coverUrl }: Book | SeachBook) => {
-  if (coverUrl === undefined) return API.getProxyCoverUrl(bookUrl)
-  return isLegadoUrl(coverUrl) ? API.getProxyCoverUrl(coverUrl) : coverUrl
-}
-const proxyImage = (evt: Event) => {
-  const target = evt.target as HTMLImageElement
-  target.src = API.getProxyCoverUrl(target.src)
-}
+<script setup>
+import { dateFormat } from "../utils/utils";
+const props = defineProps(["books", "isSearch"]);
+const emit = defineEmits(["bookClick"]);
+const handleClick = (book) => emit("bookClick", book);
+const getCover = (coverUrl) => {
+  return /^data:/.test(coverUrl)
+    ? coverUrl
+    : (import.meta.env.VITE_API || location.origin) +
+        "/cover?path=" +
+        encodeURIComponent(coverUrl);
+};
 
 const subJustify = computed(() =>
-  props.isSearch ? 'space-between' : 'flex-start',
-)
+  props.isSearch ? "space-between" : "flex-start",
+);
 </script>
 
 <style lang="scss" scoped>
@@ -114,7 +104,6 @@ const subJustify = computed(() =>
         height: 112px;
         margin-left: 20px;
         flex: 1;
-        overflow: hidden;
 
         .name {
           width: fit-content;
@@ -127,7 +116,7 @@ const subJustify = computed(() =>
           display: flex;
           flex-direction: row;
           align-items: baseline;
-          justify-content: v-bind('subJustify');
+          justify-content: v-bind("subJustify");
           font-size: 12px;
           font-weight: 600;
           color: #6b6b6b;
@@ -157,7 +146,6 @@ const subJustify = computed(() =>
           display: -webkit-box;
           -webkit-box-orient: vertical;
           -webkit-line-clamp: 1;
-          line-clamp: 1;
           text-align: left;
         }
       }

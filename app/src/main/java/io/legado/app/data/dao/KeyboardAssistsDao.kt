@@ -31,4 +31,7 @@ interface KeyboardAssistsDao {
     @Delete
     fun delete(vararg keyboardAssist: KeyboardAssist)
 
+    // 新增：删除表中所有数据
+    @Query("DELETE FROM keyboardAssists")
+    fun deleteAll()
 }

@@ -2,7 +2,6 @@ package io.legado.app.ui.book.read.page.provider
 
 import android.graphics.Paint
 import android.graphics.Rect
-import android.os.Build
 import android.text.Layout
 import android.text.TextPaint
 import java.util.WeakHashMap
@@ -17,9 +16,7 @@ class ZhLayout(
     text: CharSequence,
     textPaint: TextPaint,
     width: Int,
-    words: List<String>,
-    widths: List<Float>,
-    indentSize: Int
+    widthsArray: FloatArray
 ) : Layout(text, textPaint, width, Alignment.ALIGN_NORMAL, 0f, 0f) {
     companion object {
         private val postPanc = hashSetOf(
@@ -53,6 +50,12 @@ class ZhLayout(
 
     init {
         var line = 0
+        curPaint.getTextWidths(text as String, widthsArray)
+        val (words, widths) = ChapterProvider.getStringArrayAndTextWidths(
+            text,
+            widthsArray.asList(),
+            curPaint
+        )
         var lineW = 0f
         var cwPre = 0f
         var length = 0
@@ -98,9 +101,8 @@ class ZhLayout(
                 /*特殊标点使用难保证显示效果，所以不考虑间隔，直接查找到能满足条件的分割字*/
                 var breakLength = 0
                 if (reCheck && index > 2) {
-                    val startPos = if (line == 0) indentSize else getLineStart(line)
                     breakMod = BreakMod.NORMAL
-                    for (i in (index) downTo 1 + startPos) {
+                    for (i in (index) downTo 1) {
                         if (i == index) {
                             breakIndex = 0
                             cwPre = 0f
@@ -219,13 +221,7 @@ class ZhLayout(
         return cnCharWidth / 2 - d
     }
 
-    fun getDesiredWidth(string: String, paint: TextPaint): Float {
-        var width = paint.measureText(string)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
-            width += paint.letterSpacing * paint.textSize
-        }
-        return width
-    }
+    fun getDesiredWidth(sting: String, paint: TextPaint) = paint.measureText(sting)
 
     override fun getLineCount(): Int {
         return lineCount

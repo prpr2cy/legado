@@ -21,7 +21,6 @@
                 android:id="@+id/cb_all_export"
                 android:layout_width="20dp"
                 android:layout_height="20dp"
-                android:layout_gravity="center"
                 android:layout_marginStart="6dp"
                 android:layout_marginEnd="16dp" />
 
@@ -44,7 +43,6 @@
                 android:id="@+id/cb_select_export"
                 android:layout_width="20dp"
                 android:layout_height="20dp"
-                android:layout_gravity="center"
                 android:layout_marginStart="6dp"
                 android:layout_marginEnd="16dp" />
 
@@ -73,8 +71,8 @@
                 android:id="@+id/et_epub_filename"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:enabled="false"
                 android:inputType="text"
+                android:enabled="false"
                 tools:ignore="SpeakableTextPresentCheck,TouchTargetSizeCheck" />
 
         </io.legado.app.ui.widget.text.TextInputLayout>

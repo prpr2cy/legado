@@ -4,7 +4,6 @@ import io.legado.app.data.entities.RssSource
 import io.legado.app.utils.ACache
 import io.legado.app.utils.MD5Utils
 import io.legado.app.utils.NetworkUtils
-import com.script.rhino.runScriptWithContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -30,9 +29,7 @@ suspend fun RssSource.sortUrls(): List<Pair<String, String>> {
                         } else {
                             sortUrl!!.substring(4, sortUrl!!.lastIndexOf("<"))
                         }
-                        str = runScriptWithContext {
-                            evalJS(jsStr).toString()
-                        }
+                        str = evalJS(jsStr).toString()
                         aCache.put(sortUrlsKey, str)
                     }
                 }

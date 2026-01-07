@@ -1,13 +1,11 @@
 package io.legado.app.model.localBook
 
-import io.legado.app.constant.AppLog
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.TxtTocRule
 import io.legado.app.exception.EmptyFileException
 import io.legado.app.help.DefaultData
-import io.legado.app.help.book.isLocalModified
 import io.legado.app.utils.EncodingDetect
 import io.legado.app.utils.MD5Utils
 import io.legado.app.utils.StringUtils
@@ -16,40 +14,58 @@ import java.io.FileNotFoundException
 import java.nio.charset.Charset
 import java.util.regex.Matcher
 import java.util.regex.Pattern
-import java.util.regex.PatternSyntaxException
 import kotlin.math.min
 
-class TextFile(private var book: Book) {
+class TextFile(private val book: Book) {
 
-    @Suppress("ConstPropertyName")
     companion object {
         private val padRegex = "^[\\n\\s]+".toRegex()
-        private const val txtBufferSize = 8 * 1024 * 1024
-        private var textFile: TextFile? = null
-
-        @Synchronized
-        private fun getTextFile(book: Book): TextFile {
-            if (textFile == null || textFile?.book?.bookUrl != book.bookUrl || book.isLocalModified()) {
-                textFile = TextFile(book)
-                return textFile!!
-            }
-            textFile?.book = book
-            return textFile!!
-        }
+        private const val bufferSize = 8 * 1024 * 1024
+        var txtBuffer: ByteArray? = null
+        var bufferStart = -1
+        var bufferEnd = -1
+        var bookUrl = ""
 
         @Throws(FileNotFoundException::class)
         fun getChapterList(book: Book): ArrayList<BookChapter> {
-            return getTextFile(book).getChapterList()
+            return TextFile(book).getChapterList()
         }
 
         @Synchronized
         @Throws(FileNotFoundException::class)
         fun getContent(book: Book, bookChapter: BookChapter): String {
-            return getTextFile(book).getContent(bookChapter)
-        }
+            if (txtBuffer == null || bookUrl != book.bookUrl || bookChapter.start!! > bufferEnd || bookChapter.end!! < bufferStart) {
+                bookUrl = book.bookUrl
+                LocalBook.getBookInputStream(book).use { bis ->
+                    bufferStart = bufferSize * (bookChapter.start!! / bufferSize).toInt()
+                    txtBuffer = ByteArray(min(bufferSize, bis.available() - bufferStart))
+                    bufferEnd = bufferStart + txtBuffer!!.size
+                    bis.skip(bufferStart.toLong())
+                    bis.read(txtBuffer)
+                }
+            }
 
-        fun clear() {
-            textFile = null
+            val count = (bookChapter.end!! - bookChapter.start!!).toInt()
+            val buffer = ByteArray(count)
+
+            if (bookChapter.start!! < bufferEnd && bookChapter.end!! > bufferEnd || bookChapter.start!! < bufferStart && bookChapter.end!! > bufferStart) {
+                /** 章节内容在缓冲区交界处 */
+                LocalBook.getBookInputStream(book).use { bis ->
+                    bis.skip(bookChapter.start!!)
+                    bis.read(buffer)
+                }
+            } else {
+                /** 章节内容在缓冲区内 */
+                txtBuffer!!.copyInto(
+                    buffer,
+                    0,
+                    (bookChapter.start!! - bufferStart).toInt(),
+                    (bookChapter.end!! - bufferStart).toInt()
+                )
+            }
+
+            return String(buffer, book.fileCharset()).substringAfter(bookChapter.title)
+                .replace(padRegex, "　　")
         }
 
     }
@@ -67,33 +83,27 @@ class TextFile(private var book: Book) {
 
     private var charset: Charset = book.fileCharset()
 
-    private var txtBuffer: ByteArray? = null
-    private var bufferStart = -1L
-    private var bufferEnd = -1L
-
     /**
      * 获取目录
      */
-    @Throws(FileNotFoundException::class, SecurityException::class, EmptyFileException::class)
+    @Throws(FileNotFoundException::class)
     fun getChapterList(): ArrayList<BookChapter> {
-        val modified = book.isLocalModified()
-        if (book.charset == null || book.tocUrl.isBlank() || modified) {
+        if (book.charset == null || book.tocUrl.isBlank()) {
             LocalBook.getBookInputStream(book).use { bis ->
                 val buffer = ByteArray(bufferSize)
                 val length = bis.read(buffer)
                 if (length == -1) throw EmptyFileException("Unexpected Empty Txt File")
-                if (book.charset.isNullOrBlank() || modified) {
+                if (book.charset.isNullOrBlank()) {
                     book.charset = EncodingDetect.getEncode(buffer.copyOf(length))
                 }
                 charset = book.fileCharset()
-                if (book.tocUrl.isBlank() || modified) {
+                if (book.tocUrl.isBlank()) {
                     val blockContent = String(buffer, 0, length, charset)
                     book.tocUrl = getTocRule(blockContent)?.pattern() ?: ""
                 }
             }
         }
-        val (toc, wordCount) = analyze(book.tocUrl.toPattern(Pattern.MULTILINE))
-        book.wordCount = StringUtils.wordCountFormat(wordCount)
+        val toc = analyze(book.tocUrl.toPattern(Pattern.MULTILINE))
         toc.forEachIndexed { index, bookChapter ->
             bookChapter.index = index
             bookChapter.bookUrl = book.bookUrl
@@ -102,60 +112,21 @@ class TextFile(private var book: Book) {
         return toc
     }
 
-    fun getContent(chapter: BookChapter): String {
-        val start = chapter.start!!
-        val end = chapter.end!!
-        if (txtBuffer == null || start > bufferEnd || end < bufferStart) {
-            LocalBook.getBookInputStream(book).use { bis ->
-                bufferStart = txtBufferSize * (start / txtBufferSize)
-                txtBuffer = ByteArray(min(txtBufferSize, bis.available() - bufferStart.toInt()))
-                bufferEnd = bufferStart + txtBuffer!!.size
-                bis.skip(bufferStart)
-                bis.read(txtBuffer)
-            }
-        }
-
-        val count = (end - start).toInt()
-        val buffer = ByteArray(count)
-
-        @Suppress("ConvertTwoComparisonsToRangeCheck")
-        if (start < bufferEnd && end > bufferEnd || start < bufferStart && end > bufferStart) {
-            /** 章节内容在缓冲区交界处 */
-            LocalBook.getBookInputStream(book).use { bis ->
-                bis.skip(start)
-                bis.read(buffer)
-            }
-        } else {
-            /** 章节内容在缓冲区内 */
-            txtBuffer!!.copyInto(
-                buffer,
-                0,
-                (start - bufferStart).toInt(),
-                (end - bufferStart).toInt()
-            )
-        }
-
-        return String(buffer, charset)
-            .substringAfter(chapter.title)
-            .replace(padRegex, "　　")
-    }
-
     /**
      * 按规则解析目录
      */
-    private fun analyze(pattern: Pattern?): Pair<ArrayList<BookChapter>, Int> {
-        if (pattern == null || pattern.pattern().isNullOrEmpty()) {
+    private fun analyze(pattern: Pattern?): ArrayList<BookChapter> {
+        if (pattern?.pattern().isNullOrEmpty()) {
             return analyze()
         }
+        pattern ?: return analyze()
         val toc = arrayListOf<BookChapter>()
-        var bookWordCount = 0
         LocalBook.getBookInputStream(book).use { bis ->
             var blockContent: String
             //加载章节
             var curOffset: Long = 0
             //读取的长度
             var length: Int
-            var lastChapterWordCount = 0
             val buffer = ByteArray(bufferSize)
             var bufferStart = 3
             bis.read(buffer, 0, 3)
@@ -191,17 +162,16 @@ class TextFile(private var book: Book) {
                     val chapterStart = matcher.start()
                     //获取章节内容
                     val chapterContent = blockContent.substring(seekPos, chapterStart)
-                    val chapterLength = chapterContent.toByteArray(charset).size.toLong()
+                    val chapterLength = chapterContent.toByteArray(charset).size
                     val lastStart = toc.lastOrNull()?.start ?: curOffset
                     if (book.getSplitLongChapter() && curOffset + chapterLength - lastStart > maxLengthWithToc) {
                         toc.lastOrNull()?.let {
                             it.end = it.start
-                            it.tag = null
                         }
                         //章节字数太多进行拆分
                         val lastTitle = toc.lastOrNull()?.title
                         val lastTitleLength = lastTitle?.toByteArray(charset)?.size ?: 0
-                        val (chapters, wordCount) = analyze(
+                        val chapters = analyze(
                             lastStart + lastTitleLength, curOffset + chapterLength
                         )
                         lastTitle?.let {
@@ -210,40 +180,29 @@ class TextFile(private var book: Book) {
                             }
                         }
                         toc.addAll(chapters)
-                        bookWordCount += wordCount
                         //创建当前章节
                         val curChapter = BookChapter()
                         curChapter.title = matcher.group()
                         curChapter.start = curOffset + chapterLength
-                        curChapter.end = curChapter.start
                         toc.add(curChapter)
-                        lastChapterWordCount = 0
                     } else if (seekPos == 0 && chapterStart != 0) {
-                        /**
+                        /*
                          * 如果 seekPos == 0 && chapterStart != 0 表示当前block处前面有一段内容
                          * 第一种情况一定是序章 第二种情况是上一个章节的内容
                          */
                         if (toc.isEmpty()) { //如果当前没有章节，那么就是序章
                             //加入简介
-                            if (chapterContent.isNotBlank()) {
+                            if (StringUtils.trim(chapterContent).isNotEmpty()) {
                                 val qyChapter = BookChapter()
                                 qyChapter.title = "前言"
                                 qyChapter.start = curOffset
-                                qyChapter.end = curOffset + chapterLength
-                                qyChapter.wordCount =
-                                    StringUtils.wordCountFormat(chapterContent.length)
+                                qyChapter.end = curOffset + chapterLength.toLong()
                                 toc.add(qyChapter)
-                                book.intro = if (chapterContent.length <= 500) {
-                                    chapterContent
-                                } else {
-                                    chapterContent.substring(0, 500)
-                                }
                             }
                             //创建当前章节
                             val curChapter = BookChapter()
                             curChapter.title = matcher.group()
-                            curChapter.start = curOffset + chapterLength
-                            curChapter.end = curChapter.start
+                            curChapter.start = curOffset + chapterLength.toLong()
                             toc.add(curChapter)
                         } else { //否则就block分割之后，上一个章节的剩余内容
                             //获取上一章节
@@ -251,19 +210,13 @@ class TextFile(private var book: Book) {
                             lastChapter.isVolume =
                                 chapterContent.substringAfter(lastChapter.title).isBlank()
                             //将当前段落添加上一章去
-                            lastChapter.end = lastChapter.end!! + chapterLength
-                            lastChapterWordCount += chapterContent.length
-                            lastChapter.wordCount =
-                                StringUtils.wordCountFormat(lastChapterWordCount)
+                            lastChapter.end = lastChapter.end!! + chapterLength.toLong()
                             //创建当前章节
                             val curChapter = BookChapter()
                             curChapter.title = matcher.group()
                             curChapter.start = lastChapter.end
-                            curChapter.end = curChapter.start
                             toc.add(curChapter)
                         }
-                        bookWordCount += chapterContent.length
-                        lastChapterWordCount = 0
                     } else {
                         if (toc.isNotEmpty()) { //获取章节内容
                             //获取上一章节
@@ -271,50 +224,37 @@ class TextFile(private var book: Book) {
                             lastChapter.isVolume =
                                 chapterContent.substringAfter(lastChapter.title).isBlank()
                             lastChapter.end =
-                                lastChapter.start!! + chapterLength
-                            lastChapter.wordCount =
-                                StringUtils.wordCountFormat(chapterContent.length)
+                                lastChapter.start!! + chapterContent.toByteArray(charset).size.toLong()
                             //创建当前章节
                             val curChapter = BookChapter()
                             curChapter.title = matcher.group()
                             curChapter.start = lastChapter.end
-                            curChapter.end = curChapter.start
                             toc.add(curChapter)
                         } else { //如果章节不存在则创建章节
                             val curChapter = BookChapter()
                             curChapter.title = matcher.group()
                             curChapter.start = curOffset
                             curChapter.end = curOffset
-                            curChapter.wordCount =
-                                StringUtils.wordCountFormat(chapterContent.length)
                             toc.add(curChapter)
                         }
-                        bookWordCount += chapterContent.length
-                        lastChapterWordCount = 0
                     }
                     //设置指针偏移
                     seekPos += chapterContent.length
                 }
-                val wordCount = blockContent.length - seekPos
-                bookWordCount += wordCount
-                lastChapterWordCount += wordCount
                 //block的偏移点
                 curOffset += length.toLong()
                 //设置上一章的结尾
-                toc.lastOrNull()?.let {
-                    it.end = curOffset
-                    it.wordCount = StringUtils.wordCountFormat(lastChapterWordCount)
-                }
+                toc.lastOrNull()?.end = curOffset
+
             }
             toc.lastOrNull()?.let { chapter ->
                 //章节字数太多进行拆分
                 if (book.getSplitLongChapter() && chapter.end!! - chapter.start!! > maxLengthWithToc) {
                     val end = chapter.end!!
                     chapter.end = chapter.start
-                    chapter.tag = null
                     val lastTitle = chapter.title
                     val lastTitleLength = lastTitle.toByteArray(charset).size
-                    val (chapters, _) = analyze(
+                    val chapters = analyze(
                         chapter.start!! + lastTitleLength, end
                     )
                     chapters.forEachIndexed { index, bookChapter ->
@@ -326,7 +266,7 @@ class TextFile(private var book: Book) {
         }
         System.gc()
         System.runFinalization()
-        return toc to bookWordCount
+        return toc
     }
 
     /**
@@ -334,9 +274,8 @@ class TextFile(private var book: Book) {
      */
     private fun analyze(
         fileStart: Long = 0L, fileEnd: Long = Long.MAX_VALUE
-    ): Pair<ArrayList<BookChapter>, Int> {
+    ): ArrayList<BookChapter> {
         val toc = arrayListOf<BookChapter>()
-        var bookWordCount = 0
         LocalBook.getBookInputStream(book).use { bis ->
             //block的个数
             var blockPos = 0
@@ -345,7 +284,6 @@ class TextFile(private var book: Book) {
             var chapterPos = 0
             //读取的长度
             var length = 0
-            var lastChapterWordCount = 0
             val buffer = ByteArray(bufferSize)
             var bufferStart = 3
             if (fileStart == 0L) {
@@ -386,14 +324,10 @@ class TextFile(private var book: Book) {
                                 break
                             }
                         }
-                        val content = String(buffer, chapterOffset, end - chapterOffset, charset)
-                        bookWordCount += content.length
-                        lastChapterWordCount = content.length
                         val chapter = BookChapter()
                         chapter.title = "第${blockPos}章($chapterPos)"
                         chapter.start = toc.lastOrNull()?.end ?: curOffset
                         chapter.end = chapter.start!! + end - chapterOffset
-                        chapter.wordCount = StringUtils.wordCountFormat(content.length)
                         toc.add(chapter)
                         //减去已经被分配的长度
                         strLength -= (end - chapterOffset)
@@ -410,51 +344,37 @@ class TextFile(private var book: Book) {
                 curOffset += length.toLong()
             }
             //设置结尾章节
-            val content = String(buffer, 0, bufferStart, charset)
-            bookWordCount += content.length
             if (bufferStart > 100 || toc.isEmpty()) {
                 val chapter = BookChapter()
                 chapter.title = "第${blockPos}章(${chapterPos})"
                 chapter.start = toc.lastOrNull()?.end ?: curOffset
                 chapter.end = chapter.start!! + bufferStart
-                chapter.wordCount = StringUtils.wordCountFormat(content.length)
                 toc.add(chapter)
             } else {
-                val wordCount = lastChapterWordCount + content.length
                 toc.lastOrNull()?.let {
                     it.end = it.end!! + bufferStart
-                    it.wordCount = StringUtils.wordCountFormat(wordCount)
                 }
             }
         }
-        return toc to bookWordCount
+        return toc
     }
 
     /**
-     * 获取合适的目录规则
+     * 获取所有匹配次数大于1的目录规则
      */
     private fun getTocRule(content: String): Pattern? {
         val rules = getTocRules().reversed()
-        var maxNum = 1
+        var maxCs = 1
         var tocPattern: Pattern? = null
         for (tocRule in rules) {
-            val pattern = try {
-                tocRule.rule.toPattern(Pattern.MULTILINE)
-            } catch (e: PatternSyntaxException) {
-                AppLog.put("TXT目录规则正则语法错误:${tocRule.name}\n$e", e)
-                continue
-            }
+            val pattern = tocRule.rule.toPattern(Pattern.MULTILINE)
             val matcher = pattern.matcher(content)
-            var start = 0
-            var num = 0
+            var cs = 0
             while (matcher.find()) {
-                if (start == 0 || matcher.start() - start > 1000) {
-                    num++
-                    start = matcher.end()
-                }
+                cs++
             }
-            if (num >= maxNum) {
-                maxNum = num
+            if (cs >= maxCs) {
+                maxCs = cs
                 tocPattern = pattern
             }
         }

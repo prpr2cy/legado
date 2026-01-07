@@ -14,22 +14,19 @@
   </el-tabs>
 </template>
 
-<script setup lang="ts">
-import { useSourceStore } from '@/store'
+<script setup>
+import { useSourceStore } from "@/store";
 
-const store = useSourceStore()
+const store = useSourceStore();
 
-const current_tab = computed({
-  get: () => store.currentTab,
-  set: val => (store.currentTab = val),
-})
+const { currentTab: current_tab } = storeToRefs(store);
 
 const tabData = ref([
-  ['editTab', '编辑源'],
-  ['editDebug', '调试源'],
-  ['editList', '源列表'],
-  ['editHelp', '帮助信息'],
-])
+  ["editTab", "编辑源"],
+  ["editDebug", "调试源"],
+  ["editList", "源列表"],
+  ["editHelp", "帮助信息"],
+]);
 </script>
 
 <style lang="scss" scoped>

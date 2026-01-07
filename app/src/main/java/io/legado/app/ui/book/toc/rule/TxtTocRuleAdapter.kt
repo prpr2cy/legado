@@ -77,22 +77,20 @@ class TxtTocRuleAdapter(context: Context, private val callBack: CallBack) :
         payloads: MutableList<Any>
     ) {
         binding.run {
-            if (payloads.isEmpty()) {
+            val bundle = payloads.getOrNull(0) as? Bundle
+            if (bundle == null) {
                 root.setBackgroundColor(ColorUtils.withAlpha(context.backgroundColor, 0.5f))
                 cbSource.text = item.name
                 swtEnabled.isChecked = item.enable
                 cbSource.isChecked = selected.contains(item)
                 titleExample.text = item.example
             } else {
-                for (i in payloads.indices) {
-                    val bundle = payloads[i] as Bundle
-                    bundle.keySet().forEach {
-                        when (it) {
-                            "selected" -> cbSource.isChecked = selected.contains(item)
-                            "upName" -> cbSource.text = item.name
-                            "upExample" -> titleExample.text = item.example
-                            "enabled" -> swtEnabled.isChecked = item.enable
-                        }
+                bundle.keySet().map {
+                    when (it) {
+                        "selected" -> cbSource.isChecked = selected.contains(item)
+                        "upNmae" -> cbSource.text = item.name
+                        "upExample" -> titleExample.text = item.example
+                        "enabled" -> swtEnabled.isChecked = item.enable
                     }
                 }
             }
@@ -128,10 +126,6 @@ class TxtTocRuleAdapter(context: Context, private val callBack: CallBack) :
         binding.ivMenuMore.setOnClickListener {
             showMenu(it, holder.layoutPosition)
         }
-    }
-
-    override fun onCurrentListChanged() {
-        callBack.upCountView()
     }
 
     private fun showMenu(view: View, position: Int) {

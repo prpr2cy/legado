@@ -7,22 +7,18 @@ import io.legado.app.data.entities.RssSource
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.model.Debug
 import io.legado.app.model.analyzeRule.AnalyzeRule
-import io.legado.app.model.analyzeRule.AnalyzeRule.Companion.setCoroutineContext
-import io.legado.app.model.analyzeRule.AnalyzeRule.Companion.setRuleData
 import io.legado.app.model.analyzeRule.RuleData
 import io.legado.app.utils.NetworkUtils
 import splitties.init.appCtx
-import java.util.Locale
-import kotlin.coroutines.coroutineContext
+import java.util.*
 
 @Keep
 object RssParserByRule {
 
     @Throws(Exception::class)
-    suspend fun parseXML(
+    fun parseXML(
         sortName: String,
         sortUrl: String,
-        redirectUrl: String,
         body: String?,
         rssSource: RssSource,
         ruleData: RuleData
@@ -43,9 +39,8 @@ object RssParserByRule {
         } else {
             val articleList = mutableListOf<RssArticle>()
             val analyzeRule = AnalyzeRule(ruleData, rssSource)
-            analyzeRule.setCoroutineContext(coroutineContext)
             analyzeRule.setContent(body).setBaseUrl(sortUrl)
-            analyzeRule.setRedirectUrl(redirectUrl)
+            analyzeRule.setRedirectUrl(sortUrl)
             var reverse = false
             if (ruleArticles.startsWith("-")) {
                 reverse = true
@@ -102,7 +97,7 @@ object RssParserByRule {
         ruleLink: List<AnalyzeRule.SourceRule>
     ): RssArticle? {
         val rssArticle = RssArticle(variable = variable)
-        analyzeRule.setRuleData(rssArticle)
+        analyzeRule.ruleData = rssArticle
         analyzeRule.setContent(item)
         Debug.log(sourceUrl, "┌获取标题", log)
         rssArticle.title = analyzeRule.getString(ruleTitle)

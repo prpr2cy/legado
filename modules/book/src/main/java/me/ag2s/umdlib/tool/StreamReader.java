@@ -55,12 +55,9 @@ public class StreamReader {
     }
 
     public byte[] readBytes(int len) throws IOException {
-        if (len < 0) {
+        if (len < 1) {
             System.out.println(len);
             throw new IllegalArgumentException("Length must > 0: " + len);
-        }
-        if (len==0){
-            return null;
         }
         byte[] b = new byte[len];
         is.read(b);

@@ -2,12 +2,7 @@ package io.legado.app.data.entities
 
 import android.content.Context
 import android.os.Parcelable
-import androidx.room.ColumnInfo
-import androidx.room.Entity
-import androidx.room.ForeignKey
-import androidx.room.Ignore
-import androidx.room.Index
-import androidx.room.PrimaryKey
+import androidx.room.*
 import io.legado.app.R
 import io.legado.app.constant.BookType
 import io.legado.app.utils.GSON
@@ -104,19 +99,6 @@ data class SearchBook(
         }
     }
 
-    fun releaseHtmlData() {
-        infoHtml = null
-        tocHtml = null
-    }
-
-    fun primaryStr(): String {
-        return origin + bookUrl
-    }
-
-    fun sameBookTypeLocal(bookType: Int): Boolean {
-        return type and BookType.allBookTypeLocal == bookType and BookType.allBookTypeLocal
-    }
-
     fun toBook() = Book(
         name = name,
         author = author,
@@ -134,6 +116,6 @@ data class SearchBook(
         variable = variable
     ).apply {
         this.infoHtml = this@SearchBook.infoHtml
-        this.tocHtml = this@SearchBook.tocHtml
+        this.tocUrl = this@SearchBook.tocUrl
     }
 }

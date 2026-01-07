@@ -86,8 +86,8 @@ class ItemTouchCallback(private val callback: Callback) : ItemTouchHelper.Callba
         srcViewHolder: RecyclerView.ViewHolder,
         targetViewHolder: RecyclerView.ViewHolder
     ): Boolean {
-        val fromPosition: Int = srcViewHolder.bindingAdapterPosition
-        val toPosition: Int = targetViewHolder.bindingAdapterPosition
+        val fromPosition: Int = srcViewHolder.adapterPosition
+        val toPosition: Int = targetViewHolder.adapterPosition
         if (fromPosition < toPosition) {
             for (i in fromPosition until toPosition) {
                 callback.swap(i, i + 1)
@@ -101,7 +101,7 @@ class ItemTouchCallback(private val callback: Callback) : ItemTouchHelper.Callba
     }
 
     override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
-        callback.onSwiped(viewHolder.bindingAdapterPosition)
+        callback.onSwiped(viewHolder.adapterPosition)
     }
 
     override fun onSelectedChanged(viewHolder: RecyclerView.ViewHolder?, actionState: Int) {

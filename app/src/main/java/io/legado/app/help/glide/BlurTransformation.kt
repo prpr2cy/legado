@@ -12,7 +12,7 @@ import java.security.MessageDigest
  * @radius: 0..25
  */
 class BlurTransformation(
-    @param:IntRange(from = 0, to = 25) private val radius: Int
+    @IntRange(from = 0, to = 25) private val radius: Int
 ) : BitmapTransformation() {
 
     override fun transform(

@@ -7,10 +7,7 @@ import android.net.Uri
 import androidx.activity.result.contract.ActivityResultContract
 import io.legado.app.help.IntentData
 import io.legado.app.lib.dialogs.SelectItem
-import io.legado.app.utils.RealPathUtil
-import io.legado.app.utils.externalFiles
 import io.legado.app.utils.putJson
-import splitties.init.appCtx
 
 @Suppress("unused")
 class HandleFileContract :
@@ -23,9 +20,6 @@ class HandleFileContract :
         val handleFileParam = HandleFileParam()
         input?.let {
             handleFileParam.apply(input)
-        }
-        if (handleFileParam.mode == IMAGE) {
-            handleFileParam.allowExtensions = arrayOf("jpg", "png", "bmp", "webp")
         }
         handleFileParam.let {
             requestCode = it.requestCode
@@ -44,15 +38,10 @@ class HandleFileContract :
     }
 
     override fun parseResult(resultCode: Int, intent: Intent?): Result {
-        val uri = if (resultCode != RESULT_OK || intent?.data == null ||
-            RealPathUtil.getTreePath(intent.data!!)
-                ?.startsWith(appCtx.externalFiles.parent!!) == true
-        ) {
-            null
-        } else {
-            intent.data
+        if (resultCode == RESULT_OK) {
+            return Result(intent?.data, requestCode, intent?.getStringExtra("value"))
         }
-        return Result(uri, requestCode, intent?.getStringExtra("value"))
+        return Result(null, requestCode, intent?.getStringExtra("value"))
     }
 
     companion object {
@@ -60,7 +49,6 @@ class HandleFileContract :
         const val FILE = 1
         const val DIR_SYS = 2
         const val EXPORT = 3
-        const val IMAGE = 4
     }
 
     @Suppress("ArrayInDataClass")

@@ -5,7 +5,9 @@ import android.app.Activity
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
+import android.view.MotionEvent
 import android.view.SubMenu
+import android.widget.EditText
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.widget.PopupMenu
@@ -31,29 +33,16 @@ import io.legado.app.ui.file.HandleFileContract
 import io.legado.app.ui.qrcode.QrCodeResult
 import io.legado.app.ui.replace.edit.ReplaceEditActivity
 import io.legado.app.ui.widget.SelectActionBar
+import io.legado.app.ui.widget.dialog.TextDialog
 import io.legado.app.ui.widget.recycler.DragSelectTouchHelper
 import io.legado.app.ui.widget.recycler.ItemTouchCallback
 import io.legado.app.ui.widget.recycler.VerticalDivider
-import io.legado.app.utils.ACache
-import io.legado.app.utils.GSON
-import io.legado.app.utils.applyTint
-import io.legado.app.utils.isAbsUrl
-import io.legado.app.utils.launch
-import io.legado.app.utils.readText
-import io.legado.app.utils.sendToClip
-import io.legado.app.utils.setEdgeEffectColor
-import io.legado.app.utils.showDialogFragment
-import io.legado.app.utils.showHelp
-import io.legado.app.utils.splitNotBlank
-import io.legado.app.utils.toastOnUi
-import io.legado.app.utils.transaction
+import io.legado.app.utils.*
 import io.legado.app.utils.viewbindingdelegate.viewBinding
-import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.conflate
-import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
 
 /**
@@ -71,7 +60,7 @@ class ReplaceRuleActivity : VMBaseActivity<ActivityReplaceRuleBinding, ReplaceRu
     private val searchView: SearchView by lazy {
         binding.titleBar.findViewById(R.id.search_view)
     }
-    private var groups = arrayListOf<String>()
+    private var groups = hashSetOf<String>()
     private var groupMenu: SubMenu? = null
     private var replaceRuleFlowJob: Job? = null
     private var dataInit = false
@@ -124,6 +113,18 @@ class ReplaceRuleActivity : VMBaseActivity<ActivityReplaceRuleBinding, ReplaceRu
         observeGroupData()
     }
 
+    override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
+        if (ev.action == MotionEvent.ACTION_DOWN) {
+            currentFocus?.let {
+                if (it is EditText) {
+                    it.clearFocus()
+                    it.hideSoftInput()
+                }
+            }
+        }
+        return super.dispatchTouchEvent(ev)
+    }
+
     override fun onCompatCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.replace_rule, menu)
         return super.onCompatCreateOptionsMenu(menu)
@@ -154,7 +155,9 @@ class ReplaceRuleActivity : VMBaseActivity<ActivityReplaceRuleBinding, ReplaceRu
 
     private fun initSearchView() {
         searchView.applyTint(primaryTextColor)
+        searchView.onActionViewExpanded()
         searchView.queryHint = getString(R.string.replace_purify_search)
+        searchView.clearFocus()
         searchView.setOnQueryTextListener(this)
     }
 
@@ -206,7 +209,7 @@ class ReplaceRuleActivity : VMBaseActivity<ActivityReplaceRuleBinding, ReplaceRu
                 }
             }.catch {
                 AppLog.put("替换规则管理界面更新数据出错", it)
-            }.flowOn(IO).conflate().collect {
+            }.conflate().collect {
                 if (dataInit) {
                     setResult(Activity.RESULT_OK)
                 }
@@ -239,7 +242,7 @@ class ReplaceRuleActivity : VMBaseActivity<ActivityReplaceRuleBinding, ReplaceRu
                 allowExtensions = arrayOf("txt", "json")
             }
             R.id.menu_import_qr -> qrCodeResult.launch()
-            R.id.menu_help -> showHelp("replaceRuleHelp")
+            R.id.menu_help -> showHelp()
             R.id.menu_group_null -> {
                 searchView.setQuery(getString(R.string.no_group), true)
             }
@@ -268,10 +271,10 @@ class ReplaceRuleActivity : VMBaseActivity<ActivityReplaceRuleBinding, ReplaceRu
         return false
     }
 
-    private fun upGroupMenu() = groupMenu?.transaction { menu ->
-        menu.removeGroup(R.id.replace_group)
-        groups.forEach {
-            menu.add(R.id.replace_group, Menu.NONE, Menu.NONE, it)
+    private fun upGroupMenu() {
+        groupMenu?.removeGroup(R.id.replace_group)
+        groups.map {
+            groupMenu?.add(R.id.replace_group, Menu.NONE, Menu.NONE, it)
         }
     }
 
@@ -295,7 +298,7 @@ class ReplaceRuleActivity : VMBaseActivity<ActivityReplaceRuleBinding, ReplaceRu
             okButton {
                 val text = alertBinding.editView.text?.toString()
                 text?.let {
-                    if (it.isAbsUrl() && !cacheUrls.contains(it)) {
+                    if (!cacheUrls.contains(it)) {
                         cacheUrls.add(0, it)
                         aCache.put(importRecordKey, cacheUrls.joinToString(","))
                     }
@@ -306,6 +309,11 @@ class ReplaceRuleActivity : VMBaseActivity<ActivityReplaceRuleBinding, ReplaceRu
             }
             cancelButton()
         }
+    }
+
+    private fun showHelp() {
+        val text = String(assets.open("help/replaceRuleHelp.md").readBytes())
+        showDialogFragment(TextDialog(getString(R.string.help), text, TextDialog.Mode.MD))
     }
 
     override fun onQueryTextChange(newText: String?): Boolean {

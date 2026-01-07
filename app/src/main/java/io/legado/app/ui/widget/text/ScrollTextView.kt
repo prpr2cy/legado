@@ -258,7 +258,6 @@ class ScrollTextView(context: Context, attrs: AttributeSet?) :
             }
         }
 
-        @Suppress("DEPRECATION")
         fun postOnAnimation() {
             if (mEatRunOnAnimationRequest) {
                 mReSchedulePostAnimationCallback = true

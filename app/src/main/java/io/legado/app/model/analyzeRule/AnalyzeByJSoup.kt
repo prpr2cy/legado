@@ -16,10 +16,6 @@ import org.seimicrawler.xpath.JXNode
 @Keep
 class AnalyzeByJSoup(doc: Any) {
 
-    companion object {
-        private val nullSet = setOf(null)
-    }
-
     private var element: Element = parse(doc)
 
     private fun parse(doc: Any): Element {
@@ -45,20 +41,9 @@ class AnalyzeByJSoup(doc: Any) {
     /**
      * 合并内容列表,得到内容
      */
-    internal fun getString(ruleStr: String): String? {
-        if (ruleStr.isEmpty()) {
-            return null
-        }
-        val list = getStringList(ruleStr)
-        if (list.isEmpty()) {
-            return null
-        }
-        if (list.size == 1) {
-            return list.first()
-        }
-        return list.joinToString("\n")
-    }
-
+    internal fun getString(ruleStr: String) =
+        if (ruleStr.isEmpty()) null
+        else getStringList(ruleStr).takeIf { it.isNotEmpty() }?.joinToString("\n")
 
     /**
      * 获取一个字符串
@@ -235,7 +220,6 @@ class AnalyzeByJSoup(doc: Any) {
                     textS.add(text)
                 }
             }
-
             "textNodes" -> for (element in elements) {
                 val tn = arrayListOf<String>()
                 val contentEs = element.textNodes()
@@ -249,14 +233,12 @@ class AnalyzeByJSoup(doc: Any) {
                     textS.add(tn.joinToString("\n"))
                 }
             }
-
             "ownText" -> for (element in elements) {
                 val text = element.ownText()
                 if (text.isNotEmpty()) {
                     textS.add(text)
                 }
             }
-
             "html" -> {
                 elements.select("script").remove()
                 elements.select("style").remove()
@@ -265,7 +247,6 @@ class AnalyzeByJSoup(doc: Any) {
                     textS.add(html)
                 }
             }
-
             "all" -> textS.add(elements.outerHtml())
             else -> for (element in elements) {
 
@@ -339,22 +320,13 @@ class AnalyzeByJSoup(doc: Any) {
                 if (indexes[ix] is Triple<*, *, *>) { //区间
                     val (startX, endX, stepX) = indexes[ix] as Triple<Int?, Int?, Int> //还原储存时的类型
 
-                    var start = startX ?: 0 // 左端省略表示0
-                    if (start < 0) start += len // 将负索引转正
+                    val start = if (startX == null) 0 //左端省略表示0
+                    else if (startX >= 0) if (startX < len) startX else len - 1 //右端越界，设置为最大索引
+                    else if (-startX <= len) len + startX /* 将负索引转正 */ else 0 //左端越界，设置为最小索引
 
-                    var end = endX ?: (len - 1) // 右端省略表示 len - 1
-                    if (end < 0) end += len // 将负索引转正
-
-                    if ((start < 0 && end < 0) || (start >= len && end >= len)) {
-                        // start 和 end 同侧左右端越界，无效索引
-                        continue
-                    }
-
-                    if (start >= len) start = len - 1 // 右端越界，设置为最大索引
-                    else if (start < 0) start = 0 // 左端越界，设置为最小索引
-
-                    if (end >= len) end = len - 1 // 右端越界，设置为最大索引
-                    else if (end < 0) end = 0 // 左端越界，设置为最小索引
+                    val end = if (endX == null) len - 1 //右端省略表示 len - 1
+                    else if (endX >= 0) if (endX < len) endX else len - 1 //右端越界，设置为最大索引
+                    else if (-endX <= len) len + endX /* 将负索引转正 */ else 0 //左端越界，设置为最小索引
 
                     if (start == end || stepX >= len) { //两端相同，区间里只有一个数。或间隔过大，区间实际上仅有首位
 
@@ -387,7 +359,7 @@ class AnalyzeByJSoup(doc: Any) {
 
                 for (pcInt in indexSet) elements[pcInt] = null
 
-                elements.removeAll(nullSet) //测试过，这样就行
+                elements.removeAll(listOf(null)) //测试过，这样就行
 
             } else if (split == '.') { //选择
 

@@ -103,20 +103,18 @@ class ReplaceRuleAdapter(context: Context, var callBack: CallBack) :
         payloads: MutableList<Any>
     ) {
         binding.run {
-            if (payloads.isEmpty()) {
+            val bundle = payloads.getOrNull(0) as? Bundle
+            if (bundle == null) {
                 root.setBackgroundColor(ColorUtils.withAlpha(context.backgroundColor, 0.5f))
                 cbName.text = item.getDisplayNameGroup()
                 swtEnabled.isChecked = item.isEnabled
                 cbName.isChecked = selected.contains(item)
             } else {
-                for (i in payloads.indices) {
-                    val bundle = payloads[i] as Bundle
-                    bundle.keySet().forEach {
-                        when (it) {
-                            "selected" -> cbName.isChecked = selected.contains(item)
-                            "upName" -> cbName.text = item.getDisplayNameGroup()
-                            "enabled" -> swtEnabled.isChecked = item.isEnabled
-                        }
+                bundle.keySet().map {
+                    when (it) {
+                        "selected" -> cbName.isChecked = selected.contains(item)
+                        "upName" -> cbName.text = item.getDisplayNameGroup()
+                        "enabled" -> swtEnabled.isChecked = item.isEnabled
                     }
                 }
             }

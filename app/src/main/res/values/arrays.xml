@@ -24,7 +24,6 @@
 		<item>@string/bookshelf_px_2</item>
 		<item>@string/bookshelf_px_3</item>
 		<item>@string/bookshelf_px_4</item>
-		<item>@string/bookshelf_px_5</item>
 	</string-array>
 
 	<string-array name="indent">
@@ -64,8 +63,8 @@
 	<string-array name="screen_time_out">
 		<item>Default</item>
 		<item>1 min</item>
-		<item>5 min</item>
-		<item>10 min</item>
+		<item>2 min</item>
+		<item>3 min</item>
 		<item>Always</item>
 	</string-array>
 
@@ -74,19 +73,19 @@
 		<item>@string/screen_portrait</item>
 		<item>@string/screen_landscape</item>
 		<item>@string/screen_sensor</item>
-		<item>@string/screen_portrait_reversed</item>
+		<item>反向竖屏</item>
 	</string-array>
 
 	<string-array name="double_page_title">
-		<item>Single page</item>
-		<item>Double page</item>
-		<item>Double page in landscape</item>
-		<item>Double page on tablet or landscape</item>
+		<item>全局单页</item>
+		<item>全局双页</item>
+		<item>横屏双页</item>
+		<item>平板/横屏双页</item>
 	</string-array>
 
 	<string-array name="progress_bar_behavior_title">
-		<item>@string/adjust_chapter_page</item>
-		<item>@string/adjust_chapter_index</item>
+		<item>调整本章页数</item>
+		<item>调整章节位置</item>
 	</string-array>
 
 	<string-array name="icon_names" tools:ignore="Typos">
@@ -152,37 +151,11 @@
 		<item>@string/my</item>
 	</string-array>
 
-
-	<string-array name="default_app_variant">
-		<item>@string/default_version</item>
-		<item>@string/official_version</item>
-		<item>@string/beta_release_version</item>
-		<item>@string/beta_releaseA_version</item>
-	</string-array>
-
 	<string-array name="default_home_page_value">
 		<item>bookshelf</item>
 		<item>explore</item>
 		<item>rss</item>
 		<item>my</item>
-	</string-array>
-
-	<string-array name="default_app_variant_value">
-		<item>default_version</item>
-		<item>official_version</item>
-		<item>beta_release_version</item>
-		<item>beta_releaseA_version</item>
-	</string-array>
-
-	<string-array name="tip_color">
-		<item>Same color as content</item>
-		<item>Customize</item>
-	</string-array>
-
-	<string-array name="tip_divider_color">
-		<item>Default</item>
-		<item>Same color as content</item>
-		<item>Customize</item>
 	</string-array>
 
 </resources>

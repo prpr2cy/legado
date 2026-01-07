@@ -32,8 +32,6 @@ public class MediaTypes {
 
     public static final MediaType SVG = new MediaType("image/svg+xml", ".svg");
 
-    public static final MediaType WEBP = new MediaType("image/webp", ".webp");
-
     // fonts
     public static final MediaType TTF = new MediaType(
             "application/x-truetype-font", ".ttf");
@@ -58,7 +56,7 @@ public class MediaTypes {
     public static final MediaType UNKNOWN = new MediaType("application/octet-stream", "");
 
     public static final MediaType[] mediaTypes = new MediaType[]{
-            XHTML, EPUB, JPG, PNG, GIF, WEBP, CSS, SVG, TTF, NCX, XPGT, OPENTYPE, WOFF,
+            XHTML, EPUB, JPG, PNG, GIF, CSS, SVG, TTF, NCX, XPGT, OPENTYPE, WOFF,
             SMIL, PLS, JAVASCRIPT, MP3, MP4, OGG, UNKNOWN
     };
 
@@ -71,11 +69,7 @@ public class MediaTypes {
     }
 
     public static boolean isBitmapImage(MediaType mediaType) {
-        return mediaType == JPG || mediaType == PNG || mediaType == GIF || mediaType == WEBP;
-    }
-
-    public static boolean isImage(MediaType mediaType) {
-        return mediaType == JPG || mediaType == PNG || mediaType == GIF || mediaType == SVG || mediaType == WEBP;
+        return mediaType == JPG || mediaType == PNG || mediaType == GIF;
     }
 
     /**

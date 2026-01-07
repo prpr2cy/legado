@@ -1,8 +1,10 @@
 package io.legado.app.utils
 
 import android.net.Uri
+import androidx.annotation.Keep
 import java.io.File
 
+@Keep
 object IntentType {
 
     fun from(uri: Uri): String {
@@ -24,8 +26,21 @@ object IntentType {
             "jpg", "gif", "png", "jpeg", "bmp" -> "image/*"
             "", "txt", "json", "log" -> "text/plain"
             "apk" -> "application/vnd.android.package-archive"
-            else -> "*/*"
+            else -> appIntentType?.from(path) ?: "*/*"
         }
+    }
+
+    private val appIntentType: TypeInterface? by lazy {
+        kotlin.runCatching {
+            Class.forName("io.legado.app.help.AppIntentType")
+                .kotlin.objectInstance as? TypeInterface
+        }.getOrNull()
+    }
+
+    interface TypeInterface {
+
+        fun from(path: String?): String?
+
     }
 
 }

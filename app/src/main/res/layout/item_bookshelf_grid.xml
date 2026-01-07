@@ -5,10 +5,9 @@
     android:id="@+id/cv_content"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="@drawable/bg_item_focused_on_tv"
     android:clickable="true"
     android:focusable="true"
-    android:scrollbars="none"
+    android:background="@drawable/bg_item_focused_on_tv"
     tools:ignore="UnusedAttribute">
 
 
@@ -16,16 +15,14 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:paddingLeft="8dp"
         android:paddingTop="8dp"
+        android:paddingLeft="8dp"
         android:paddingRight="8dp"
-        android:scrollbars="none"
         app:layout_constraintTop_toTopOf="parent">
 
         <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:scrollbars="none">
+            android:layout_height="wrap_content">
 
             <io.legado.app.ui.widget.image.CoverImageView
                 android:id="@+id/iv_cover"
@@ -33,7 +30,6 @@
                 android:layout_height="wrap_content"
                 android:layout_margin="8dp"
                 android:scaleType="centerCrop"
-                android:scrollbars="none"
                 android:src="@drawable/image_cover_default"
                 android:transitionName="img_cover"
                 app:layout_constraintTop_toTopOf="parent"
@@ -46,7 +42,6 @@
                 android:layout_height="wrap_content"
                 android:layout_gravity="right"
                 android:includeFontPadding="false"
-                android:scrollbars="none"
                 app:layout_constraintRight_toRightOf="parent"
                 app:layout_constraintTop_toTopOf="parent"
                 tools:ignore="RtlHardcoded" />
@@ -56,7 +51,6 @@
                 android:layout_width="22dp"
                 android:layout_height="22dp"
                 android:layout_gravity="right"
-                android:scrollbars="none"
                 android:visibility="invisible"
                 app:layout_constraintRight_toRightOf="parent"
                 app:layout_constraintTop_toTopOf="parent"
@@ -74,7 +68,6 @@
             android:gravity="top|center_horizontal"
             android:includeFontPadding="false"
             android:lines="2"
-            android:scrollbars="none"
             android:text="@string/book_name"
             android:textColor="@color/primaryText"
             android:textSize="12sp"
@@ -87,7 +80,6 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:background="?android:attr/selectableItemBackground"
-        android:scrollbars="none"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintVertical_bias="0.0"

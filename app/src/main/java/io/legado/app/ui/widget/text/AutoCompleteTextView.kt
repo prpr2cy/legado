@@ -2,7 +2,6 @@ package io.legado.app.ui.widget.text
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.os.Build
 import android.util.AttributeSet
 import android.view.LayoutInflater
 import android.view.MotionEvent
@@ -29,9 +28,6 @@ class AutoCompleteTextView @JvmOverloads constructor(
 
     init {
         applyTint(context.accentColor)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
-            isLocalePreferredLineHeightForMinimumUsed = false
-        }
     }
 
     override fun enoughToFilter(): Boolean {

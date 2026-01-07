@@ -1,7 +1,7 @@
 [
   {
-    "key": "@css:",
-    "value": "@css:",
+    "key": "$.",
+    "value": "$.",
     "serialNo": 0
   },
   {
@@ -25,138 +25,83 @@
     "serialNo": 4
   },
   {
-    "key": "%%",
-    "value": "%%",
-    "serialNo": 5
-  },
-  {
     "key": "||",
     "value": "||",
-    "serialNo": 6
-  },
-  {
-    "key": "//",
-    "value": "//",
-    "serialNo": 7
-  },
-  {
-    "key": "\\",
-    "value": "\\",
-    "serialNo": 8
-  },
-  {
-    "key": "$.",
-    "value": "$.",
-    "serialNo": 9
-  },
-  {
-    "key": "@",
-    "value": "@",
-    "serialNo": 10
-  },
-  {
-    "key": ":",
-    "value": ":",
-    "serialNo": 11
-  },
-  {
-    "key": "class",
-    "value": "class",
-    "serialNo": 12
-  },
-  {
-    "key": "text",
-    "value": "text",
-    "serialNo": 13
-  },
-  {
-    "key": "href",
-    "value": "href",
-    "serialNo": 14
-  },
-  {
-    "key": "textNodes",
-    "value": "textNodes",
-    "serialNo": 15
-  },
-  {
-    "key": "ownText",
-    "value": "ownText",
-    "serialNo": 16
-  },
-  {
-    "key": "all",
-    "value": "all",
-    "serialNo": 17
-  },
-  {
-    "key": "html",
-    "value": "html",
-    "serialNo": 18
-  },
-  {
-    "key": "[",
-    "value": "[",
-    "serialNo": 19
-  },
-  {
-    "key": "]",
-    "value": "]",
-    "serialNo": 20
-  },
-  {
-    "key": "<",
-    "value": "<",
-    "serialNo": 21
-  },
-  {
-    "key": ">",
-    "value": ">",
-    "serialNo": 22
-  },
-  {
-    "key": "#",
-    "value": "#",
-    "serialNo": 23
-  },
-  {
-    "key": "!",
-    "value": "!",
-    "serialNo": 24
-  },
-  {
-    "key": ".",
-    "value": ".",
-    "serialNo": 25
-  },
-  {
-    "key": "+",
-    "value": "+",
-    "serialNo": 26
-  },
-  {
-    "key": "-",
-    "value": "-",
-    "serialNo": 27
-  },
-  {
-    "key": "*",
-    "value": "*",
-    "serialNo": 28
-  },
-  {
-    "key": "/",
-    "value": "/",
-    "serialNo": 29
+    "serialNo": 5
   },
   {
     "key": "=",
     "value": "=",
-    "serialNo": 30
+    "serialNo": 6
+  },
+  {
+    "key": "+",
+    "value": "+",
+    "serialNo": 7
+  },
+  {
+    "key": "\"\"",
+    "value": "\"\"",
+    "serialNo": 8
+  },
+  {
+    "key": "``",
+    "value": "``",
+    "serialNo": 9
+  },
+  {
+    "key": "[]",
+    "value": "[]",
+    "serialNo": 10
+  },
+  {
+    "key": "\\",
+    "value": "\\",
+    "serialNo": 11
+  },
+  {
+    "key": "<",
+    "value": "<",
+    "serialNo": 12
+  },
+  {
+    "key": ">",
+    "value": ">",
+    "serialNo": 13
+  },
+  {
+    "key": "^",
+    "value": "^",
+    "serialNo": 14
+  },
+  {
+    "key": "[?(@.)]",
+    "value": "[?(@.)]",
+    "serialNo": 15
+  },
+  {
+    "key": "JSON.parse",
+    "value": "JSON.parse()",
+    "serialNo": 16
+  },
+  {
+    "key": "JSON.stringify",
+    "value": "JSON.stringify()",
+    "serialNo": 17
+  },
+  {
+    "key": "encodeURIComponent",
+    "value": "encodeURIComponent()",
+    "serialNo": 18
+  },
+  {
+    "key": "data:;base64",
+    "value": "data:;base64,,{\"type\":\"\"}",
+    "serialNo": 19
   },
   {
     "key": "useWebView",
-    "value": ",{\"webView\": true}",
-    "serialNo": 31
+    "value": "{\"webView\":true}",
+    "serialNo": 20
   }
 ]

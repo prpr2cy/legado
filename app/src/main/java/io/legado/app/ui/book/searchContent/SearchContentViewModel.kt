@@ -2,6 +2,7 @@ package io.legado.app.ui.book.searchContent
 
 
 import android.app.Application
+import com.github.liuyueyi.quick.transfer.ChineseUtils
 import io.legado.app.base.BaseViewModel
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
@@ -9,14 +10,13 @@ import io.legado.app.data.entities.BookChapter
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.ContentProcessor
 import io.legado.app.help.config.AppConfig
-import io.legado.app.utils.ChineseUtils
 import kotlinx.coroutines.ensureActive
 import kotlin.coroutines.coroutineContext
 
 class SearchContentViewModel(application: Application) : BaseViewModel(application) {
     var bookUrl: String = ""
     var book: Book? = null
-    private var contentProcessor: ContentProcessor? = null
+    var contentProcessor: ContentProcessor? = null
     var lastQuery: String = ""
     var searchResultCounts = 0
     val cacheChapterNames = hashSetOf<String>()

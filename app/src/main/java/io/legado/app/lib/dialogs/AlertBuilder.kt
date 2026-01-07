@@ -68,6 +68,11 @@ interface AlertBuilder<out D : DialogInterface> {
         onItemSelected: (dialog: DialogInterface, item: T, index: Int) -> Unit
     )
 
+    fun <T> decodeItems(
+        items: List<T>,
+        onItemSelected: (dialog: DialogInterface, item: T, index: Int) -> Unit
+    )
+
     fun multiChoiceItems(
         items: Array<String>,
         checkedItems: BooleanArray,

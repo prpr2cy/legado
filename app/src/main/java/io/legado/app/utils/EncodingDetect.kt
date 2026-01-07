@@ -4,6 +4,9 @@ import android.text.TextUtils
 import io.legado.app.lib.icu4j.CharsetDetector
 import org.jsoup.Jsoup
 import java.io.File
+import java.io.FileInputStream
+import java.nio.charset.StandardCharsets
+import java.util.*
 
 /**
  * 自动获取文件的编码
@@ -11,21 +14,9 @@ import java.io.File
 @Suppress("MemberVisibilityCanBePrivate", "unused")
 object EncodingDetect {
 
-    private val headTagRegex = "(?i)<head>[\\s\\S]*?</head>".toRegex()
-    private val headOpenBytes = "<head>".toByteArray()
-    private val headCloseBytes = "</head>".toByteArray()
-
-    fun getHtmlEncode(bytes: ByteArray): String {
+    fun getHtmlEncode(bytes: ByteArray): String? {
         try {
-            var head: String? = null
-            val startIndex = bytes.indexOf(headOpenBytes)
-            if (startIndex > -1) {
-                val endIndex = bytes.indexOf(headCloseBytes, startIndex)
-                if (endIndex > -1) {
-                    head = String(bytes.copyOfRange(startIndex, endIndex + headCloseBytes.size))
-                }
-            }
-            val doc = Jsoup.parseBodyFragment(head ?: headTagRegex.find(String(bytes))!!.value)
+            val doc = Jsoup.parse(String(bytes, StandardCharsets.UTF_8))
             val metaTags = doc.getElementsByTag("meta")
             var charsetStr: String
             for (metaTag in metaTags) {
@@ -33,14 +24,16 @@ object EncodingDetect {
                 if (!TextUtils.isEmpty(charsetStr)) {
                     return charsetStr
                 }
+                val content = metaTag.attr("content")
                 val httpEquiv = metaTag.attr("http-equiv")
-                if (httpEquiv.equals("content-type", true)) {
-                    val content = metaTag.attr("content")
-                    val idx = content.indexOf("charset=", ignoreCase = true)
-                    charsetStr = if (idx > -1) {
-                        content.substring(idx + "charset=".length)
+                if (httpEquiv.lowercase(Locale.getDefault()) == "content-type") {
+                    charsetStr = if (content.lowercase(Locale.getDefault()).contains("charset")) {
+                        content.substring(
+                            content.lowercase(Locale.getDefault())
+                                .indexOf("charset") + "charset=".length
+                        )
                     } else {
-                        content.substringAfter(";")
+                        content.substring(content.lowercase(Locale.getDefault()).indexOf(";") + 1)
                     }
                     if (!TextUtils.isEmpty(charsetStr)) {
                         return charsetStr
@@ -69,30 +62,18 @@ object EncodingDetect {
      */
     fun getEncode(file: File): String {
         val tempByte = getFileBytes(file)
-        if (tempByte.isEmpty()) {
-            return "UTF-8"
-        }
         return getEncode(tempByte)
     }
 
-    private fun getFileBytes(file: File): ByteArray {
+    private fun getFileBytes(file: File?): ByteArray {
         val byteArray = ByteArray(8000)
-        var pos = 0
         try {
-            file.inputStream().buffered().use {
-                while (pos < byteArray.size) {
-                    val n = it.read(byteArray, pos, 1)
-                    if (n == -1) {
-                        break
-                    }
-                    if (byteArray[pos] < 0) {
-                        pos++
-                    }
-                }
+            FileInputStream(file).use {
+                it.read(byteArray)
             }
         } catch (e: Exception) {
             System.err.println("Error: $e")
         }
-        return byteArray.copyOf(pos)
+        return byteArray
     }
 }

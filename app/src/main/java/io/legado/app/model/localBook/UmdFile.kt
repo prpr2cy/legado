@@ -2,9 +2,7 @@ package io.legado.app.model.localBook
 
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
-import io.legado.app.utils.DebugLog
-import io.legado.app.utils.FileUtils
-import io.legado.app.utils.printOnDebug
+import io.legado.app.utils.*
 import me.ag2s.umdlib.domain.UmdBook
 import me.ag2s.umdlib.umd.UmdReader
 import java.io.File
@@ -59,8 +57,20 @@ class UmdFile(var book: Book) {
             return field
         }
 
+
     init {
-        upBookCover(true)
+        try {
+            umdBook?.let {
+                if (book.coverUrl.isNullOrEmpty()) {
+                    book.coverUrl = LocalBook.getCoverPath(book)
+                }
+                if (!File(book.coverUrl!!).exists()) {
+                    FileUtils.writeBytes(book.coverUrl!!, it.cover.coverData)
+                }
+            }
+        } catch (e: Exception) {
+            e.printOnDebug()
+        }
     }
 
     private fun readUmd(): UmdBook? {
@@ -68,28 +78,11 @@ class UmdFile(var book: Book) {
         return UmdReader().read(input)
     }
 
-    private fun upBookCover(fastCheck: Boolean = false) {
-        try {
-            umdBook?.let {
-                if (book.coverUrl.isNullOrEmpty()) {
-                    book.coverUrl = LocalBook.getCoverPath(book)
-                }
-                if (fastCheck && File(book.coverUrl!!).exists()) {
-                    return
-                }
-                FileUtils.writeBytes(book.coverUrl!!, it.cover.coverData)
-            }
-        } catch (e: Exception) {
-            e.printOnDebug()
-        }
-    }
-
     private fun upBookInfo() {
         if (umdBook == null) {
             uFile = null
             book.intro = "书籍导入异常"
         } else {
-            upBookCover()
             val hd = umdBook!!.header
             book.name = hd.title
             book.author = hd.author

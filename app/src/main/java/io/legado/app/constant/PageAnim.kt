@@ -2,7 +2,6 @@ package io.legado.app.constant
 
 import androidx.annotation.IntDef
 
-@Suppress("ConstPropertyName")
 object PageAnim {
 
     const val coverPageAnim = 0

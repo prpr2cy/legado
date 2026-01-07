@@ -1,68 +1,43 @@
 package io.legado.app
 
 import android.app.Application
-import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
 import android.content.pm.ActivityInfo
-import android.content.pm.ApplicationInfo
 import android.content.res.Configuration
 import android.os.Build
+import com.github.liuyueyi.quick.transfer.ChineseUtils
 import com.github.liuyueyi.quick.transfer.constants.TransType
 import com.jeremyliao.liveeventbus.LiveEventBus
-import com.jeremyliao.liveeventbus.logger.DefaultLogger
-import com.script.rhino.ReadOnlyJavaObject
-import com.script.rhino.RhinoScriptEngine
-import com.script.rhino.RhinoWrapFactory
 import io.legado.app.base.AppContextWrapper
 import io.legado.app.constant.AppConst.channelIdDownload
 import io.legado.app.constant.AppConst.channelIdReadAloud
 import io.legado.app.constant.AppConst.channelIdWeb
 import io.legado.app.constant.PreferKey
 import io.legado.app.data.appDb
-import io.legado.app.data.entities.Book
-import io.legado.app.data.entities.BookChapter
-import io.legado.app.data.entities.BookSource
-import io.legado.app.data.entities.HttpTTS
-import io.legado.app.data.entities.RssSource
-import io.legado.app.data.entities.rule.BookInfoRule
-import io.legado.app.data.entities.rule.ContentRule
-import io.legado.app.data.entities.rule.ExploreRule
-import io.legado.app.data.entities.rule.SearchRule
-import io.legado.app.help.AppFreezeMonitor
 import io.legado.app.help.AppWebDav
 import io.legado.app.help.CrashHandler
 import io.legado.app.help.DefaultData
-import io.legado.app.help.DispatchersMonitor
 import io.legado.app.help.LifecycleHelp
 import io.legado.app.help.RuleBigDataHelp
 import io.legado.app.help.book.BookHelp
 import io.legado.app.help.config.AppConfig
-import io.legado.app.help.config.ReadBookConfig
-import io.legado.app.help.config.ThemeConfig
 import io.legado.app.help.config.ThemeConfig.applyDayNight
-import io.legado.app.help.config.ThemeConfig.applyDayNightInit
 import io.legado.app.help.coroutine.Coroutine
 import io.legado.app.help.http.Cronet
 import io.legado.app.help.http.ObsoleteUrlFactory
 import io.legado.app.help.http.okHttpClient
-import io.legado.app.help.rhino.NativeBaseSource
 import io.legado.app.help.source.SourceHelp
 import io.legado.app.help.storage.Backup
 import io.legado.app.model.BookCover
-import io.legado.app.utils.ChineseUtils
-import io.legado.app.utils.LogUtils
 import io.legado.app.utils.defaultSharedPreferences
 import io.legado.app.utils.getPrefBoolean
-import io.legado.app.utils.isDebuggable
 import kotlinx.coroutines.launch
-import org.chromium.base.ThreadUtils
 import splitties.init.appCtx
 import splitties.systemservices.notificationManager
 import java.net.URL
 import java.util.concurrent.TimeUnit
-import java.util.logging.Level
 
 class App : Application() {
 
@@ -70,32 +45,21 @@ class App : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        CrashHandler(this)
-        if (isDebuggable) {
-            ThreadUtils.setThreadAssertsDisabledForTesting(true)
-        }
         oldConfig = Configuration(resources.configuration)
-        applyDayNightInit(this)
+        CrashHandler(this)
+        //预下载Cronet so
+        Cronet.preDownload()
+        createNotificationChannels()
+        applyDayNight(this)
+        LiveEventBus.config()
+            .lifecycleObserverAlwaysActive(true)
+            .autoClear(false)
         registerActivityLifecycleCallbacks(LifecycleHelp)
         defaultSharedPreferences.registerOnSharedPreferenceChangeListener(AppConfig)
+        DefaultData.upVersion()
         Coroutine.async {
-            LogUtils.init(this@App)
-            LogUtils.d("App", "onCreate")
-            LogUtils.logDeviceInfo()
-            //预下载Cronet so
-            Cronet.preDownload()
-            createNotificationChannels()
-            LiveEventBus.config()
-                .lifecycleObserverAlwaysActive(true)
-                .autoClear(false)
-                .enableLogger(BuildConfig.DEBUG || AppConfig.recordLog)
-                .setLogger(EventLogger())
-            DefaultData.upVersion()
-            AppFreezeMonitor.init(this@App)
-            DispatchersMonitor.init()
             URL.setURLStreamHandlerFactory(ObsoleteUrlFactory(okHttpClient))
             launch { installGmsTlsProvider(appCtx) }
-            initRhino()
             //初始化封面
             BookCover.toString()
             //清除过期数据
@@ -107,15 +71,9 @@ class App : Application() {
             RuleBigDataHelp.clearInvalid()
             BookHelp.clearInvalidCache()
             Backup.clearCache()
-            ReadBookConfig.clearBgAndCache()
-            ThemeConfig.clearBg()
             //初始化简繁转换引擎
             when (AppConfig.chineseConverterType) {
-                1 -> {
-                    ChineseUtils.fixT2sDict()
-                    ChineseUtils.preLoad(true, TransType.TRADITIONAL_TO_SIMPLE)
-                }
-
+                1 -> ChineseUtils.preLoad(true, TransType.TRADITIONAL_TO_SIMPLE)
                 2 -> ChineseUtils.preLoad(true, TransType.SIMPLE_TO_TRADITIONAL)
             }
             //调整排序序号
@@ -151,17 +109,9 @@ class App : Application() {
      * @return
      */
     private fun installGmsTlsProvider(context: Context) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            return
-        }
         try {
-            val gmsPackageName = "com.google.android.gms"
-            val appInfo = packageManager.getApplicationInfo(gmsPackageName, 0)
-            if ((appInfo.flags and ApplicationInfo.FLAG_SYSTEM) == 0) {
-                return
-            }
             val gms = context.createPackageContext(
-                gmsPackageName,
+                "com.google.android.gms",
                 CONTEXT_INCLUDE_CODE or CONTEXT_IGNORE_SECURITY
             )
             gms.classLoader
@@ -186,7 +136,7 @@ class App : Application() {
             enableLights(false)
             enableVibration(false)
             setSound(null, null)
-            lockscreenVisibility = Notification.VISIBILITY_PUBLIC
+            importance = NotificationManager.IMPORTANCE_LOW
         }
 
         val readAloudChannel = NotificationChannel(
@@ -197,7 +147,7 @@ class App : Application() {
             enableLights(false)
             enableVibration(false)
             setSound(null, null)
-            lockscreenVisibility = Notification.VISIBILITY_PUBLIC
+            importance = NotificationManager.IMPORTANCE_LOW
         }
 
         val webChannel = NotificationChannel(
@@ -208,7 +158,7 @@ class App : Application() {
             enableLights(false)
             enableVibration(false)
             setSound(null, null)
-            lockscreenVisibility = Notification.VISIBILITY_PUBLIC
+            importance = NotificationManager.IMPORTANCE_LOW
         }
 
         //向notification manager 提交channel
@@ -219,44 +169,6 @@ class App : Application() {
                 webChannel
             )
         )
-    }
-
-    private fun initRhino() {
-        RhinoScriptEngine
-        RhinoWrapFactory.register(BookSource::class.java, NativeBaseSource.factory)
-        RhinoWrapFactory.register(RssSource::class.java, NativeBaseSource.factory)
-        RhinoWrapFactory.register(HttpTTS::class.java, NativeBaseSource.factory)
-        RhinoWrapFactory.register(ExploreRule::class.java, ReadOnlyJavaObject.factory)
-        RhinoWrapFactory.register(SearchRule::class.java, ReadOnlyJavaObject.factory)
-        RhinoWrapFactory.register(BookInfoRule::class.java, ReadOnlyJavaObject.factory)
-        RhinoWrapFactory.register(ContentRule::class.java, ReadOnlyJavaObject.factory)
-        RhinoWrapFactory.register(BookChapter::class.java, ReadOnlyJavaObject.factory)
-        RhinoWrapFactory.register(Book.ReadConfig::class.java, ReadOnlyJavaObject.factory)
-    }
-
-    class EventLogger : DefaultLogger() {
-
-        override fun log(level: Level, msg: String) {
-            super.log(level, msg)
-            LogUtils.d(TAG, msg)
-        }
-
-        override fun log(level: Level, msg: String, th: Throwable?) {
-            super.log(level, msg, th)
-            LogUtils.d(TAG, "$msg\n${th?.stackTraceToString()}")
-        }
-
-        companion object {
-            private const val TAG = "[LiveEventBus]"
-        }
-    }
-
-    companion object {
-        init {
-            if (BuildConfig.DEBUG) {
-                System.setProperty("kotlinx.coroutines.debug", "on")
-            }
-        }
     }
 
 }

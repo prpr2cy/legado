@@ -6,10 +6,6 @@
         android:title="@string/edit" />
 
     <item
-        android:id="@+id/menu_top"
-        android:title="@string/to_top" />
-
-    <item
         android:id="@+id/menu_login"
         android:title="@string/login" />
 

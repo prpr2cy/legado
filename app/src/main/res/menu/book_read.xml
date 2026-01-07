@@ -66,19 +66,8 @@
         app:showAsAction="never" />
 
     <item
-        android:id="@+id/menu_cover_progress"
-        android:title="@string/cover_book_progress"
-        android:visible="false"
-        app:showAsAction="never" />
-
-    <item
         android:id="@+id/menu_reverse_content"
         android:title="@string/reverse_content"
-        app:showAsAction="never" />
-
-    <item
-        android:id="@+id/menu_simulated_reading"
-        android:title="@string/simulated_reading"
         app:showAsAction="never" />
 
     <item
@@ -90,8 +79,8 @@
 
     <item
         android:id="@+id/menu_same_title_removed"
-        android:checkable="true"
         android:title="@string/same_title_removed"
+        android:checkable="true"
         app:showAsAction="never" />
 
     <item
@@ -108,24 +97,6 @@
         android:title="@string/review"
         android:visible="false"
         app:showAsAction="never" />
-
-    <group android:id="@+id/menu_group_epub">
-
-        <item
-            android:id="@+id/menu_del_ruby_tag"
-            android:checkable="true"
-            android:checked="false"
-            android:title="@string/del_ruby_tag"
-            app:showAsAction="never" />
-
-        <item
-            android:id="@+id/menu_del_h_tag"
-            android:checkable="true"
-            android:checked="false"
-            android:title="@string/del_h_tag"
-            app:showAsAction="never" />
-
-    </group>
 
     <item
         android:id="@+id/menu_image_style"

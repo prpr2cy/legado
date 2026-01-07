@@ -2,14 +2,12 @@ package io.legado.app.ui.book.manage
 
 import android.app.Application
 import androidx.lifecycle.MutableLiveData
-import io.legado.app.R
 import io.legado.app.base.BaseViewModel
 import io.legado.app.constant.AppLog
 import io.legado.app.constant.BookType
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookSource
-import io.legado.app.help.book.BookHelp
 import io.legado.app.help.book.isLocal
 import io.legado.app.help.book.removeType
 import io.legado.app.help.config.AppConfig
@@ -22,8 +20,9 @@ import io.legado.app.utils.stackTraceStr
 import io.legado.app.utils.toastOnUi
 import io.legado.app.utils.writeToOutputStream
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.ensureActive
+import java.io.BufferedOutputStream
 import java.io.File
+import java.io.FileOutputStream
 
 
 class BookshelfManageViewModel(application: Application) : BaseViewModel(application) {
@@ -36,11 +35,7 @@ class BookshelfManageViewModel(application: Application) : BaseViewModel(applica
     fun upCanUpdate(books: List<Book>, canUpdate: Boolean) {
         execute {
             val array = Array(books.size) {
-                books[it].copy(canUpdate = canUpdate).apply {
-                    if (!canUpdate) {
-                        removeType(BookType.updateError)
-                    }
-                }
+                books[it].copy(canUpdate = canUpdate)
             }
             appDb.bookDao.update(*array)
         }
@@ -63,14 +58,17 @@ class BookshelfManageViewModel(application: Application) : BaseViewModel(applica
         }
     }
 
+    @Suppress("BlockingMethodInNonBlockingContext")
     fun saveAllUseBookSourceToFile(success: (file: File) -> Unit) {
         execute {
             val path = "${context.filesDir}/shareBookSource.json"
             FileUtils.delete(path)
             val file = FileUtils.createFileWithReplace(path)
             val sources = appDb.bookDao.getAllUseBookSource()
-            file.outputStream().buffered().use {
-                GSON.writeToOutputStream(it, sources)
+            FileOutputStream(file).use { out ->
+                BufferedOutputStream(out, 64 * 1024).use {
+                    GSON.writeToOutputStream(it, sources)
+                }
             }
             file
         }.onSuccess {
@@ -88,18 +86,10 @@ class BookshelfManageViewModel(application: Application) : BaseViewModel(applica
                 batchChangeSourceProcessLiveData.postValue("${index + 1} / ${books.size}")
                 if (book.isLocal) return@forEachIndexed
                 if (book.origin == source.bookSourceUrl) return@forEachIndexed
-                val newBook = WebBook.preciseSearchAwait(source, book.name, book.author)
+                val newBook = WebBook.preciseSearchAwait(this, source, book.name, book.author)
                     .onFailure {
-                        AppLog.put("搜索书籍出错\n${it.localizedMessage}", it, true)
+                        AppLog.put("获取书籍出错\n${it.localizedMessage}", it, true)
                     }.getOrNull() ?: return@forEachIndexed
-                kotlin.runCatching {
-                    if (newBook.tocUrl.isEmpty()) {
-                        WebBook.getBookInfoAwait(source, newBook)
-                    }
-                }.onFailure {
-                    AppLog.put("获取书籍详情出错\n${it.localizedMessage}", it, true)
-                    return@forEachIndexed
-                }
                 WebBook.getChapterListAwait(source, newBook)
                     .onFailure {
                         AppLog.put("获取目录出错\n${it.localizedMessage}", it, true)
@@ -115,16 +105,6 @@ class BookshelfManageViewModel(application: Application) : BaseViewModel(applica
             batchChangeSourceState.postValue(true)
         }.onFinally {
             batchChangeSourceState.postValue(false)
-        }
-    }
-
-    fun clearCache(books: List<Book>) {
-        execute {
-            books.forEach {
-                BookHelp.clearCache(it)
-            }
-        }.onSuccess {
-            context.toastOnUi(R.string.clear_cache_success)
         }
     }
 

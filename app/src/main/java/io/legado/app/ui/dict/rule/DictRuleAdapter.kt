@@ -95,20 +95,18 @@ class DictRuleAdapter(context: Context, var callBack: CallBack) :
         payloads: MutableList<Any>
     ) {
         binding.run {
-            if (payloads.isEmpty()) {
+            val bundle = payloads.getOrNull(0) as? Bundle
+            if (bundle == null) {
                 root.setBackgroundColor(ColorUtils.withAlpha(context.backgroundColor, 0.5f))
                 cbName.text = item.name
                 swtEnabled.isChecked = item.enabled
                 cbName.isChecked = selected.contains(item)
             } else {
-                for (i in payloads.indices) {
-                    val bundle = payloads[i] as Bundle
-                    bundle.keySet().forEach {
-                        when (it) {
-                            "selected" -> cbName.isChecked = selected.contains(item)
-                            "upName" -> cbName.text = item.name
-                            "enabled" -> swtEnabled.isChecked = item.enabled
-                        }
+                bundle.keySet().map {
+                    when (it) {
+                        "selected" -> cbName.isChecked = selected.contains(item)
+                        "upName" -> cbName.text = item.name
+                        "enabled" -> swtEnabled.isChecked = item.enabled
                     }
                 }
             }
@@ -143,6 +141,7 @@ class DictRuleAdapter(context: Context, var callBack: CallBack) :
             ivDelete.setOnClickListener {
                 getItem(holder.layoutPosition)?.let {
                     callBack.delete(it)
+                    selected.remove(it)
                 }
             }
         }

@@ -1,19 +1,11 @@
 package io.legado.app.data.dao
 
-import androidx.room.Dao
-import androidx.room.Delete
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
-import androidx.room.Query
-import androidx.room.Transaction
-import androidx.room.Update
+import androidx.room.*
 import io.legado.app.constant.BookType
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookGroup
 import io.legado.app.data.entities.BookSource
-import io.legado.app.help.book.isNotShelf
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
 
 @Dao
 interface BookDao {
@@ -28,8 +20,6 @@ interface BookDao {
             BookGroup.IdLocalNone -> flowLocalNoGroup()
             BookGroup.IdError -> flowUpdateError()
             else -> flowByUserGroup(groupId)
-        }.map { list ->
-            list.filterNot { it.isNotShelf }
         }
     }
 
@@ -130,17 +120,11 @@ interface BookDao {
     @get:Query("select max(`order`) from books")
     val maxOrder: Int
 
-    @Query("select exists(select 1 from books where bookUrl = :bookUrl)")
-    fun has(bookUrl: String): Boolean
+    @Query("select 1 from books where bookUrl = :bookUrl")
+    fun has(bookUrl: String): Boolean?
 
-    @Query("select exists(select 1 from books where name = :name and author = :author)")
-    fun has(name: String, author: String): Boolean
-
-    @Query(
-        """select exists(select 1 from books where type & ${BookType.local} > 0 
-        and (originName = :fileName or (origin != '${BookType.localTag}' and origin like '%' || :fileName)))"""
-    )
-    fun hasFile(fileName: String): Boolean
+    @Query("select 1 from books where originName = :fileName or origin like '%' || :fileName")
+    fun hasFile(fileName: String): Boolean?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun insert(vararg book: Book)
@@ -151,12 +135,6 @@ interface BookDao {
     @Delete
     fun delete(vararg book: Book)
 
-    @Transaction
-    fun replace(oldBook: Book, newBook: Book) {
-        delete(oldBook)
-        insert(newBook)
-    }
-
     @Query("update books set durChapterPos = :pos where bookUrl = :bookUrl")
     fun upProgress(bookUrl: String, pos: Int)
 
@@ -165,7 +143,4 @@ interface BookDao {
 
     @Query("update books set `group` = `group` - :group where `group` & :group > 0")
     fun removeGroup(group: Long)
-
-    @Query("delete from books where type & ${BookType.notShelf} > 0")
-    fun deleteNotShelfBook()
 }

@@ -17,7 +17,6 @@ import io.legado.app.R
 import io.legado.app.base.BaseDialogFragment
 import io.legado.app.base.adapter.ItemViewHolder
 import io.legado.app.base.adapter.RecyclerAdapter
-import io.legado.app.constant.AppLog
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.TxtTocRule
 import io.legado.app.databinding.DialogEditTextBinding
@@ -29,23 +28,12 @@ import io.legado.app.lib.theme.primaryColor
 import io.legado.app.ui.association.ImportTxtTocRuleDialog
 import io.legado.app.ui.file.HandleFileContract
 import io.legado.app.ui.qrcode.QrCodeResult
+import io.legado.app.ui.widget.dialog.TextDialog
 import io.legado.app.ui.widget.recycler.ItemTouchCallback
 import io.legado.app.ui.widget.recycler.VerticalDivider
-import io.legado.app.utils.ACache
-import io.legado.app.utils.applyTint
-import io.legado.app.utils.isAbsUrl
-import io.legado.app.utils.launch
-import io.legado.app.utils.readText
-import io.legado.app.utils.setLayout
-import io.legado.app.utils.showDialogFragment
-import io.legado.app.utils.showHelp
-import io.legado.app.utils.splitNotBlank
-import io.legado.app.utils.toastOnUi
+import io.legado.app.utils.*
 import io.legado.app.utils.viewbindingdelegate.viewBinding
-import kotlinx.coroutines.Dispatchers.IO
-import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.conflate
-import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
 
 /**
@@ -120,9 +108,7 @@ class TxtTocRuleDialog() : BaseDialogFragment(R.layout.dialog_toc_regex),
 
     private fun initData() {
         lifecycleScope.launch {
-            appDb.txtTocRuleDao.observeAll().catch {
-                AppLog.put("TXT目录规则对话框获取数据失败\n${it.localizedMessage}", it)
-            }.flowOn(IO).conflate().collect { tocRules ->
+            appDb.txtTocRuleDao.observeAll().conflate().collect { tocRules ->
                 initSelectedName(tocRules)
                 adapter.setItems(tocRules, adapter.diffItemCallBack)
             }
@@ -153,7 +139,7 @@ class TxtTocRuleDialog() : BaseDialogFragment(R.layout.dialog_toc_regex),
             R.id.menu_import_onLine -> showImportDialog()
             R.id.menu_import_qr -> qrCodeResult.launch()
             R.id.menu_import_default -> viewModel.importDefault()
-            R.id.menu_help -> showHelp("txtTocRuleHelp")
+            R.id.menu_help -> showTxtTocRuleHelp()
         }
         return false
     }
@@ -187,7 +173,7 @@ class TxtTocRuleDialog() : BaseDialogFragment(R.layout.dialog_toc_regex),
             okButton {
                 val text = alertBinding.editView.text?.toString()
                 text?.let {
-                    if (it.isAbsUrl() && !cacheUrls.contains(it)) {
+                    if (!cacheUrls.contains(it)) {
                         cacheUrls.add(0, it)
                         aCache.put(importTocRuleKey, cacheUrls.joinToString(","))
                     }
@@ -196,6 +182,11 @@ class TxtTocRuleDialog() : BaseDialogFragment(R.layout.dialog_toc_regex),
             }
             cancelButton()
         }
+    }
+
+    private fun showTxtTocRuleHelp() {
+        val text = String(requireContext().assets.open("help/txtTocRuleHelp.md").readBytes())
+        showDialogFragment(TextDialog(getString(R.string.help), text, TextDialog.Mode.MD))
     }
 
     inner class TocRegexAdapter(context: Context) :
@@ -250,22 +241,20 @@ class TxtTocRuleDialog() : BaseDialogFragment(R.layout.dialog_toc_regex),
             payloads: MutableList<Any>
         ) {
             binding.apply {
-                if (payloads.isEmpty()) {
+                val bundle = payloads.getOrNull(0) as? Bundle
+                if (bundle == null) {
                     root.setBackgroundColor(context.backgroundColor)
                     rbRegexName.text = item.name
                     titleExample.text = item.example
                     rbRegexName.isChecked = item.name == selectedName
                     swtEnabled.isChecked = item.enable
                 } else {
-                    for (i in payloads.indices) {
-                        val bundle = payloads[i] as Bundle
-                        bundle.keySet().forEach {
-                            when (it) {
-                                "upName" -> rbRegexName.text = item.name
-                                "upExample" -> titleExample.text = item.example
-                                "enabled" -> swtEnabled.isChecked = item.enable
-                                "upSelect" -> rbRegexName.isChecked = item.name == selectedName
-                            }
+                    bundle.keySet().map {
+                        when (it) {
+                            "upNmae" -> rbRegexName.text = item.name
+                            "upExample" -> titleExample.text = item.example
+                            "enabled" -> swtEnabled.isChecked = item.enable
+                            "upSelect" -> rbRegexName.isChecked = item.name == selectedName
                         }
                     }
                 }
@@ -293,13 +282,7 @@ class TxtTocRuleDialog() : BaseDialogFragment(R.layout.dialog_toc_regex),
                 }
                 ivDelete.setOnClickListener {
                     getItem(holder.layoutPosition)?.let { item ->
-                        alert(R.string.draw) {
-                            setMessage(getString(R.string.sure_del) + "\n" + item.name)
-                            noButton()
-                            yesButton {
-                                viewModel.del(item)
-                            }
-                        }
+                        viewModel.del(item)
                     }
                 }
             }

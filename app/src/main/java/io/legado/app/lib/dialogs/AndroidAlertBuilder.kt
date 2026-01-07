@@ -6,9 +6,8 @@ import android.graphics.drawable.Drawable
 import android.view.KeyEvent
 import android.view.View
 import androidx.appcompat.app.AlertDialog
-import io.legado.app.R
-import io.legado.app.help.config.AppConfig
 import io.legado.app.utils.applyTint
+import java.net.URLDecoder
 
 internal class AndroidAlertBuilder(override val ctx: Context) : AlertBuilder<AlertDialog> {
     private val builder = AlertDialog.Builder(ctx)
@@ -121,6 +120,20 @@ internal class AndroidAlertBuilder(override val ctx: Context) : AlertBuilder<Ale
         }
     }
 
+    override fun <T> decodeItems(
+        items: List<T>,
+        onItemSelected: (dialog: DialogInterface, item: T, index: Int) -> Unit
+    ) {
+        builder.setItems(Array(items.size) { i ->
+            URLDecoder.decode(
+                items[i].toString(),
+                "UTF-8"
+            )
+        }) { dialog, which ->
+            onItemSelected(dialog, items[which], which)
+        }
+    }
+
     override fun multiChoiceItems(
         items: Array<String>,
         checkedItems: BooleanArray,
@@ -141,31 +154,7 @@ internal class AndroidAlertBuilder(override val ctx: Context) : AlertBuilder<Ale
         }
     }
 
-    override fun build(): AlertDialog {
-        val dialog = builder.create()
-        if (AppConfig.isEInkMode) {
-            dialog.window?.run {
-                val attr = attributes
-                attr.dimAmount = 0f
-                attr.windowAnimations = 0
-                attributes = attr
-                setBackgroundDrawableResource(R.drawable.bg_eink_border_dialog)
-            }
-        }
-        return dialog
-    }
+    override fun build(): AlertDialog = builder.create()
 
-    override fun show(): AlertDialog {
-        val dialog = builder.show().applyTint()
-        if (AppConfig.isEInkMode) {
-            dialog.window?.run {
-                val attr = attributes
-                attr.dimAmount = 0f
-                attr.windowAnimations = 0
-                attributes = attr
-                setBackgroundDrawableResource(R.drawable.bg_eink_border_dialog)
-            }
-        }
-        return dialog
-    }
+    override fun show(): AlertDialog = builder.show().applyTint()
 }

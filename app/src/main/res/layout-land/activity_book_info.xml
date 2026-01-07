@@ -159,7 +159,7 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent">
 
-            <androidx.core.widget.NestedScrollView
+            <ScrollView
                 android:id="@+id/scroll_view"
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
@@ -372,14 +372,13 @@
                         android:paddingBottom="8dp"
                         android:text="@string/book_intro"
                         android:textColor="@color/secondaryText"
-                        android:textIsSelectable="true"
                         android:textSize="14sp"
                         android:visibility="visible"
                         tools:ignore="RtlHardcoded,RtlSymmetry" />
 
                 </LinearLayout>
 
-            </androidx.core.widget.NestedScrollView>
+            </ScrollView>
 
             <LinearLayout
                 android:id="@+id/fl_action"

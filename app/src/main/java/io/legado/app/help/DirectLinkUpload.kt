@@ -3,7 +3,6 @@ package io.legado.app.help
 import androidx.annotation.Keep
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.model.analyzeRule.AnalyzeRule
-import io.legado.app.model.analyzeRule.AnalyzeRule.Companion.setCoroutineContext
 import io.legado.app.model.analyzeRule.AnalyzeUrl
 import io.legado.app.utils.ACache
 import io.legado.app.utils.FileUtils
@@ -15,7 +14,6 @@ import io.legado.app.utils.fromJsonArray
 import io.legado.app.utils.fromJsonObject
 import splitties.init.appCtx
 import java.io.File
-import kotlin.coroutines.coroutineContext
 
 @Suppress("MemberVisibilityCanBePrivate")
 object DirectLinkUpload {
@@ -62,7 +60,6 @@ object DirectLinkUpload {
             mFile.delete()
         }
         val analyzeRule = AnalyzeRule().setContent(res.body, res.url)
-            .setCoroutineContext(coroutineContext)
         val downloadUrl = analyzeRule.getString(downloadUrlRule)
         if (downloadUrl.isBlank()) {
             throw NoStackTraceException("上传失败,${res.body}")
@@ -101,7 +98,7 @@ object DirectLinkUpload {
 
     @Keep
     data class Rule(
-        var uploadUrl: String, //创建分享链接
+        var uploadUrl: String, //上传url
         var downloadUrlRule: String, //下载链接规则
         var summary: String, //注释
         var compress: Boolean = false, //是否压缩

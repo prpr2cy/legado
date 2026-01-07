@@ -9,7 +9,6 @@ import android.os.Build
 import android.os.Environment
 import android.provider.DocumentsContract
 import android.provider.MediaStore
-import androidx.core.provider.DocumentsContractCompat
 
 import java.io.File
 import java.io.FileInputStream
@@ -33,7 +32,7 @@ object RealPathUtil {
         if (isKitKat && DocumentsContract.isDocumentUri(context, uri)) { // ExternalStorageProvider
             if (isExternalStorageDocument(uri)) {
                 val docId = DocumentsContract.getDocumentId(uri)
-                val split = docId.split(":")
+                val split = docId.split(":").toTypedArray()
                 val type = split[0]
                 if ("primary".equals(type, ignoreCase = true)) {
                     return Environment.getExternalStorageDirectory().toString() + "/" + split[1]
@@ -55,51 +54,34 @@ object RealPathUtil {
                     "image" -> {
                         contentUri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
                     }
-
                     "video" -> {
                         contentUri = MediaStore.Video.Media.EXTERNAL_CONTENT_URI
                     }
-
                     "audio" -> {
                         contentUri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
                     }
                 }
                 val selection = "_id=?"
-                val selectionArgs = arrayOf(split[1])
+                val selectionArgs = arrayOf(
+                    split[1]
+                )
                 return getDataColumn(context, contentUri, selection, selectionArgs)
             }
-        } else if (DocumentsContractCompat.isTreeUri(uri)) {
-            if (isExternalStorageDocument(uri)) {
-                val docId = DocumentsContract.getTreeDocumentId(uri)
-                val split = docId.split(":")
-                val type = split[0]
-                if ("primary".equals(type, ignoreCase = true)) {
-                    return Environment.getExternalStorageDirectory().toString() + "/" + split[1]
-                }
-            }
-        } else if ("content".equals(uri.scheme, ignoreCase = true)) { // Return the remote address
-            return if (isGooglePhotosUri(uri)) uri.lastPathSegment
-            else getDataColumn(context, uri, null, null)
+        } else if ("content".equals(
+                uri.scheme,
+                ignoreCase = true
+            )
+        ) { // Return the remote address
+            return if (isGooglePhotosUri(uri)) uri.lastPathSegment else getDataColumn(
+                context,
+                uri,
+                null,
+                null
+            )
         } else if ("file".equals(uri.scheme, ignoreCase = true)) {
             return uri.path
         }
         return uri.path
-    }
-
-    fun getTreePath(uri: Uri): String? {
-        if (!DocumentsContractCompat.isTreeUri(uri) || !isExternalStorageDocument(uri)) {
-            return null
-        }
-        val docId = DocumentsContract.getTreeDocumentId(uri)
-        val split = docId.split(":")
-        if (split.size < 2) {
-            return null
-        }
-        val type = split[0]
-        if ("primary".equals(type, ignoreCase = true)) {
-            return Environment.getExternalStorageDirectory().toString() + "/" + split[1]
-        }
-        return null
     }
 
     /**

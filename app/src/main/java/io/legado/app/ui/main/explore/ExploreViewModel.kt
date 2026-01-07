@@ -3,23 +3,23 @@ package io.legado.app.ui.main.explore
 import android.app.Application
 import io.legado.app.base.BaseViewModel
 import io.legado.app.data.appDb
-import io.legado.app.data.entities.BookSourcePart
+import io.legado.app.data.entities.BookSource
 import io.legado.app.help.config.SourceConfig
-import io.legado.app.help.source.SourceHelp
 
 class ExploreViewModel(application: Application) : BaseViewModel(application) {
 
-    fun topSource(bookSource: BookSourcePart) {
+    fun topSource(bookSource: BookSource) {
         execute {
             val minXh = appDb.bookSourceDao.minOrder
             bookSource.customOrder = minXh - 1
-            appDb.bookSourceDao.upOrder(bookSource)
+            appDb.bookSourceDao.insert(bookSource)
         }
     }
 
-    fun deleteSource(source: BookSourcePart) {
+    fun deleteSource(source: BookSource) {
         execute {
-            SourceHelp.deleteBookSource(source.bookSourceUrl)
+            appDb.bookSourceDao.delete(source)
+            SourceConfig.removeSource(source.bookSourceUrl)
         }
     }
 

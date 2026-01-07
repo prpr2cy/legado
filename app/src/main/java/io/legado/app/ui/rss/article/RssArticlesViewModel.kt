@@ -80,16 +80,14 @@ class RssArticlesViewModel(application: Application) : BaseViewModel(application
             return
         }
         val firstArticle = articles.first()
-        val dbFirstArticle = appDb.rssArticleDao.get(firstArticle.origin, firstArticle.link)
-        val lastArticle = articles.last()
-        val dbLastArticle = appDb.rssArticleDao.get(lastArticle.origin, lastArticle.link)
-        if (dbFirstArticle != null && dbLastArticle != null) {
+        val dbArticle = appDb.rssArticleDao.get(firstArticle.origin, firstArticle.link)
+        if (dbArticle != null) {
             loadFinallyLiveData.postValue(false)
         } else {
             articles.forEach {
                 it.order = order--
             }
-            appDb.rssArticleDao.append(*articles.toTypedArray())
+            appDb.rssArticleDao.insert(*articles.toTypedArray())
         }
     }
 

@@ -1,18 +1,11 @@
 package io.legado.app.data.dao
 
-import androidx.room.Dao
-import androidx.room.Delete
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
-import androidx.room.Query
-import androidx.room.Update
+import androidx.room.*
 import io.legado.app.constant.AppPattern
 import io.legado.app.data.entities.RssSource
 import io.legado.app.utils.cnCompare
 import io.legado.app.utils.splitNotBlank
-import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 
 @Dao
@@ -38,7 +31,6 @@ interface RssSourceDao {
         where sourceName like '%' || :key || '%' 
         or sourceUrl like '%' || :key || '%' 
         or sourceGroup like '%' || :key || '%'
-        or sourceComment like '%' || :key || '%'
         order by customOrder"""
     )
     fun flowSearch(key: String): Flow<List<RssSource>>
@@ -70,8 +62,7 @@ interface RssSourceDao {
         where enabled = 1 
         and (sourceName like '%' || :searchKey || '%' 
             or sourceGroup like '%' || :searchKey || '%' 
-            or sourceUrl like '%' || :searchKey || '%'
-            or sourceComment like '%' || :searchKey || '%') 
+            or sourceUrl like '%' || :searchKey || '%') 
         order by customOrder"""
     )
     fun flowEnabled(searchKey: String): Flow<List<RssSource>>
@@ -90,7 +81,7 @@ interface RssSourceDao {
     fun flowGroupsUnProcessed(): Flow<List<String>>
 
     @Query("select distinct sourceGroup from rssSources where trim(sourceGroup) <> '' and enabled = 1")
-    fun flowEnabledGroupsUnProcessed(): Flow<List<String>>
+    fun flowGroupEnabled(): Flow<List<String>>
 
     @get:Query("select distinct sourceGroup from rssSources where trim(sourceGroup) <> ''")
     val allGroupsUnProcessed: List<String>
@@ -122,11 +113,8 @@ interface RssSourceDao {
     @Query("select * from rssSources where sourceGroup like '%' || :group || '%'")
     fun getByGroup(group: String): List<RssSource>
 
-    @Query("select exists(select 1 from rssSources where sourceUrl = :key)")
-    fun has(key: String): Boolean
-
-    @Query("update rssSources set enabled = :enable where sourceUrl = :sourceUrl")
-    fun enable(sourceUrl: String, enable: Boolean)
+    @Query("select 1 from rssSources where sourceUrl = :key")
+    fun has(key: String): Boolean?
 
     private fun dealGroups(list: List<String>): List<String> {
         val groups = linkedSetOf<String>()
@@ -145,13 +133,6 @@ interface RssSourceDao {
     fun flowGroups(): Flow<List<String>> {
         return flowGroupsUnProcessed().map { list ->
             dealGroups(list)
-        }.flowOn(IO)
+        }
     }
-
-    fun flowEnabledGroups(): Flow<List<String>> {
-        return flowEnabledGroupsUnProcessed().map { list ->
-            dealGroups(list)
-        }.flowOn(IO)
-    }
-
 }

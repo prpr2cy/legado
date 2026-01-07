@@ -8,139 +8,98 @@
   >
     <img
       class="full"
-      v-if="/^\s*<img[^>]*src[^>]+>$/.test(String(para))"
+      v-if="/^\s*<img[^>]*src[^>]+>$/.test(para)"
       :src="getImageSrc(para)"
       @error.once="proxyImage"
       loading="lazy"
     />
-    <p v-else :style="{ fontFamily, fontSize }" v-html="para" @error.capture="handleImgLoadError" />
+    <p v-else :style="{ fontFamily, fontSize }" v-html="para" />
   </div>
 </template>
 
-<script setup lang="ts">
-import { isLegadoUrl } from '@/utils/utils'
-import API from '@api'
-import jump from '@/plugins/jump'
-import type { webReadConfig } from '@/web'
+<script setup>
+import { getImageFromLegado, isLegadoUrl } from "@/utils/utils";
+import jump from "@/plugins/jump";
 
-const store = useBookStore()
-const readWidth = computed(() => store.config.readWidth)
-const bookUrl = computed(() => store.readingBook.bookUrl)
+const props = defineProps({
+  chapterIndex: { type: Number, required: true },
+  contents: { type: Array, required: true },
+  title: { type: String, required: true },
+  spacing: { type: Object, required: true },
+  fontFamily: { type: String, required: true },
+  fontSize: { type: String, required: true },
+});
 
-const props = defineProps<{
-  chapterIndex: number
-  contents: Array<string>
-  title: string
-  spacing: webReadConfig['spacing']
-  fontFamily: string
-  fontSize: string
-}>()
+const getImageSrc = (content) => {
+  const imgPattern = /<img[^>]*src="([^"]*(?:"[^>]+\})?)"[^>]*>/;
+  const src = content.match(imgPattern)[1];
+  if (isLegadoUrl(src)) return getImageFromLegado(src);
+  return src;
+};
+const proxyImage = (event) => {
+  event.target.src = getImageFromLegado(event.target.src);
+};
 
-const getImageSrc = (content: string) => {
-  const imgPattern = /<img[^>]*src="([^"]*(?:"[^>]+\})?)"[^>]*>/
-  const src = content.match(imgPattern)![1] //reg tested in template
-  if (isLegadoUrl(src))
-    return API.getProxyImageUrl(
-      bookUrl.value,
-      src,
-      useBookStore().config.readWidth,
-    )
-  return src
-}
-const proxyImage = (event: Event) => {
-  /* 获取IMG标签原始的src
-    <img src="/test" />
-    假设location.href = http://example.com
-    event.target.src 返回 http://example.com/test
-    (event.target as HTMLImageElement)?.getAttribute("src")  返回/test
-  */
-  const src = (event.target as HTMLImageElement)?.getAttribute("src")
-  if (src != null && src.length > 0) {
-    (event.target as HTMLImageElement).src = API.getProxyImageUrl(
-      bookUrl.value,
-      src,
-      readWidth.value,
-    )
-  }
-}
-
-/**
- * 处理传入的IMG标签错误事件，自动替换图片的代理链接
- */
-const handleImgLoadError = (event: Event) => {
-  if ((event.target as HTMLElement)?.tagName === "IMG") {
-    console.log("[ChapterContent]: IMG Load Error, replace src:",
-      (event.target as HTMLImageElement)?.getAttribute("src"), "=>",
-      API.getProxyImageUrl(
-        bookUrl.value,
-        (event.target as HTMLImageElement)?.getAttribute("src") ?? "",
-        readWidth.value,
-      )
-    )
-    proxyImage(event)
-  }
-}
-
-const calculateWordCount = (paragraph: string) => {
-  const imgPattern = /<img[^>]*src="[^"]*(?:"[^>]+\})?"[^>]*>/g
+const calculateWordCount = (paragraph) => {
+  const imgPattern = /<img[^>]*src="[^"]*(?:"[^>]+\})?"[^>]*>/g;
   //内嵌图片文字为1
-  const imagePlaceHolder = ' '
-  return paragraph.replace(imgPattern, imagePlaceHolder).length
-}
+  const imagePlaceHolder = " ";
+  return paragraph.replaceAll(imgPattern, imagePlaceHolder).length;
+};
 const chapterPos = computed(() => {
-  let pos = -1
-  return Array.from(props.contents, content => {
-    pos += calculateWordCount(content) + 1 //计算上一段的换行符
-    return pos
-  })
-})
+  let pos = -1;
+  return Array.from(props.contents, (content) => {
+    pos += calculateWordCount(content) + 1; //计算上一段的换行符
+    return pos;
+  });
+});
 
-const titleRef = ref<HTMLElement>()
-const paragraphRef = ref<HTMLParagraphElement[]>()
-const scrollToReadedLength = (length: number) => {
-  if (length === 0) return
-  const paragraphIndex = chapterPos.value.findIndex(
-    wordCount => wordCount >= length,
-  )
-  if (paragraphIndex === -1) return
+const titleRef = ref();
+const paragraphRef = ref();
+const scrollToReadedLength = (length) => {
+  if (length === 0) return;
+  let paragraphIndex = chapterPos.value.findIndex(
+    (wordCount) => wordCount >= length,
+  );
+  if (paragraphIndex === -1) return;
   nextTick(() => {
-    jump(paragraphRef.value![paragraphIndex], {
+    jump(paragraphRef.value[paragraphIndex], {
       duration: 0,
-    })
-  })
-}
+    });
+  });
+};
 defineExpose({
   scrollToReadedLength,
-})
-let intersectionObserver: IntersectionObserver | null = null
-const emit = defineEmits(['readedLengthChange'])
+});
+let intersectionObserver = null;
+const emit = defineEmits(["readedLengthChange"]);
 onMounted(() => {
   intersectionObserver = new IntersectionObserver(
-    entries => {
-      for (const { target, isIntersecting } of entries) {
+    (entries) => {
+      for (let { target, isIntersecting } of entries) {
         if (isIntersecting) {
           emit(
-            'readedLengthChange',
+            "readedLengthChange",
             props.chapterIndex,
-            parseInt((target as HTMLElement).dataset.chapterpos as string),
-          )
+            parseInt(target.dataset.chapterpos),
+          );
         }
       }
     },
     {
       rootMargin: `0px 0px -${window.innerHeight - 24}px 0px`,
     },
-  )
-  intersectionObserver.observe(titleRef.value!)
-  paragraphRef.value!.forEach(element => {
-    intersectionObserver!.observe(element)
-  })
-})
+  );
+  intersectionObserver.observe(titleRef.value);
+  paragraphRef.value.forEach((element) => {
+    intersectionObserver.observe(element);
+  });
+});
 
 onUnmounted(() => {
-  intersectionObserver?.disconnect()
-  intersectionObserver = null
-})
+  intersectionObserver?.disconnect();
+  intersectionObserver = null;
+});
 </script>
 
 <style lang="scss" scoped>
@@ -149,18 +108,19 @@ onUnmounted(() => {
   font:
     24px / 32px PingFangSC-Regular,
     HelveticaNeue-Light,
-    'Helvetica Neue Light',
-    'Microsoft YaHei',
+    "Helvetica Neue Light",
+    "Microsoft YaHei",
     sans-serif;
 }
 
 p {
   display: block;
   word-wrap: break-word;
-  /*   word-break: break-all; */
-  letter-spacing: calc(v-bind('props.spacing.letter') * 1em);
-  line-height: calc(1 + v-bind('props.spacing.line'));
-  margin: calc(v-bind('props.spacing.paragraph') * 1em) 0;
+  word-break: break-all;
+
+  letter-spacing: calc(v-bind("props.spacing.letter") * 1em);
+  line-height: calc(1 + v-bind("props.spacing.line"));
+  margin: calc(v-bind("props.spacing.paragraph") * 1em) 0;
 
   :deep(img) {
     height: 1em;

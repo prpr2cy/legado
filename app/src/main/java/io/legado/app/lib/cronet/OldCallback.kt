@@ -9,8 +9,7 @@ import org.chromium.net.UrlRequest
 import java.io.IOException
 
 @Keep
-class OldCallback(originalRequest: Request, mCall: Call, readTimeoutMillis: Int) :
-    AbsCallBack(originalRequest, mCall, readTimeoutMillis) {
+class OldCallback(originalRequest: Request, mCall: Call) : AbsCallBack(originalRequest, mCall) {
 
     private val mResponseCondition = ConditionVariable()
     private var mException: IOException? = null
@@ -20,7 +19,6 @@ class OldCallback(originalRequest: Request, mCall: Call, readTimeoutMillis: Int)
         //获取okhttp call的完整请求的超时时间
         val timeOutMs: Long = mCall.timeout().timeoutNanos() / 1000000
         urlRequest.start()
-        startCheckCancelJob(urlRequest)
         if (timeOutMs > 0) {
             mResponseCondition.block(timeOutMs)
         } else {

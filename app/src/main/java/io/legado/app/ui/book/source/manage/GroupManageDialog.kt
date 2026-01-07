@@ -76,14 +76,14 @@ class GroupManageDialog : BaseDialogFragment(R.layout.dialog_recycler_view),
                 editView.setHint(R.string.group_name)
             }
             customView { alertBinding.root }
-            okButton {
+            yesButton {
                 alertBinding.editView.text?.toString()?.let {
                     if (it.isNotBlank()) {
                         viewModel.addGroup(it)
                     }
                 }
             }
-            cancelButton()
+            noButton()
         }.requestInputMethod()
     }
 
@@ -95,10 +95,10 @@ class GroupManageDialog : BaseDialogFragment(R.layout.dialog_recycler_view),
                 editView.setText(group)
             }
             customView { alertBinding.root }
-            okButton {
+            yesButton {
                 viewModel.upGroup(group, alertBinding.editView.text?.toString())
             }
-            cancelButton()
+            noButton()
         }.requestInputMethod()
     }
 

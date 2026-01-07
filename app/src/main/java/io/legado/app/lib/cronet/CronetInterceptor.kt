@@ -3,15 +3,8 @@ package io.legado.app.lib.cronet
 import android.annotation.SuppressLint
 import android.os.Build
 import androidx.annotation.Keep
-import io.legado.app.help.http.CookieManager
-import io.legado.app.help.http.CookieManager.cookieJarHeader
 import io.legado.app.utils.printOnDebug
-import okhttp3.Call
-import okhttp3.CookieJar
-import okhttp3.HttpUrl
-import okhttp3.Interceptor
-import okhttp3.Request
-import okhttp3.Response
+import okhttp3.*
 import java.io.IOException
 
 @Keep
@@ -25,35 +18,21 @@ class CronetInterceptor(private val cookieJar: CookieJar) : Interceptor {
         }
         val original: Request = chain.request()
         //Cronet未初始化
-        if (!CronetLoader.install() || cronetEngine == null) {
-            return chain.proceed(original)
-        }
-        val cronetException: Exception
-        try {
+        return if (!CronetLoader.install() || cronetEngine == null) {
+            chain.proceed(original)
+        } else try {
             val builder: Request.Builder = original.newBuilder()
             //移除Keep-Alive,手动设置会导致400 BadRequest
             builder.removeHeader("Keep-Alive")
             builder.removeHeader("Accept-Encoding")
 
-            // https://github.com/gedoor/legado/issues/5025#issuecomment-2851156500
-            if (!original.isHttps &&
-                original.header("User-Agent")?.startsWith("Mozilla", true) == true
-            ) {
-                val referer = original.header("Referer")
-                if (referer != null && referer.startsWith("https:", true)) {
-                    builder.header("Referer", "http" + referer.substring(5))
-                }
-            }
-
-            var newReq = builder.build()
-
-            if (newReq.header(cookieJarHeader) != null) {
-                newReq = CookieManager.loadRequest(newReq)
-            }
-
-            return proceedWithCronet(newReq, chain.call(), chain.readTimeoutMillis())!!
+            val newReq = builder.build()
+            proceedWithCronet(newReq, chain.call())?.let { response ->
+                //从Response 中保存Cookie到CookieJar
+                //cookieJar.receiveHeaders(newReq.url, response.headers)
+                response
+            } ?: chain.proceed(original)
         } catch (e: Exception) {
-            cronetException = e
             //不能抛出错误,抛出错误会导致应用崩溃
             //遇到Cronet处理有问题时的情况，如证书过期等等，回退到okhttp处理
             if (!e.message.toString().contains("ERR_CERT_", true)
@@ -61,25 +40,19 @@ class CronetInterceptor(private val cookieJar: CookieJar) : Interceptor {
             ) {
                 e.printOnDebug()
             }
-        }
-        try {
-            return chain.proceed(original)
-        } catch (e: Exception) {
-            e.addSuppressed(cronetException)
-            throw e
+            chain.proceed(original)
         }
     }
 
     @SuppressLint("ObsoleteSdkInt")
-    @Throws(IOException::class)
-    private fun proceedWithCronet(request: Request, call: Call, readTimeoutMillis: Int): Response? {
+    private fun proceedWithCronet(request: Request, call: Call): Response? {
         val callBack = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            NewCallBack(request, call, readTimeoutMillis)
+            NewCallBack(request, call)
         } else {
-            OldCallback(request, call, readTimeoutMillis)
+            OldCallback(request, call)
         }
-        buildRequest(request, callBack)?.let {
-            return callBack.waitForDone(it)
+        buildRequest(request, callBack)?.runCatching {
+            return callBack.waitForDone(this)
         }
         return null
     }

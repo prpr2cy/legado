@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-@file:Suppress("unused")
+@file:Suppress("NOTHING_TO_INLINE", "unused")
 
 package io.legado.app.lib.dialogs
 
@@ -88,3 +88,16 @@ fun <T> Context.selector(
         show()
     }
 }
+
+fun <T> Context.decodeSelector(
+    titleSource: Int,
+    items: List<T>,
+    onClick: (DialogInterface, T, Int) -> Unit
+) {
+    with(AndroidAlertBuilder(this)) {
+        this.setTitle(titleSource)
+        decodeItems(items, onClick)
+        show()
+    }
+}
+

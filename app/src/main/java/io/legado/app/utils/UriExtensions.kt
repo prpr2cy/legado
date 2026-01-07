@@ -1,8 +1,6 @@
 package io.legado.app.utils
 
 import android.content.Context
-import android.content.Intent
-import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.ParcelFileDescriptor
 import androidx.appcompat.app.AppCompatActivity
@@ -47,7 +45,10 @@ fun AppCompatActivity.readUri(
             }
         } else {
             PermissionsCompat.Builder()
-                .addPermissions(*Permissions.Group.STORAGE)
+                .addPermissions(
+                    Permissions.READ_EXTERNAL_STORAGE,
+                    Permissions.WRITE_EXTERNAL_STORAGE
+                )
                 .rationale(R.string.get_storage_per)
                 .onGranted {
                     RealPathUtil.getPath(this, uri)?.let { path ->
@@ -62,7 +63,7 @@ fun AppCompatActivity.readUri(
         }
     } catch (e: Exception) {
         e.printOnDebug()
-        AppLog.put("读取Uri出错\n$uri\n$e", e, true)
+        toastOnUi(e.localizedMessage ?: "read uri error")
         if (e is SecurityException) {
             throw e
         }
@@ -84,7 +85,10 @@ fun Fragment.readUri(uri: Uri?, success: (fileDoc: FileDoc, inputStream: InputSt
             }
         } else {
             PermissionsCompat.Builder()
-                .addPermissions(*Permissions.Group.STORAGE)
+                .addPermissions(
+                    Permissions.READ_EXTERNAL_STORAGE,
+                    Permissions.WRITE_EXTERNAL_STORAGE
+                )
                 .rationale(R.string.get_storage_per)
                 .onGranted {
                     RealPathUtil.getPath(requireContext(), uri)?.let { path ->
@@ -93,13 +97,14 @@ fun Fragment.readUri(uri: Uri?, success: (fileDoc: FileDoc, inputStream: InputSt
                         FileInputStream(file).use { inputStream ->
                             success.invoke(fileDoc, inputStream)
                         }
+
                     }
                 }
                 .request()
         }
     } catch (e: Exception) {
         e.printOnDebug()
-        AppLog.put("读取Uri出错\n$uri\n$e", e, true)
+        toastOnUi(e.localizedMessage ?: "read uri error")
     }
 }
 
@@ -306,11 +311,4 @@ fun Uri.toRequestBody(contentType: MediaType? = null): RequestBody {
             }
         }
     }
-}
-
-fun Uri.canRead(): Boolean {
-    return appCtx.checkSelfUriPermission(
-        this,
-        Intent.FLAG_GRANT_READ_URI_PERMISSION
-    ) == PackageManager.PERMISSION_GRANTED
 }

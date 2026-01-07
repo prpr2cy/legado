@@ -24,19 +24,17 @@ class BooksAdapterGrid(context: Context, private val callBack: CallBack) :
         item: Book,
         payloads: MutableList<Any>
     ) = binding.run {
-        if (payloads.isEmpty()) {
+        val bundle = payloads.getOrNull(0) as? Bundle
+        if (bundle == null) {
             tvName.text = item.name
             ivCover.load(item.getDisplayCover(), item.name, item.author, false, item.origin)
             upRefresh(binding, item)
         } else {
-            for (i in payloads.indices) {
-                val bundle = payloads[i] as Bundle
-                bundle.keySet().forEach {
-                    when (it) {
-                        "name" -> tvName.text = item.name
-                        "cover" -> ivCover.load(item.getDisplayCover(), item.name, item.author, false, item.origin)
-                        "refresh" -> upRefresh(binding, item)
-                    }
+            bundle.keySet().forEach {
+                when (it) {
+                    "name" -> tvName.text = item.name
+                    "cover" -> ivCover.load(item.getDisplayCover(), item.name, item.author, false, item.origin)
+                    "refresh" -> upRefresh(binding, item)
                 }
             }
         }

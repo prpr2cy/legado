@@ -10,23 +10,24 @@ import io.legado.app.constant.AppLog
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.SearchBook
-import io.legado.app.help.book.isNotShelf
 import io.legado.app.model.webBook.WebBook
 import io.legado.app.utils.printOnDebug
 import io.legado.app.utils.stackTraceStr
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.mapLatest
-import java.util.concurrent.ConcurrentHashMap
+import java.util.Collections
 
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ExploreShowViewModel(application: Application) : BaseViewModel(application) {
-    val bookshelf: MutableSet<String> = ConcurrentHashMap.newKeySet()
+    val bookshelf: MutableSet<String> = Collections.synchronizedSet(hashSetOf<String>())
     val upAdapterLiveData = MutableLiveData<String>()
     val booksData = MutableLiveData<List<SearchBook>>()
+    val addBooksData = MutableLiveData<List<SearchBook>>()
     val errorLiveData = MutableLiveData<String>()
+    val errorTopLiveData = MutableLiveData<String>()
+    val pageLiveData = MutableLiveData<Int>()
     private var bookSource: BookSource? = null
     private var exploreUrl: String? = null
     private var page = 1
@@ -35,15 +36,7 @@ class ExploreShowViewModel(application: Application) : BaseViewModel(application
     init {
         execute {
             appDb.bookDao.flowAll().mapLatest { books ->
-                val keys = arrayListOf<String>()
-                books.filterNot { it.isNotShelf }
-                    .forEach {
-                        keys.add("${it.name}-${it.author}")
-                        keys.add(it.name)
-                    }
-                keys
-            }.catch {
-                AppLog.put("发现列表界面获取书籍数据失败\n${it.localizedMessage}", it)
+                books.map { "${it.name}-${it.author}" }
             }.collect {
                 bookshelf.clear()
                 bookshelf.addAll(it)
@@ -65,16 +58,47 @@ class ExploreShowViewModel(application: Application) : BaseViewModel(application
         }
     }
 
+    /**
+     * 上滑触发的增量更新
+     */
+    fun explore(page: Int) {
+        val source = bookSource
+        val url = exploreUrl
+        if (source == null || url == null) return
+        WebBook.exploreBook(viewModelScope, source, url, page)
+            .timeout(if (BuildConfig.DEBUG) 0L else 60000L)
+            .onSuccess(IO) { searchBooks ->
+                val newBooks = linkedSetOf<SearchBook>()
+                newBooks.addAll(searchBooks)
+                newBooks.addAll(books)
+                books = newBooks
+                addBooksData.postValue(searchBooks)
+                appDb.searchBookDao.insert(*searchBooks.toTypedArray())
+                pageLiveData.postValue(page)
+            }.onError {
+                it.printOnDebug()
+                errorTopLiveData.postValue(it.stackTraceStr)
+            }
+    }
+
+    fun skipPage(page: Int) {
+        if (page > 0) {
+            books.clear()
+            this.page = page
+        }
+    }
+
     fun explore() {
         val source = bookSource
         val url = exploreUrl
         if (source == null || url == null) return
         WebBook.exploreBook(viewModelScope, source, url, page)
-            .timeout(if (BuildConfig.DEBUG) 0L else 30000L)
+            .timeout(if (BuildConfig.DEBUG) 0L else 60000L)
             .onSuccess(IO) { searchBooks ->
                 books.addAll(searchBooks)
                 booksData.postValue(books.toList())
                 appDb.searchBookDao.insert(*searchBooks.toTypedArray())
+                pageLiveData.postValue(page)
                 page++
             }.onError {
                 it.printOnDebug()
@@ -82,12 +106,18 @@ class ExploreShowViewModel(application: Application) : BaseViewModel(application
             }
     }
 
-    fun isInBookShelf(name: String, author: String): Boolean {
-        return if (author.isNotBlank()) {
-            bookshelf.contains("$name-$author")
-        } else {
-            bookshelf.contains(name)
+    suspend fun loadExploreBooks(start: Int, end: Int): List<SearchBook> {
+        val source = bookSource
+        val url = exploreUrl
+        if (source == null || url == null) return emptyList()
+        val searchBooks = arrayListOf<SearchBook>()
+        for (page in start..end) {
+            val books = WebBook.exploreBookAwait(source, url, page)
+            if (books.isEmpty()) break
+            searchBooks.addAll(books)
         }
+        searchBooks.reverse()
+        return searchBooks
     }
 
 }

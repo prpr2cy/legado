@@ -1,8 +1,7 @@
 package io.legado.app.model
 
-import androidx.collection.LruCache
 import com.google.gson.reflect.TypeToken
-import com.script.ScriptBindings
+import com.script.SimpleBindings
 import com.script.rhino.RhinoScriptEngine
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.http.newCallStrResponse
@@ -14,20 +13,19 @@ import io.legado.app.utils.isAbsUrl
 import io.legado.app.utils.isJsonObject
 import kotlinx.coroutines.runBlocking
 import org.mozilla.javascript.Scriptable
-import org.mozilla.javascript.ScriptableObject
 import splitties.init.appCtx
 import java.io.File
 import java.lang.ref.WeakReference
-import kotlin.coroutines.CoroutineContext
+import kotlin.collections.set
 
 object SharedJsScope {
 
-    private val cacheFolder = File(appCtx.cacheDir, "shareJs")
+    private val cacheFolder = File(appCtx.filesDir, "shareJs")
     private val aCache = ACache.get(cacheFolder)
 
-    private val scopeMap = LruCache<String, WeakReference<Scriptable>>(16)
+    private val scopeMap = hashMapOf<String, WeakReference<Scriptable>>()
 
-    fun getScope(jsLib: String?, coroutineContext: CoroutineContext?): Scriptable? {
+    fun getScope(jsLib: String?): Scriptable? {
         if (jsLib.isNullOrBlank()) {
             return null
         }
@@ -35,7 +33,7 @@ object SharedJsScope {
         var scope = scopeMap[key]?.get()
         if (scope == null) {
             scope = RhinoScriptEngine.run {
-                getRuntimeScope(ScriptBindings())
+                getRuntimeScope(getScriptContext(SimpleBindings()))
             }
             if (jsLib.isJsonObject()) {
                 val jsMap: Map<String, String> = GSON.fromJson(
@@ -56,32 +54,21 @@ object SharedJsScope {
                                     url(value)
                                 }.body
                             }
-                            if (js != null) {
+                            if (js !== null) {
                                 aCache.put(fileName, js)
                             } else {
                                 throw NoStackTraceException("下载jsLib-${value}失败")
                             }
                         }
-                        RhinoScriptEngine.eval(js, scope, coroutineContext)
+                        RhinoScriptEngine.eval(js, scope)
                     }
                 }
             } else {
-                RhinoScriptEngine.eval(jsLib, scope, coroutineContext)
+                RhinoScriptEngine.eval(jsLib, scope)
             }
-            if (scope is ScriptableObject) {
-                scope.sealObject()
-            }
-            scopeMap.put(key, WeakReference(scope))
+            scopeMap[key] = WeakReference(scope)
         }
         return scope
-    }
-
-    fun remove(jsLib: String?) {
-        if (jsLib.isNullOrBlank()) {
-            return
-        }
-        val key = MD5Utils.md5Encode(jsLib)
-        scopeMap.remove(key)
     }
 
 }

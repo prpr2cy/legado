@@ -5,7 +5,7 @@
       :label="name"
       :key="name"
     >
-      <el-form label-position="right" label-width="auto">
+      <el-form label-position="right" label-width="5em">
         <el-form-item
           v-for="{
             type,
@@ -14,7 +14,7 @@
             id,
             array,
             hint,
-            required = false,
+            required,
           } in children"
           :label="title"
           :key="title"
@@ -35,26 +35,20 @@
             autosize
           />
 
-          <el-switch
-            v-if="(type as string) === 'Boolean'"
-            v-model="currentSource[id]"
-          />
+          <el-switch v-if="type == 'Boolean'" v-model="currentSource[id]" />
 
           <el-input-number
-            v-if="(type as string) === 'Number'"
+            v-if="type == 'Number'"
             v-model="currentSource[id]"
             :min="0"
           />
 
-          <el-select
-            v-if="(type as string) === 'Array'"
-            v-model="currentSource[id]"
-          >
+          <el-select v-if="type == 'Array'" v-model="currentSource[id]">
             <el-option
-              v-for="(optionName, index) in array"
+              v-for="(name, index) in array"
               :value="index"
-              :key="optionName"
-              :label="optionName"
+              :key="name"
+              :label="name"
             />
           </el-select>
         </el-form-item>
@@ -63,17 +57,10 @@
   </el-tabs>
 </template>
 
-<script setup lang="ts">
-import type { SourceConfig } from '@/config/sourceConfig'
-
-const store = useSourceStore()
-defineProps<{ config: SourceConfig }>()
-
-const currentSource = computed(() => store.currentSource)
-/* 
-修改currentSource的属性 没有直接修改本身
+<script setup>
+const store = useSourceStore();
+defineProps(["config"]);
 const { currentSource } = storeToRefs(store);
- */
 </script>
 
 <style lang="scss" scoped>

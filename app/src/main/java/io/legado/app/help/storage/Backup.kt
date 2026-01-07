@@ -2,7 +2,6 @@ package io.legado.app.help.storage
 
 import android.content.Context
 import android.net.Uri
-import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
 import io.legado.app.constant.AppLog
 import io.legado.app.constant.PreferKey
@@ -15,35 +14,20 @@ import io.legado.app.help.config.LocalConfig
 import io.legado.app.help.config.ReadBookConfig
 import io.legado.app.help.config.ThemeConfig
 import io.legado.app.help.coroutine.Coroutine
-import io.legado.app.model.BookCover
-import io.legado.app.utils.FileUtils
-import io.legado.app.utils.GSON
-import io.legado.app.utils.LogUtils
+import io.legado.app.utils.*
 import io.legado.app.utils.compress.ZipUtils
-import io.legado.app.utils.createFolderIfNotExist
-import io.legado.app.utils.defaultSharedPreferences
-import io.legado.app.utils.externalFiles
-import io.legado.app.utils.getFile
-import io.legado.app.utils.getSharedPreferences
-import io.legado.app.utils.isContentScheme
-import io.legado.app.utils.normalizeFileName
-import io.legado.app.utils.openOutputStream
-import io.legado.app.utils.outputStream
-import io.legado.app.utils.writeToOutputStream
 import kotlinx.coroutines.Dispatchers.IO
-import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import splitties.init.appCtx
+import java.io.BufferedOutputStream
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import java.util.*
 import java.util.concurrent.TimeUnit
+import kotlin.coroutines.coroutineContext
 
 /**
  * 备份
@@ -54,10 +38,6 @@ object Backup {
         appCtx.filesDir.getFile("backup").createFolderIfNotExist().absolutePath
     }
     val zipFilePath = "${appCtx.externalFiles.absolutePath}${File.separator}tmp_backup.zip"
-
-    private const val TAG = "Backup"
-
-    private val mutex = Mutex()
 
     private val backupFileNames by lazy {
         arrayOf(
@@ -80,7 +60,6 @@ object Backup {
             ReadBookConfig.configFileName,
             ReadBookConfig.shareConfigFileName,
             ThemeConfig.configFileName,
-            BookCover.configFileName,
             "config.xml"
         )
     }
@@ -93,26 +72,20 @@ object Backup {
             "backup${backupDate}-${deviceName}.zip"
         } else {
             "backup${backupDate}.zip"
-        }.normalizeFileName()
-    }
-
-    private fun shouldBackup(): Boolean {
-        val lastBackup = LocalConfig.lastBackup
-        return lastBackup + TimeUnit.DAYS.toMillis(1) < System.currentTimeMillis()
+        }
     }
 
     fun autoBack(context: Context) {
-        if (shouldBackup()) {
+        if (!AppConfig.autoBackupEnabled) return
+
+        val lastBackup = LocalConfig.lastBackup
+        if (lastBackup + TimeUnit.DAYS.toMillis(1) < System.currentTimeMillis()) {
             Coroutine.async {
-                mutex.withLock {
-                    if (shouldBackup()) {
-                        val backupZipFileName = getNowZipFileName()
-                        if (!AppWebDav.hasBackUp(backupZipFileName)) {
-                            backup(context, AppConfig.backupPath)
-                        } else {
-                            LocalConfig.lastBackup = System.currentTimeMillis()
-                        }
-                    }
+                val backupZipFileName = getNowZipFileName()
+                if (!AppWebDav.hasBackUp(backupZipFileName)) {
+                    backup(context, context.getPrefString(PreferKey.backupPath))
+                } else {
+                    LocalConfig.lastBackup = System.currentTimeMillis()
                 }
             }.onError {
                 AppLog.put("自动备份失败\n${it.localizedMessage}")
@@ -120,16 +93,7 @@ object Backup {
         }
     }
 
-    suspend fun backupLocked(context: Context, path: String?) {
-        mutex.withLock {
-            withContext(IO) {
-                backup(context, path)
-            }
-        }
-    }
-
-    private suspend fun backup(context: Context, path: String?) {
-        LogUtils.d(TAG, "开始备份 path:$path")
+    suspend fun backup(context: Context, path: String?) {
         LocalConfig.lastBackup = System.currentTimeMillis()
         val aes = BackupAES()
         FileUtils.delete(backupPath)
@@ -155,7 +119,7 @@ object Backup {
                     .writeText(it)
             }
         }
-        currentCoroutineContext().ensureActive()
+        coroutineContext.ensureActive()
         GSON.toJson(ReadBookConfig.configList).let {
             FileUtils.createFileIfNotExist(backupPath + File.separator + ReadBookConfig.configFileName)
                 .writeText(it)
@@ -172,11 +136,7 @@ object Backup {
             FileUtils.createFileIfNotExist(backupPath + File.separator + DirectLinkUpload.ruleFileName)
                 .writeText(GSON.toJson(it))
         }
-        BookCover.getConfig()?.let {
-            FileUtils.createFileIfNotExist(backupPath + File.separator + BookCover.configFileName)
-                .writeText(GSON.toJson(it))
-        }
-        currentCoroutineContext().ensureActive()
+        coroutineContext.ensureActive()
         appCtx.getSharedPreferences(backupPath, "config")?.let { sp ->
             val edit = sp.edit()
             appCtx.defaultSharedPreferences.all.forEach { (key, value) ->
@@ -200,7 +160,7 @@ object Backup {
             }
             edit.commit()
         }
-        currentCoroutineContext().ensureActive()
+        coroutineContext.ensureActive()
         val zipFileName = getNowZipFileName()
         val paths = arrayListOf(*backupFileNames)
         for (i in 0 until paths.size) {
@@ -220,22 +180,18 @@ object Backup {
                 }
 
                 path.isContentScheme() -> {
-                    copyBackup(context, path.toUri(), backupFileName)
+                    copyBackup(context, Uri.parse(path), backupFileName)
                 }
 
                 else -> {
                     copyBackup(File(path), backupFileName)
                 }
             }
-            try {
-                AppWebDav.backUpWebDav(zipFileName)
-            } catch (e: Exception) {
-                AppLog.put("上传备份至webdav失败\n$e", e)
-            }
+            AppWebDav.backUpWebDav(zipFileName)
         }
         FileUtils.delete(backupPath)
         FileUtils.delete(zipFilePath)
-        currentCoroutineContext().ensureActive()
+        coroutineContext.ensureActive()
         ReadBookConfig.getAllPicBgStr().map {
             if (it.contains(File.separator)) {
                 File(it)
@@ -248,17 +204,15 @@ object Backup {
     }
 
     private suspend fun writeListToJson(list: List<Any>, fileName: String, path: String) {
-        currentCoroutineContext().ensureActive()
+        coroutineContext.ensureActive()
         withContext(IO) {
             if (list.isNotEmpty()) {
-                LogUtils.d(TAG, "阅读备份 $fileName 列表大小 ${list.size}")
                 val file = FileUtils.createFileIfNotExist(path + File.separator + fileName)
-                file.outputStream().buffered().use {
-                    GSON.writeToOutputStream(it, list)
+                FileOutputStream(file).use { fos ->
+                    BufferedOutputStream(fos, 64 * 1024).use {
+                        GSON.writeToOutputStream(it, list)
+                    }
                 }
-                LogUtils.d(TAG, "阅读备份 $fileName 写入大小 ${file.length()}")
-            } else {
-                LogUtils.d(TAG, "阅读备份 $fileName 列表为空")
             }
         }
     }

@@ -1,18 +1,13 @@
 package io.legado.app.ui.main.bookshelf
 
 import android.app.Application
-import androidx.lifecycle.MutableLiveData
 import com.google.gson.stream.JsonWriter
 import io.legado.app.R
 import io.legado.app.base.BaseViewModel
-import io.legado.app.constant.AppLog
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
-import io.legado.app.data.entities.BookSourcePart
+import io.legado.app.data.entities.BookSource
 import io.legado.app.exception.NoStackTraceException
-import io.legado.app.help.config.AppConfig
-import io.legado.app.help.coroutine.Coroutine
-import io.legado.app.help.http.decompressed
 import io.legado.app.help.http.newCallResponseBody
 import io.legado.app.help.http.okHttpClient
 import io.legado.app.help.http.text
@@ -25,77 +20,64 @@ import io.legado.app.utils.isAbsUrl
 import io.legado.app.utils.isJsonArray
 import io.legado.app.utils.printOnDebug
 import io.legado.app.utils.toastOnUi
-import kotlinx.coroutines.sync.Semaphore
-import kotlinx.coroutines.sync.withPermit
+import kotlinx.coroutines.Dispatchers.IO
+import kotlinx.coroutines.isActive
 import java.io.File
 import java.io.FileOutputStream
 import java.io.OutputStreamWriter
+import kotlin.collections.List
+import kotlin.collections.Map
+import kotlin.collections.forEach
+import kotlin.collections.hashMapOf
+import kotlin.collections.set
 
 class BookshelfViewModel(application: Application) : BaseViewModel(application) {
-    val addBookProgressLiveData = MutableLiveData(-1)
-    var addBookJob: Coroutine<*>? = null
 
     fun addBookByUrl(bookUrls: String) {
         var successCount = 0
-        addBookJob = execute {
-            val hasBookUrlPattern: List<BookSourcePart> by lazy {
+        execute {
+            val hasBookUrlPattern: List<BookSource> by lazy {
                 appDb.bookSourceDao.hasBookUrlPattern
             }
             val urls = bookUrls.split("\n")
             for (url in urls) {
                 val bookUrl = url.trim()
                 if (bookUrl.isEmpty()) continue
-                if (appDb.bookDao.getBook(bookUrl) != null) {
-                    successCount++
-                    continue
-                }
+                if (appDb.bookDao.getBook(bookUrl) != null) continue
                 val baseUrl = NetworkUtils.getBaseUrl(bookUrl) ?: continue
                 var source = appDb.bookSourceDao.getBookSourceAddBook(baseUrl)
                 if (source == null) {
-                    for (bookSource in hasBookUrlPattern) {
-                        try {
-                            val bs = bookSource.getBookSource()!!
-                            if (bookUrl.matches(bs.bookUrlPattern!!.toRegex())) {
-                                source = bs
-                                break
-                            }
-                        } catch (_: Exception) {
+                    hasBookUrlPattern.forEach { bookSource ->
+                        if (bookUrl.matches(bookSource.bookUrlPattern!!.toRegex())) {
+                            source = bookSource
+                            return@forEach
                         }
                     }
                 }
-                val bookSource = source ?: continue
-                val book = Book(
-                    bookUrl = bookUrl,
-                    origin = bookSource.bookSourceUrl,
-                    originName = bookSource.bookSourceName
-                )
-                kotlin.runCatching {
-                    WebBook.getBookInfoAwait(bookSource, book)
-                }.onSuccess {
-                    val dbBook = appDb.bookDao.getBook(it.name, it.author)
-                    if (dbBook != null) {
-                        val toc = WebBook.getChapterListAwait(bookSource, it).getOrThrow()
-                        dbBook.migrateTo(it, toc)
-                        appDb.bookDao.insert(it)
-                        appDb.bookChapterDao.insert(*toc.toTypedArray())
-                    } else {
-                        it.order = appDb.bookDao.minOrder - 1
-                        it.save()
-                    }
-                    successCount++
-                    addBookProgressLiveData.postValue(successCount)
+                source?.let { bookSource ->
+                    val book = Book(
+                        bookUrl = bookUrl,
+                        origin = bookSource.bookSourceUrl,
+                        originName = bookSource.bookSourceName
+                    )
+                    WebBook.getBookInfo(this, bookSource, book)
+                        .onSuccess(IO) {
+                            it.order = appDb.bookDao.minOrder - 1
+                            it.save()
+                            successCount++
+                        }.onError {
+                            throw it
+                        }
                 }
             }
         }.onSuccess {
             if (successCount > 0) {
                 context.toastOnUi(R.string.success)
             } else {
-                context.toastOnUi("添加网址失败")
+                context.toastOnUi("ERROR")
             }
         }.onError {
-            AppLog.put("添加网址出错\n${it.localizedMessage}", it, true)
-        }.onFinally {
-            addBookProgressLiveData.postValue(-1)
+            context.toastOnUi(it.localizedMessage ?: "ERROR")
         }
     }
 
@@ -135,15 +117,13 @@ class BookshelfViewModel(application: Application) : BaseViewModel(application) 
                 text.isAbsUrl() -> {
                     okHttpClient.newCallResponseBody {
                         url(text)
-                    }.decompressed().text().let {
+                    }.text().let {
                         importBookshelf(it, groupId)
                     }
                 }
-
                 text.isJsonArray() -> {
                     importBookshelfByJson(text, groupId)
                 }
-
                 else -> {
                     throw NoStackTraceException("格式不对")
                 }
@@ -155,27 +135,22 @@ class BookshelfViewModel(application: Application) : BaseViewModel(application) 
 
     private fun importBookshelfByJson(json: String, groupId: Long) {
         execute {
-            val bookSourceParts = appDb.bookSourceDao.allEnabledPart
-            val semaphore = Semaphore(AppConfig.threadCount)
+            val bookSources = appDb.bookSourceDao.allEnabled
             GSON.fromJsonArray<Map<String, String?>>(json).getOrThrow().forEach { bookInfo ->
+                if (!isActive) return@execute
                 val name = bookInfo["name"] ?: ""
                 val author = bookInfo["author"] ?: ""
-                if (name.isEmpty() || appDb.bookDao.has(name, author)) {
-                    return@forEach
-                }
-                semaphore.withPermit {
-                    WebBook.preciseSearch(
-                        this, bookSourceParts, name, author,
-                        semaphore = semaphore
-                    ).onSuccess {
-                        val book = it.first
-                        if (groupId > 0) {
-                            book.group = groupId
+                if (name.isNotEmpty() && appDb.bookDao.getBook(name, author) == null) {
+                    WebBook.preciseSearch(this, bookSources, name, author)
+                        .onSuccess {
+                            val book = it.first
+                            if (groupId > 0) {
+                                book.group = groupId
+                            }
+                            book.save()
+                        }.onError { e ->
+                            context.toastOnUi(e.localizedMessage)
                         }
-                        book.save()
-                    }.onError { e ->
-                        context.toastOnUi(e.localizedMessage)
-                    }
                 }
             }
         }.onError {

@@ -4,16 +4,11 @@ import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.pdf.PdfRenderer
 import android.os.ParcelFileDescriptor
-import androidx.core.graphics.createBitmap
 import io.legado.app.constant.AppLog
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
 import io.legado.app.help.book.getLocalUri
-import io.legado.app.utils.BitmapUtils
-import io.legado.app.utils.FileUtils
-import io.legado.app.utils.SystemUtils
-import io.legado.app.utils.isContentScheme
-import io.legado.app.utils.printOnDebug
+import io.legado.app.utils.*
 import splitties.init.appCtx
 import java.io.File
 import java.io.FileOutputStream
@@ -75,8 +70,26 @@ class PdfFile(var book: Book) {
             return field
         }
 
+
     init {
-        upBookCover(true)
+        try {
+            pdfRenderer?.let { renderer ->
+                if (book.coverUrl.isNullOrEmpty()) {
+                    book.coverUrl = LocalBook.getCoverPath(book)
+                }
+                if (!File(book.coverUrl!!).exists()) {
+
+                    FileOutputStream(FileUtils.createFileIfNotExist(book.coverUrl!!)).use { out ->
+                        openPdfPage(renderer, 0)?.compress(Bitmap.CompressFormat.JPEG, 90, out)
+                        out.flush()
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            AppLog.put("加载书籍封面失败\n${e.localizedMessage}", e)
+            e.printOnDebug()
+        }
+
     }
 
     /**
@@ -122,14 +135,16 @@ class PdfFile(var book: Book) {
         if (index >= renderer.pageCount) {
             return null
         }
-        return renderer.openPage(index).use { page ->
-            createBitmap(
+        return renderer.openPage(index)?.use { page ->
+            Bitmap.createBitmap(
                 SystemUtils.screenWidthPx,
-                (SystemUtils.screenWidthPx.toDouble() * page.height / page.width).toInt()
-            ).apply {
-                this.eraseColor(Color.WHITE)
-                page.render(this, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
-            }
+                (SystemUtils.screenWidthPx.toDouble() * page.height / page.width).toInt(),
+                Bitmap.Config.ARGB_8888
+            )
+                .apply {
+                    this.eraseColor(Color.WHITE)
+                    page.render(this, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                }
         }
 
     }
@@ -167,7 +182,7 @@ class PdfFile(var book: Book) {
                 null
             }
 
-        } catch (_: Exception) {
+        } catch (e: Exception) {
             return null
         }
     }
@@ -191,32 +206,11 @@ class PdfFile(var book: Book) {
         return chapterList
     }
 
-    private fun upBookCover(fastCheck: Boolean = false) {
-        try {
-            pdfRenderer?.let { renderer ->
-                if (book.coverUrl.isNullOrEmpty()) {
-                    book.coverUrl = LocalBook.getCoverPath(book)
-                }
-                if (fastCheck && File(book.coverUrl!!).exists()) {
-                    return
-                }
-                FileOutputStream(FileUtils.createFileIfNotExist(book.coverUrl!!)).use { out ->
-                    openPdfPage(renderer, 0)?.compress(Bitmap.CompressFormat.JPEG, 90, out)
-                    out.flush()
-                }
-            }
-        } catch (e: Exception) {
-            AppLog.put("加载书籍封面失败\n${e.localizedMessage}", e)
-            e.printOnDebug()
-        }
-    }
-
     private fun upBookInfo() {
         if (pdfRenderer == null) {
             pFile = null
             book.intro = "书籍导入异常"
         } else {
-            upBookCover()
             if (book.name.isEmpty()) {
                 book.name = book.originName.replace(".pdf", "")
             }

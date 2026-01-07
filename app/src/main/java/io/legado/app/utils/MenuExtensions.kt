@@ -18,7 +18,6 @@ import io.legado.app.lib.theme.primaryTextColor
 import java.lang.reflect.Method
 
 @SuppressLint("RestrictedApi")
-@Suppress("UsePropertyAccessSyntax")
 fun Menu.applyTint(context: Context, theme: Theme = Theme.Auto): Menu = this.let { menu ->
     if (menu is MenuBuilder) {
         menu.setOptionalIconsVisible(true)
@@ -36,7 +35,6 @@ fun Menu.applyTint(context: Context, theme: Theme = Theme.Auto): Menu = this.let
     return menu
 }
 
-@SuppressLint("RestrictedApi")
 fun Menu.applyOpenTint(context: Context) {
     //展开菜单显示图标
     if (this.javaClass.simpleName.equals("MenuBuilder", ignoreCase = true)) {
@@ -78,17 +76,6 @@ fun Menu.iconItemOnLongClick(id: Int, function: (view: View) -> Unit) {
                 performIdentifierAction(id, 0)
             }
         }
-    }
-}
-
-@SuppressLint("RestrictedApi")
-inline fun Menu.transaction(block: (Menu) -> Unit) {
-    val menuBuilder = this as? MenuBuilder
-    menuBuilder?.stopDispatchingItemsChanged()
-    try {
-        block(this)
-    } finally {
-        menuBuilder?.startDispatchingItemsChanged()
     }
 }
 

@@ -3,13 +3,11 @@ package io.legado.app.ui.widget.recycler
 import android.content.Context
 import android.util.AttributeSet
 import android.view.LayoutInflater
-import android.view.View
+import android.view.ViewGroup
 import android.widget.FrameLayout
-import androidx.annotation.ColorRes
 import io.legado.app.R
 import io.legado.app.databinding.ViewLoadMoreBinding
 import io.legado.app.lib.dialogs.alert
-import io.legado.app.utils.getCompatColor
 import io.legado.app.utils.invisible
 import io.legado.app.utils.visible
 
@@ -28,7 +26,7 @@ class LoadMoreView(context: Context, attrs: AttributeSet? = null) : FrameLayout(
 
     init {
         super.setOnClickListener {
-            if (!showErrorDialog(it)) {
+            if (!showErrorDialog()) {
                 onClickListener?.onClick(it)
             }
         }
@@ -40,7 +38,7 @@ class LoadMoreView(context: Context, attrs: AttributeSet? = null) : FrameLayout(
 
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
-        layoutParams.width = LayoutParams.MATCH_PARENT
+        layoutParams.width = ViewGroup.LayoutParams.MATCH_PARENT
     }
 
     fun startLoad() {
@@ -72,34 +70,20 @@ class LoadMoreView(context: Context, attrs: AttributeSet? = null) : FrameLayout(
         binding.tvText.visible()
     }
 
-    fun error(msg: String?, text: String = "") {
+    fun error(msg: String) {
         stopLoad()
         hasMore = false
-        errorMsg = msg ?: ""
-        binding.tvText.text =
-            text.ifEmpty { context.getString(R.string.error_load_msg, "点击查看详情") }
+        errorMsg = msg
+        binding.tvText.text = context.getString(R.string.error_load_msg, "点击查看详情")
         binding.tvText.visible()
     }
 
-    fun setLoadingColor(@ColorRes color: Int) {
-        binding.rotateLoading.loadingColor = context.getCompatColor(color)
-    }
-
-    fun setLoadingTextColor(@ColorRes color: Int) {
-        binding.tvText.setTextColor(context.getCompatColor(color))
-    }
-
-    private fun showErrorDialog(view: View): Boolean {
+    private fun showErrorDialog(): Boolean {
         if (errorMsg.isBlank()) {
             return false
         }
         context.alert(R.string.error) {
             setMessage(errorMsg)
-            if (onClickListener != null) {
-                neutralButton(R.string.retry) {
-                    onClickListener?.onClick(view)
-                }
-            }
         }
         return true
     }

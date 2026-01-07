@@ -29,5 +29,4 @@ pnpm build
 pnpm lint:fix
 #格式化代码
 ```
-
-- 调试的时候可以修改.env.development里面的地址连接手机端调试
+ - 调试的时候可以修改.env.development里面的地址连接手机端调试

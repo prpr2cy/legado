@@ -7,16 +7,7 @@ import android.graphics.PorterDuff
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.RippleDrawable
 import android.view.View
-import android.widget.Button
-import android.widget.CheckBox
-import android.widget.CheckedTextView
-import android.widget.EditText
-import android.widget.ImageView
-import android.widget.ProgressBar
-import android.widget.RadioButton
-import android.widget.SeekBar
-import android.widget.Switch
-import android.widget.TextView
+import android.widget.*
 import androidx.annotation.CheckResult
 import androidx.annotation.ColorInt
 import androidx.appcompat.widget.AppCompatEditText
@@ -24,7 +15,6 @@ import androidx.appcompat.widget.SearchView
 import androidx.appcompat.widget.SwitchCompat
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.DrawableCompat
-import androidx.core.widget.TextViewCompat
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import io.legado.app.R
 import io.legado.app.utils.ColorUtils
@@ -154,7 +144,6 @@ object TintHelper {
                 is ProgressBar -> setTint(view, color)
                 is AppCompatEditText -> setTint(view, color, isDark)
                 is CheckBox -> setTint(view, color, isDark)
-                is CheckedTextView -> setTint(view, color, isDark)
                 is ImageView -> setTint(view, color)
                 is Switch -> setTint(view, color, isDark)
                 is SwitchCompat -> setTint(view, color, isDark)
@@ -308,29 +297,6 @@ object TintHelper {
             )
         )
         box.buttonTintList = sl
-    }
-
-    @SuppressLint("PrivateResource")
-    fun setTint(checkedTextView: CheckedTextView, @ColorInt color: Int, useDarker: Boolean) {
-        val sl = ColorStateList(
-            arrayOf(
-                intArrayOf(-android.R.attr.state_enabled),
-                intArrayOf(android.R.attr.state_enabled, -android.R.attr.state_checked),
-                intArrayOf(android.R.attr.state_enabled, android.R.attr.state_checked)
-            ), intArrayOf(
-                ContextCompat.getColor(
-                    checkedTextView.context,
-                    if (useDarker) R.color.ate_control_disabled_dark else R.color.ate_control_disabled_light
-                ),
-                ContextCompat.getColor(
-                    checkedTextView.context,
-                    if (useDarker) R.color.ate_control_normal_dark else R.color.ate_control_normal_light
-                ),
-                color
-            )
-        )
-        checkedTextView.checkMarkTintList = sl
-        TextViewCompat.setCompoundDrawableTintList(checkedTextView, sl)
     }
 
     fun setTint(image: ImageView, @ColorInt color: Int) {

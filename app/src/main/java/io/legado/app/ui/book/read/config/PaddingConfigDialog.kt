@@ -63,61 +63,61 @@ class PaddingConfigDialog : BaseDialogFragment(R.layout.dialog_read_padding) {
         //正文
         dsbPaddingTop.onChanged = {
             ReadBookConfig.paddingTop = it
-            postEvent(EventBus.UP_CONFIG, arrayListOf(10, 5))
+            postEvent(EventBus.UP_CONFIG, true)
         }
         dsbPaddingBottom.onChanged = {
             ReadBookConfig.paddingBottom = it
-            postEvent(EventBus.UP_CONFIG, arrayListOf(10, 5))
+            postEvent(EventBus.UP_CONFIG, true)
         }
         dsbPaddingLeft.onChanged = {
             ReadBookConfig.paddingLeft = it
-            postEvent(EventBus.UP_CONFIG, arrayListOf(10, 5))
+            postEvent(EventBus.UP_CONFIG, true)
         }
         dsbPaddingRight.onChanged = {
             ReadBookConfig.paddingRight = it
-            postEvent(EventBus.UP_CONFIG, arrayListOf(10, 5))
+            postEvent(EventBus.UP_CONFIG, true)
         }
         //页眉
         dsbHeaderPaddingTop.onChanged = {
             ReadBookConfig.headerPaddingTop = it
-            postEvent(EventBus.UP_CONFIG, arrayListOf(2))
+            postEvent(EventBus.UP_CONFIG, true)
         }
         dsbHeaderPaddingBottom.onChanged = {
             ReadBookConfig.headerPaddingBottom = it
-            postEvent(EventBus.UP_CONFIG, arrayListOf(2))
+            postEvent(EventBus.UP_CONFIG, true)
         }
         dsbHeaderPaddingLeft.onChanged = {
             ReadBookConfig.headerPaddingLeft = it
-            postEvent(EventBus.UP_CONFIG, arrayListOf(2))
+            postEvent(EventBus.UP_CONFIG, true)
         }
         dsbHeaderPaddingRight.onChanged = {
             ReadBookConfig.headerPaddingRight = it
-            postEvent(EventBus.UP_CONFIG, arrayListOf(2))
+            postEvent(EventBus.UP_CONFIG, true)
         }
         //页脚
         dsbFooterPaddingTop.onChanged = {
             ReadBookConfig.footerPaddingTop = it
-            postEvent(EventBus.UP_CONFIG, arrayListOf(2))
+            postEvent(EventBus.UP_CONFIG, true)
         }
         dsbFooterPaddingBottom.onChanged = {
             ReadBookConfig.footerPaddingBottom = it
-            postEvent(EventBus.UP_CONFIG, arrayListOf(2))
+            postEvent(EventBus.UP_CONFIG, true)
         }
         dsbFooterPaddingLeft.onChanged = {
             ReadBookConfig.footerPaddingLeft = it
-            postEvent(EventBus.UP_CONFIG, arrayListOf(2))
+            postEvent(EventBus.UP_CONFIG, true)
         }
         dsbFooterPaddingRight.onChanged = {
             ReadBookConfig.footerPaddingRight = it
-            postEvent(EventBus.UP_CONFIG, arrayListOf(2))
+            postEvent(EventBus.UP_CONFIG, true)
         }
         cbShowTopLine.onCheckedChangeListener = { _, isChecked ->
             ReadBookConfig.showHeaderLine = isChecked
-            postEvent(EventBus.UP_CONFIG, arrayListOf(2))
+            postEvent(EventBus.UP_CONFIG, true)
         }
         cbShowBottomLine.onCheckedChangeListener = { _, isChecked ->
             ReadBookConfig.showFooterLine = isChecked
-            postEvent(EventBus.UP_CONFIG, arrayListOf(2))
+            postEvent(EventBus.UP_CONFIG, true)
         }
     }
 

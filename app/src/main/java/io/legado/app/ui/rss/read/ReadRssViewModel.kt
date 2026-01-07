@@ -7,30 +7,28 @@ import android.util.Base64
 import android.webkit.URLUtil
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
-import com.script.rhino.runScriptWithContext
 import io.legado.app.base.BaseViewModel
 import io.legado.app.constant.AppConst
-import io.legado.app.constant.AppConst.imagePathKey
 import io.legado.app.data.appDb
+import io.legado.app.data.entities.BaseSource
 import io.legado.app.data.entities.RssArticle
 import io.legado.app.data.entities.RssSource
 import io.legado.app.data.entities.RssStar
 import io.legado.app.exception.NoStackTraceException
+import io.legado.app.help.JsExtensions
 import io.legado.app.help.TTS
 import io.legado.app.help.http.newCallResponseBody
 import io.legado.app.help.http.okHttpClient
 import io.legado.app.model.analyzeRule.AnalyzeUrl
 import io.legado.app.model.rss.Rss
-import io.legado.app.utils.ACache
 import io.legado.app.utils.toastOnUi
 import io.legado.app.utils.writeBytes
 import kotlinx.coroutines.Dispatchers.IO
 import splitties.init.appCtx
 import java.util.Date
-import kotlin.coroutines.coroutineContext
 
 
-class ReadRssViewModel(application: Application) : BaseViewModel(application) {
+class ReadRssViewModel(application: Application) : BaseViewModel(application), JsExtensions {
     var rssSource: RssSource? = null
     var rssArticle: RssArticle? = null
     var tts: TTS? = null
@@ -39,16 +37,16 @@ class ReadRssViewModel(application: Application) : BaseViewModel(application) {
     var rssStar: RssStar? = null
     val upTtsMenuData = MutableLiveData<Boolean>()
     val upStarMenuData = MutableLiveData<Boolean>()
-    var headerMap: Map<String, String> = emptyMap()
+
+    override fun getSource(): BaseSource? {
+        return rssSource
+    }
 
     fun initData(intent: Intent) {
         execute {
             val origin = intent.getStringExtra("origin") ?: return@execute
             val link = intent.getStringExtra("link")
             rssSource = appDb.rssSourceDao.getByKey(origin)
-            headerMap = runScriptWithContext {
-                rssSource?.getHeaderMap() ?: emptyMap()
-            }
             if (link != null) {
                 rssStar = appDb.rssStarDao.get(origin, link)
                 rssArticle = rssStar?.toRssArticle() ?: appDb.rssArticleDao.get(origin, link)
@@ -82,13 +80,11 @@ class ReadRssViewModel(application: Application) : BaseViewModel(application) {
         }
     }
 
-    private suspend fun loadUrl(url: String, baseUrl: String) {
+    private fun loadUrl(url: String, baseUrl: String) {
         val analyzeUrl = AnalyzeUrl(
             mUrl = url,
             baseUrl = baseUrl,
-            source = rssSource,
-            coroutineContext = coroutineContext,
-            hasLoginHeader = false
+            headerMapF = rssSource?.getHeaderMap()
         )
         urlLiveData.postValue(analyzeUrl)
     }
@@ -139,39 +135,6 @@ class ReadRssViewModel(application: Application) : BaseViewModel(application) {
         }
     }
 
-    fun addFavorite() {
-        execute {
-            rssStar ?: rssArticle?.toStar()?.let {
-                appDb.rssStarDao.insert(it)
-                rssStar = it
-            }
-        }.onSuccess {
-            upStarMenuData.postValue(true)
-        }
-    }
-
-    fun updateFavorite() {
-        execute {
-            rssArticle?.toStar()?.let {
-                appDb.rssStarDao.update(it)
-                rssStar = it
-            }
-        }.onSuccess {
-            upStarMenuData.postValue(true)
-        }
-    }
-
-    fun delFavorite() {
-        execute {
-            rssStar?.let {
-                appDb.rssStarDao.delete(it.origin, it.link)
-                rssStar = null
-            }
-        }.onSuccess {
-            upStarMenuData.postValue(true)
-        }
-    }
-
     fun saveImage(webPic: String?, uri: Uri) {
         webPic ?: return
         execute {
@@ -179,7 +142,6 @@ class ReadRssViewModel(application: Application) : BaseViewModel(application) {
             val byteArray = webData2bitmap(webPic) ?: throw NoStackTraceException("NULL")
             uri.writeBytes(context, fileName, byteArray)
         }.onError {
-            ACache.get().remove(imagePathKey)
             context.toastOnUi("保存图片失败:${it.localizedMessage}")
         }.onSuccess {
             context.toastOnUi("保存成功")

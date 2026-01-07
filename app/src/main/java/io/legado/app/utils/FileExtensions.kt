@@ -4,7 +4,6 @@ package io.legado.app.utils
 
 import android.net.Uri
 import java.io.File
-import java.io.FileOutputStream
 
 fun File.getFile(vararg subDirFiles: String): File {
     val path = FileUtils.getPath(this, *subDirFiles)
@@ -35,7 +34,7 @@ fun File.listFileDocs(filter: FileDocFilter? = null): ArrayList<FileDoc> {
 
 fun File.createFileIfNotExist(): File {
     if (!exists()) {
-        parentFile?.createFolderIfNotExist()
+        parentFile?.createFileIfNotExist()
         createNewFile()
     }
     return this
@@ -70,19 +69,13 @@ fun File.createFolderReplace(): File {
 }
 
 fun File.checkWrite(): Boolean {
-    var file: File? = null
     return try {
         val filename = System.currentTimeMillis().toString()
-        file = FileUtils.createFileIfNotExist(this, filename)
-        file.outputStream().bufferedWriter().use { it.write(filename) }
-        file.inputStream().bufferedReader().use { it.readText() == filename }
+        val file = FileUtils.createFileIfNotExist(this, filename)
+        file.outputStream().use { }
+        file.delete()
+        true
     } catch (e: Exception) {
         false
-    } finally {
-        file?.delete()
     }
-}
-
-fun File.outputStream(append: Boolean = false): FileOutputStream {
-    return FileOutputStream(this, append)
 }

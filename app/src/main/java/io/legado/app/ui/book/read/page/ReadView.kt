@@ -3,6 +3,8 @@ package io.legado.app.ui.book.read.page
 import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.Rect
 import android.graphics.RectF
 import android.os.Build
 import android.util.AttributeSet
@@ -10,39 +12,24 @@ import android.view.MotionEvent
 import android.view.ViewConfiguration
 import android.view.WindowInsets
 import android.widget.FrameLayout
-import io.legado.app.R
 import io.legado.app.constant.PageAnim
-import io.legado.app.data.entities.BookProgress
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.config.ReadBookConfig
+import io.legado.app.lib.theme.accentColor
 import io.legado.app.model.ReadAloud
 import io.legado.app.model.ReadBook
-import io.legado.app.service.BaseReadAloudService
 import io.legado.app.ui.book.read.ContentEditDialog
 import io.legado.app.ui.book.read.page.api.DataSource
-import io.legado.app.ui.book.read.page.delegate.CoverPageDelegate
-import io.legado.app.ui.book.read.page.delegate.HorizontalPageDelegate
-import io.legado.app.ui.book.read.page.delegate.NoAnimPageDelegate
-import io.legado.app.ui.book.read.page.delegate.PageDelegate
-import io.legado.app.ui.book.read.page.delegate.ScrollPageDelegate
-import io.legado.app.ui.book.read.page.delegate.SimulationPageDelegate
-import io.legado.app.ui.book.read.page.delegate.SlidePageDelegate
+import io.legado.app.ui.book.read.page.delegate.*
 import io.legado.app.ui.book.read.page.entities.PageDirection
 import io.legado.app.ui.book.read.page.entities.TextChapter
-import io.legado.app.ui.book.read.page.entities.TextLine
 import io.legado.app.ui.book.read.page.entities.TextPage
 import io.legado.app.ui.book.read.page.entities.TextPos
-import io.legado.app.ui.book.read.page.entities.column.TextColumn
 import io.legado.app.ui.book.read.page.provider.ChapterProvider
-import io.legado.app.ui.book.read.page.provider.LayoutProgressListener
 import io.legado.app.ui.book.read.page.provider.TextPageFactory
-import io.legado.app.utils.activity
-import io.legado.app.utils.invisible
-import io.legado.app.utils.longToastOnUi
-import io.legado.app.utils.showDialogFragment
-import io.legado.app.utils.throttle
+import io.legado.app.utils.*
 import java.text.BreakIterator
-import java.util.Locale
+import java.util.*
 import kotlin.math.abs
 
 /**
@@ -50,7 +37,7 @@ import kotlin.math.abs
  */
 class ReadView(context: Context, attrs: AttributeSet) :
     FrameLayout(context, attrs),
-    DataSource, LayoutProgressListener {
+    DataSource {
 
     val callBack: CallBack get() = activity as CallBack
     var pageFactory: TextPageFactory = TextPageFactory(this)
@@ -61,7 +48,7 @@ class ReadView(context: Context, attrs: AttributeSet) :
             field = value
             upContent()
         }
-    override var isScroll = false
+    var isScroll = false
     val prevPage by lazy { PageView(context) }
     val curPage by lazy { PageView(context) }
     val nextPage by lazy { PageView(context) }
@@ -107,17 +94,16 @@ class ReadView(context: Context, attrs: AttributeSet) :
     private val blRect = RectF()
     private val bcRect = RectF()
     private val brRect = RectF()
+    private val autoPageRect by lazy { Rect() }
+    private val autoPagePint by lazy { Paint().apply { color = context.accentColor } }
     private val boundary by lazy { BreakIterator.getWordInstance(Locale.getDefault()) }
-    private val upProgressThrottle = throttle(200) { post { upProgress() } }
-    val autoPager = AutoPager(this)
-    val isAutoPage get() = autoPager.isRunning
 
     init {
         addView(nextPage)
         addView(curPage)
         addView(prevPage)
-        prevPage.invisible()
         nextPage.invisible()
+        prevPage.invisible()
         curPage.markAsMainView()
         if (!isInEditMode) {
             upBg()
@@ -153,12 +139,26 @@ class ReadView(context: Context, attrs: AttributeSet) :
     override fun dispatchDraw(canvas: Canvas) {
         super.dispatchDraw(canvas)
         pageDelegate?.onDraw(canvas)
-        autoPager.onDraw(canvas)
+        if (!isInEditMode && callBack.isAutoPage && !isScroll) {
+            // 自动翻页
+            nextPage.screenshot()?.let {
+                val bottom = callBack.autoPageProgress
+                autoPageRect.set(0, 0, width, bottom)
+                canvas.drawBitmap(it, autoPageRect, autoPageRect, null)
+                canvas.drawRect(
+                    0f,
+                    bottom.toFloat() - 1,
+                    width.toFloat(),
+                    bottom.toFloat(),
+                    autoPagePint
+                )
+                it.recycle()
+            }
+        }
     }
 
     override fun computeScroll() {
-        pageDelegate?.computeScroll()
-        autoPager.computeOffset()
+        pageDelegate?.scroll()
     }
 
     override fun onInterceptTouchEvent(ev: MotionEvent?): Boolean {
@@ -171,15 +171,11 @@ class ReadView(context: Context, attrs: AttributeSet) :
     @SuppressLint("ClickableViewAccessibility")
     override fun onTouchEvent(event: MotionEvent): Boolean {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            val insets = this.rootWindowInsets.getInsetsIgnoringVisibility(
-                WindowInsets.Type.mandatorySystemGestures()
-            )
+            val insets =
+                this.rootWindowInsets.getInsetsIgnoringVisibility(WindowInsets.Type.mandatorySystemGestures())
             val height = activity?.windowManager?.currentWindowMetrics?.bounds?.height()
             if (height != null) {
-                if (event.y > height.minus(insets.bottom)
-                    && event.action != MotionEvent.ACTION_UP
-                    && event.action != MotionEvent.ACTION_CANCEL
-                ) {
+                if (event.y > height.minus(insets.bottom)) {
                     return true
                 }
             }
@@ -209,7 +205,6 @@ class ReadView(context: Context, attrs: AttributeSet) :
             }
 
             MotionEvent.ACTION_MOVE -> {
-                if (!pressDown) return true
                 val absX = abs(startX - event.x)
                 val absY = abs(startY - event.y)
                 if (!isMove) {
@@ -257,15 +252,14 @@ class ReadView(context: Context, attrs: AttributeSet) :
                     pageDelegate?.onTouch(event)
                 }
                 pressOnTextSelected = false
-                autoPager.resume()
             }
         }
         return true
     }
 
-    fun cancelSelect(clearSearchResult: Boolean = false) {
+    fun cancelSelect() {
         if (isTextSelected) {
-            curPage.cancelSelect(clearSearchResult)
+            curPage.cancelSelect()
             isTextSelected = false
         }
     }
@@ -307,8 +301,6 @@ class ReadView(context: Context, attrs: AttributeSet) :
             invalidate()
         }
         pageDelegate?.onScroll()
-        val offset = touchY - lastY
-        touchY -= offset - offset.toInt()
     }
 
     /**
@@ -361,7 +353,7 @@ class ReadView(context: Context, attrs: AttributeSet) :
                     var ci = 0
                     for (index in lineStart..lineEnd) {
                         val textLine = page.getLine(index)
-                        for (j in textLine.columns.indices) {
+                        for (j in 0 until textLine.charSize) {
                             if (ci == start) {
                                 startPos.lineIndex = index
                                 startPos.columnIndex = j
@@ -370,12 +362,7 @@ class ReadView(context: Context, attrs: AttributeSet) :
                                 endPos.columnIndex = j
                                 return@run
                             }
-                            val column = textLine.getColumn(j)
-                            if (column is TextColumn) {
-                                ci += column.charData.length
-                            } else {
-                                ci++
-                            }
+                            ci++
                         }
                     }
                 }
@@ -450,18 +437,6 @@ class ReadView(context: Context, attrs: AttributeSet) :
             9 -> callBack.changeReplaceRuleState()
             10 -> callBack.openChapterList()
             11 -> callBack.openSearchActivity(null)
-            12 -> ReadBook.syncProgress(
-                { progress -> callBack.sureNewProgress(progress) },
-                { context.longToastOnUi(context.getString(R.string.upload_book_success)) },
-                { context.longToastOnUi(context.getString(R.string.sync_book_progress_success)) })
-
-            13 -> {
-                if (BaseReadAloudService.isPlay()) {
-                    ReadAloud.pause(context)
-                } else {
-                    ReadAloud.resume(context)
-                }
-            }
         }
     }
 
@@ -472,13 +447,9 @@ class ReadView(context: Context, attrs: AttributeSet) :
         curPage.selectText(x, y) { textPos ->
             val compare = initialTextPos.compare(textPos)
             when {
-                compare > 0 -> {
+                compare >= 0 -> {
                     curPage.selectStartMoveIndex(textPos)
-                    curPage.selectEndMoveIndex(
-                        initialTextPos.relativePagePos,
-                        initialTextPos.lineIndex,
-                        initialTextPos.columnIndex - 1
-                    )
+                    curPage.selectEndMoveIndex(initialTextPos)
                 }
 
                 else -> {
@@ -495,7 +466,6 @@ class ReadView(context: Context, attrs: AttributeSet) :
     fun onDestroy() {
         pageDelegate?.onDestroy()
         curPage.cancelSelect()
-        invalidateTextPage()
     }
 
     /**
@@ -519,7 +489,7 @@ class ReadView(context: Context, attrs: AttributeSet) :
     /**
      * 更新翻页动画
      */
-    fun upPageAnim(upRecorder: Boolean = false) {
+    fun upPageAnim() {
         isScroll = ReadBook.pageAnim() == 3
         ChapterProvider.upLayout()
         when (ReadBook.pageAnim()) {
@@ -544,17 +514,6 @@ class ReadView(context: Context, attrs: AttributeSet) :
             }
         }
         (pageDelegate as? ScrollPageDelegate)?.noAnim = AppConfig.noAnimScrollPage
-        if (upRecorder) {
-            (pageDelegate as? HorizontalPageDelegate)?.upRecorder()
-            autoPager.upRecorder()
-        }
-        pageDelegate?.setViewSize(width, height)
-        if (isScroll) {
-            curPage.setAutoPager(autoPager)
-        } else {
-            curPage.setAutoPager(null)
-        }
-        curPage.setIsScroll(isScroll)
     }
 
     /**
@@ -563,31 +522,22 @@ class ReadView(context: Context, attrs: AttributeSet) :
      * @param resetPageOffset 滚动阅读是是否重置位置
      */
     override fun upContent(relativePosition: Int, resetPageOffset: Boolean) {
-        post {
-            curPage.setContentDescription(pageFactory.curPage.text)
-        }
-        if (isScroll && !isAutoPage) {
-            if (relativePosition == 0) {
-                curPage.setContent(pageFactory.curPage, resetPageOffset)
-            } else {
-                curPage.invalidateContentView()
-            }
+        curPage.setContentDescription(pageFactory.curPage.text)
+        if (isScroll && !callBack.isAutoPage) {
+            curPage.setContent(pageFactory.curPage, resetPageOffset)
         } else {
+            curPage.resetPageOffset()
             when (relativePosition) {
                 -1 -> prevPage.setContent(pageFactory.prevPage)
                 1 -> nextPage.setContent(pageFactory.nextPage)
                 else -> {
-                    curPage.setContent(pageFactory.curPage, resetPageOffset)
+                    curPage.setContent(pageFactory.curPage)
                     nextPage.setContent(pageFactory.nextPage)
                     prevPage.setContent(pageFactory.prevPage)
                 }
             }
         }
         callBack.screenOffTimerStart()
-    }
-
-    private fun upProgress() {
-        curPage.setProgress(pageFactory.curPage)
     }
 
     /**
@@ -649,19 +599,19 @@ class ReadView(context: Context, attrs: AttributeSet) :
     /**
      * 从选择位置开始朗读
      */
-    suspend fun aloudStartSelect() {
+    fun aloudStartSelect() {
         val selectStartPos = curPage.selectStartPos
         var pagePos = selectStartPos.relativePagePos
         val line = selectStartPos.lineIndex
         val column = selectStartPos.columnIndex
         while (pagePos > 0) {
             if (!ReadBook.moveToNextPage()) {
-                ReadBook.moveToNextChapterAwait(false)
+                ReadBook.moveToNextChapter(false)
             }
             pagePos--
         }
         val startPos = curPage.textPage.getPosByLineColumn(line, column)
-        ReadBook.readAloud(startPos = startPos)
+        ReadAloud.play(context, startPos = startPos)
     }
 
     /**
@@ -675,48 +625,8 @@ class ReadView(context: Context, attrs: AttributeSet) :
         return curPage.getCurVisiblePage()
     }
 
-    fun getReadAloudPos(): Pair<Int, TextLine>? {
-        return curPage.getReadAloudPos()
-    }
-
-    fun invalidateTextPage() {
-        if (!AppConfig.optimizeRender) {
-            return
-        }
-        pageFactory.run {
-            prevPage.invalidateAll()
-            curPage.invalidateAll()
-            nextPage.invalidateAll()
-            nextPlusPage.invalidateAll()
-        }
-    }
-
-    fun onScrollAnimStart() {
-        autoPager.pause()
-    }
-
-    fun onScrollAnimStop() {
-        autoPager.resume()
-    }
-
-    fun onPageChange() {
-        autoPager.reset()
-        submitRenderTask()
-    }
-
-    fun submitRenderTask() {
-        if (!AppConfig.optimizeRender) {
-            return
-        }
-        curPage.submitRenderTask()
-    }
-
-    fun isLongScreenShot(): Boolean {
-        return curPage.isLongScreenShot()
-    }
-
-    override fun onLayoutPageCompleted(index: Int, page: TextPage) {
-        upProgressThrottle.invoke()
+    fun getCurPagePosition(): Int {
+        return curPage.getCurVisibleFirstLine()?.pagePosition ?: 0
     }
 
     override val currentChapter: TextChapter?
@@ -735,7 +645,7 @@ class ReadView(context: Context, attrs: AttributeSet) :
         }
 
     override fun hasNextChapter(): Boolean {
-        return ReadBook.durChapterIndex < ReadBook.simulatedChapterSize - 1
+        return ReadBook.durChapterIndex < ReadBook.chapterSize - 1
     }
 
     override fun hasPrevChapter(): Boolean {
@@ -744,6 +654,8 @@ class ReadView(context: Context, attrs: AttributeSet) :
 
     interface CallBack {
         val isInitFinish: Boolean
+        val isAutoPage: Boolean
+        val autoPageProgress: Int
         fun showActionMenu()
         fun screenOffTimerStart()
         fun showTextActionMenu()
@@ -753,6 +665,5 @@ class ReadView(context: Context, attrs: AttributeSet) :
         fun changeReplaceRuleState()
         fun openSearchActivity(searchWord: String?)
         fun upSystemUiVisibility()
-        fun sureNewProgress(progress: BookProgress)
     }
 }

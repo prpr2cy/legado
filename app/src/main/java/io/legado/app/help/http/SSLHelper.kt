@@ -1,7 +1,6 @@
 package io.legado.app.help.http
 
 import android.annotation.SuppressLint
-import android.net.http.X509TrustManagerExtensions
 import io.legado.app.utils.printOnDebug
 
 
@@ -39,18 +38,10 @@ object SSLHelper {
                 //do nothing，接受任意客户端证书
             }
 
-            fun checkServerTrusted(chain: Array<X509Certificate>, authType: String, host: String): List<X509Certificate> {
-                return chain.toList()
-            }
-
             override fun getAcceptedIssuers(): Array<X509Certificate> {
                 return arrayOf()
             }
         }
-
-    val unsafeTrustManagerExtensions by lazy {
-        X509TrustManagerExtensions(unsafeTrustManager)
-    }
 
     val unsafeSSLSocketFactory: SSLSocketFactory by lazy {
         try {

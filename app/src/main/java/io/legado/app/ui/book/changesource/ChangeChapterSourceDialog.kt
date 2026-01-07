@@ -13,11 +13,11 @@ import androidx.core.view.isVisible
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle.State.STARTED
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import io.legado.app.R
 import io.legado.app.base.BaseDialogFragment
-import io.legado.app.constant.AppLog
 import io.legado.app.constant.EventBus
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
@@ -36,19 +36,17 @@ import io.legado.app.ui.book.source.manage.BookSourceActivity
 import io.legado.app.ui.widget.recycler.VerticalDivider
 import io.legado.app.utils.StartActivityContract
 import io.legado.app.utils.applyTint
+import io.legado.app.utils.cnCompare
 import io.legado.app.utils.dpToPx
 import io.legado.app.utils.gone
 import io.legado.app.utils.observeEvent
 import io.legado.app.utils.setLayout
 import io.legado.app.utils.startActivity
 import io.legado.app.utils.toastOnUi
-import io.legado.app.utils.transaction
 import io.legado.app.utils.viewbindingdelegate.viewBinding
 import io.legado.app.utils.visible
-import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.conflate
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 
@@ -91,7 +89,7 @@ class ChangeChapterSourceDialog() : BaseDialogFragment(R.layout.dialog_chapter_c
             val searchGroup = AppConfig.searchGroup
             if (searchGroup.isNotEmpty()) {
                 lifecycleScope.launch {
-                    context?.alert("搜索结果为空") {
+                    alert("搜索结果为空") {
                         setMessage("${searchGroup}分组搜索结果为空,是否切换到全部分组")
                         noButton()
                         yesButton {
@@ -128,11 +126,6 @@ class ChangeChapterSourceDialog() : BaseDialogFragment(R.layout.dialog_chapter_c
             }
             dismissAllowingStateLoss()
         }
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        viewModel.searchFinishCallback = null
     }
 
     private fun showTitle() {
@@ -232,10 +225,11 @@ class ChangeChapterSourceDialog() : BaseDialogFragment(R.layout.dialog_chapter_c
             binding.toolBar.menu.applyTint(requireContext())
         }
         lifecycleScope.launch {
-            lifecycle.currentStateFlow.first { it.isAtLeast(STARTED) }
-            viewModel.searchDataFlow.conflate().collect {
-                searchBookAdapter.setItems(it)
-                delay(1000)
+            repeatOnLifecycle(STARTED) {
+                viewModel.searchDataFlow.conflate().collect {
+                    searchBookAdapter.setItems(it)
+                    delay(1000)
+                }
             }
         }
         lifecycleScope.launch {
@@ -257,23 +251,19 @@ class ChangeChapterSourceDialog() : BaseDialogFragment(R.layout.dialog_chapter_c
                 item.isChecked = !item.isChecked
                 viewModel.refresh()
             }
-
             R.id.menu_load_info -> {
                 AppConfig.changeSourceLoadInfo = !item.isChecked
                 item.isChecked = !item.isChecked
             }
-
             R.id.menu_load_toc -> {
                 AppConfig.changeSourceLoadToc = !item.isChecked
                 item.isChecked = !item.isChecked
             }
-
             R.id.menu_load_word_count -> {
                 AppConfig.changeSourceLoadWordCount = !item.isChecked
                 item.isChecked = !item.isChecked
                 viewModel.onLoadWordCountChecked(item.isChecked)
             }
-
             R.id.menu_start_stop -> viewModel.startOrStopSearch()
             R.id.menu_source_manage -> startActivity<BookSourceActivity>()
             else -> if (item?.groupId == R.id.source_group && !item.isChecked) {
@@ -283,12 +273,8 @@ class ChangeChapterSourceDialog() : BaseDialogFragment(R.layout.dialog_chapter_c
                 } else {
                     AppConfig.searchGroup = item.title.toString()
                 }
-                lifecycleScope.launch(IO) {
-                    viewModel.stopSearch()
-                    if (viewModel.refresh()) {
-                        viewModel.startSearch()
-                    }
-                }
+                viewModel.startOrStopSearch()
+                viewModel.refresh()
             }
         }
         return false
@@ -310,16 +296,16 @@ class ChangeChapterSourceDialog() : BaseDialogFragment(R.layout.dialog_chapter_c
         binding.clToc.visible()
         binding.loadingToc.visible()
         val book = searchBook.toBook()
-        viewModel.getToc(book, { toc: List<BookChapter>, _: BookSource ->
+        viewModel.getToc(book, {
+            binding.clToc.gone()
+            toastOnUi(it)
+        }) { toc: List<BookChapter>, _: BookSource ->
             tocAdapter.durChapterIndex =
                 BookHelp.getDurChapter(viewModel.chapterIndex, viewModel.chapterTitle, toc)
             binding.loadingToc.gone()
             tocAdapter.setItems(toc)
             binding.recyclerViewToc.scrollToPosition(tocAdapter.durChapterIndex - 5)
-        }, {
-            binding.clToc.gone()
-            AppLog.put("单章换源获取目录出错\n$it", it, true)
-        })
+        }
     }
 
     override val oldBookUrl: String?
@@ -375,12 +361,14 @@ class ChangeChapterSourceDialog() : BaseDialogFragment(R.layout.dialog_chapter_c
      * 更新分组菜单
      */
     private fun upGroupMenu() {
-        binding.toolBar.menu.findItem(R.id.menu_group)?.subMenu?.transaction { menu ->
+        binding.toolBar.menu.findItem(R.id.menu_group)?.subMenu?.let { menu ->
             val selectedGroup = AppConfig.searchGroup
             menu.removeGroup(R.id.source_group)
             val allItem = menu.add(R.id.source_group, Menu.NONE, Menu.NONE, R.string.all_source)
             var hasSelectedGroup = false
-            groups.forEach { group ->
+            groups.sortedWith { o1, o2 ->
+                o1.cnCompare(o2)
+            }.forEach { group ->
                 menu.add(R.id.source_group, Menu.NONE, Menu.NONE, group)?.let {
                     if (group == selectedGroup) {
                         it.isChecked = true

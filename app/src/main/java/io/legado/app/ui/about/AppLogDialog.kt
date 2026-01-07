@@ -3,10 +3,13 @@ package io.legado.app.ui.about
 import android.content.Context
 import android.os.Bundle
 import android.view.MenuItem
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
+import android.widget.TextView
 import androidx.appcompat.widget.Toolbar
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import io.legado.app.R
 import io.legado.app.base.BaseDialogFragment
 import io.legado.app.base.adapter.ItemViewHolder
@@ -20,7 +23,6 @@ import io.legado.app.utils.LogUtils
 import io.legado.app.utils.setLayout
 import io.legado.app.utils.showDialogFragment
 import io.legado.app.utils.viewbindingdelegate.viewBinding
-import splitties.views.onClick
 import java.util.*
 
 class AppLogDialog : BaseDialogFragment(R.layout.dialog_recycler_view),
@@ -76,15 +78,29 @@ class AppLogDialog : BaseDialogFragment(R.layout.dialog_recycler_view),
         }
 
         override fun registerListener(holder: ItemViewHolder, binding: ItemAppLogBinding) {
-            binding.root.onClick {
-                getItem(holder.layoutPosition)?.let { item ->
-                    item.third?.let {
-                        showDialogFragment(TextDialog("Log", it.stackTraceToString()))
+            binding.root.setOnClickListener {
+                showLogDialog(holder.layoutPosition)
+            }
+
+            binding.textMessage.setOnTouchListener { view, event ->
+                if (event.action == MotionEvent.ACTION_UP) {
+                    val textView = view as TextView
+                    if (textView.selectionStart == textView.selectionEnd) {
+                        showLogDialog(holder.layoutPosition)
+                        return@setOnTouchListener true
                     }
                 }
+                false
             }
         }
 
+        private fun showLogDialog(position: Int) {
+            if (position != RecyclerView.NO_POSITION) {
+                getItem(position)?.let {
+                    val dialog = it.third?.stackTraceToString() ?: it.second
+                    showDialogFragment(TextDialog("Log", dialog.removePrefix("源调试输出：")))
+                }
+            }
+        }
     }
-
 }

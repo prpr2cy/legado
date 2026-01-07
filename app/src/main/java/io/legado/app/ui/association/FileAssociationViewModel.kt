@@ -6,22 +6,22 @@ import androidx.lifecycle.MutableLiveData
 import io.legado.app.constant.AppLog
 import io.legado.app.constant.AppPattern
 import io.legado.app.constant.AppPattern.bookFileRegex
-import io.legado.app.data.entities.Book
 import io.legado.app.model.localBook.LocalBook
 import io.legado.app.utils.*
 
 class FileAssociationViewModel(application: Application) : BaseAssociationViewModel(application) {
     val importBookLiveData = MutableLiveData<Uri>()
     val onLineImportLive = MutableLiveData<Uri>()
-    val openBookLiveData = MutableLiveData<Book>()
+    val openBookLiveData = MutableLiveData<String>()
     val notSupportedLiveData = MutableLiveData<Pair<Uri, String>>()
 
-    fun dispatchIntent(uri: Uri) {
+    fun dispatchIndent(uri: Uri) {
         execute {
+            lateinit var fileName: String
             //如果是普通的url，需要根据返回的内容判断是什么
             if (uri.isContentScheme() || uri.isFileScheme()) {
                 val fileDoc = FileDoc.fromUri(uri, false)
-                val fileName = fileDoc.name
+                fileName = fileDoc.name
                 if (fileName.matches(AppPattern.archiveFileRegex)) {
                     ArchiveUtils.deCompress(fileDoc, ArchiveUtils.TEMP_PATH) {
                         it.matches(bookFileRegex)
@@ -36,9 +36,8 @@ class FileAssociationViewModel(application: Application) : BaseAssociationViewMo
             }
         }.onError {
             it.printOnDebug()
-            val msg = "无法打开文件\n${it.localizedMessage}"
-            errorLive.postValue(msg)
-            AppLog.put(msg, it)
+            errorLive.postValue(it.localizedMessage)
+            AppLog.put("无法打开文件\n${it.localizedMessage}", it)
         }
     }
 
@@ -61,6 +60,6 @@ class FileAssociationViewModel(application: Application) : BaseAssociationViewMo
 
     fun importBook(uri: Uri) {
         val book = LocalBook.importFile(uri)
-        openBookLiveData.postValue(book)
+        openBookLiveData.postValue(book.bookUrl)
     }
 }

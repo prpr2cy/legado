@@ -1,11 +1,11 @@
 package io.legado.app.data.entities
 
-import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Ignore
 import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonObject
 import kotlinx.parcelize.IgnoredOnParcel
+
 
 @Entity(
     tableName = "rssArticles",
@@ -21,8 +21,6 @@ data class RssArticle(
     var description: String? = null,
     var content: String? = null,
     var image: String? = null,
-    @ColumnInfo(defaultValue = "默认分组")
-    var group: String = "默认分组",
     var read: Boolean = false,
     override var variable: String? = null
 ) : BaseRssArticle {
@@ -51,7 +49,6 @@ data class RssArticle(
         description = description,
         content = content,
         image = image,
-        group = group,
         variable = variable
     )
 }

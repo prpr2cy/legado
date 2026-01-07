@@ -1,22 +1,18 @@
 package io.legado.app.ui.book.read.page.provider
 
-import io.legado.app.R
 import io.legado.app.model.ReadBook
 import io.legado.app.ui.book.read.page.api.DataSource
 import io.legado.app.ui.book.read.page.api.PageFactory
 import io.legado.app.ui.book.read.page.entities.TextPage
-import splitties.init.appCtx
 
 class TextPageFactory(dataSource: DataSource) : PageFactory<TextPage>(dataSource) {
-
-    private val keepSwipeTip = appCtx.getString(R.string.keep_swipe_tip)
 
     override fun hasPrev(): Boolean = with(dataSource) {
         return hasPrevChapter() || pageIndex > 0
     }
 
     override fun hasNext(): Boolean = with(dataSource) {
-        return hasNextChapter() || (currentChapter != null && currentChapter?.isLastIndex(pageIndex) != true)
+        return hasNextChapter() || currentChapter?.isLastIndex(pageIndex) != true
     }
 
     override fun hasNextPlus(): Boolean = with(dataSource) {
@@ -38,42 +34,26 @@ class TextPageFactory(dataSource: DataSource) : PageFactory<TextPage>(dataSource
     }
 
     override fun moveToNext(upContent: Boolean): Boolean = with(dataSource) {
-        return if (hasNext()) {
-            val pageIndex = pageIndex
-            if (currentChapter == null || currentChapter?.isLastIndex(pageIndex) == true) {
-                if ((currentChapter == null || isScroll) && nextChapter == null) {
-                    return@with false
-                }
-                ReadBook.moveToNextChapter(upContent, false)
+        return if (hasNext() && currentChapter != null) {
+            if (currentChapter?.isLastIndex(pageIndex) == true) {
+                ReadBook.moveToNextChapter(upContent)
             } else {
-                if (pageIndex < 0 || currentChapter?.isLastIndexCurrent(pageIndex) == true) {
-                    return@with false
-                }
                 ReadBook.setPageIndex(pageIndex.plus(1))
+                if (upContent) upContent(resetPageOffset = false)
             }
-            if (upContent) upContent(resetPageOffset = false)
             true
         } else
             false
     }
 
     override fun moveToPrev(upContent: Boolean): Boolean = with(dataSource) {
-        return if (hasPrev()) {
+        return if (hasPrev() && currentChapter != null) {
             if (pageIndex <= 0) {
-                if (currentChapter == null && prevChapter == null) {
-                    return@with false
-                }
-                if (prevChapter != null && prevChapter?.isCompleted == false) {
-                    return@with false
-                }
-                ReadBook.moveToPrevChapter(upContent, upContentInPlace = false)
+                ReadBook.moveToPrevChapter(upContent)
             } else {
-                if (currentChapter == null) {
-                    return@with false
-                }
                 ReadBook.setPageIndex(pageIndex.minus(1))
+                if (upContent) upContent(resetPageOffset = false)
             }
-            if (upContent) upContent(resetPageOffset = false)
             true
         } else
             false
@@ -85,8 +65,7 @@ class TextPageFactory(dataSource: DataSource) : PageFactory<TextPage>(dataSource
                 return@with TextPage(text = it).format()
             }
             currentChapter?.let {
-                return@with it.getPage(pageIndex)
-                    ?: TextPage(title = it.title).apply { textChapter = it }.format()
+                return@with it.getPage(pageIndex) ?: TextPage(title = it.title).format()
             }
             return TextPage().format()
         }
@@ -97,14 +76,13 @@ class TextPageFactory(dataSource: DataSource) : PageFactory<TextPage>(dataSource
                 return@with TextPage(text = it).format()
             }
             currentChapter?.let {
-                val pageIndex = pageIndex
                 if (pageIndex < it.pageSize - 1) {
                     return@with it.getPage(pageIndex + 1)?.removePageAloudSpan()
                         ?: TextPage(title = it.title).format()
                 }
-                if (!it.isCompleted) {
-                    return@with TextPage(title = it.title).format()
-                }
+            }
+            if (!hasNextChapter()) {
+                return@with TextPage(text = "")
             }
             nextChapter?.let {
                 return@with it.getPage(0)?.removePageAloudSpan()
@@ -118,14 +96,10 @@ class TextPageFactory(dataSource: DataSource) : PageFactory<TextPage>(dataSource
             ReadBook.msg?.let {
                 return@with TextPage(text = it).format()
             }
-            currentChapter?.let {
-                val pageIndex = pageIndex
-                if (pageIndex > 0) {
+            if (pageIndex > 0) {
+                currentChapter?.let {
                     return@with it.getPage(pageIndex - 1)?.removePageAloudSpan()
                         ?: TextPage(title = it.title).format()
-                }
-                if (!it.isCompleted) {
-                    return@with TextPage(title = it.title).format()
                 }
             }
             prevChapter?.let {
@@ -138,13 +112,9 @@ class TextPageFactory(dataSource: DataSource) : PageFactory<TextPage>(dataSource
     override val nextPlusPage: TextPage
         get() = with(dataSource) {
             currentChapter?.let {
-                val pageIndex = pageIndex
                 if (pageIndex < it.pageSize - 2) {
                     return@with it.getPage(pageIndex + 2)?.removePageAloudSpan()
                         ?: TextPage(title = it.title).format()
-                }
-                if (!it.isCompleted) {
-                    return@with TextPage(title = it.title).format()
                 }
                 nextChapter?.let { nc ->
                     if (pageIndex < it.pageSize - 1) {
@@ -152,8 +122,9 @@ class TextPageFactory(dataSource: DataSource) : PageFactory<TextPage>(dataSource
                             ?: TextPage(title = nc.title).format()
                     }
                     return@with nc.getPage(1)?.removePageAloudSpan()
-                        ?: TextPage(text = keepSwipeTip).format()
+                        ?: TextPage(text = "继续滑动以加载下一章…").format()
                 }
+
             }
             return TextPage().format()
         }

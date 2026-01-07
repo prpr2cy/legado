@@ -1,7 +1,6 @@
 package io.legado.app.ui.association
 
 import android.app.Application
-import androidx.core.net.toUri
 import androidx.lifecycle.MutableLiveData
 import com.jayway.jsonpath.JsonPath
 import io.legado.app.R
@@ -13,9 +12,9 @@ import io.legado.app.data.appDb
 import io.legado.app.data.entities.RssSource
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.config.AppConfig
-import io.legado.app.help.http.decompressed
 import io.legado.app.help.http.newCallResponseBody
 import io.legado.app.help.http.okHttpClient
+import io.legado.app.help.http.unCompress
 import io.legado.app.help.source.SourceHelp
 import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonArray
@@ -23,11 +22,8 @@ import io.legado.app.utils.fromJsonObject
 import io.legado.app.utils.isAbsUrl
 import io.legado.app.utils.isJsonArray
 import io.legado.app.utils.isJsonObject
-import io.legado.app.utils.isUri
 import io.legado.app.utils.jsonPath
-import io.legado.app.utils.readText
 import io.legado.app.utils.splitNotBlank
-import splitties.init.appCtx
 
 class ImportRssSourceViewModel(app: Application) : BaseViewModel(app) {
     var isAddGroup = false
@@ -105,55 +101,47 @@ class ImportRssSourceViewModel(app: Application) : BaseViewModel(app) {
 
     fun importSource(text: String) {
         execute {
-            importSourceAwait(text)
+            val mText = text.trim()
+            when {
+                mText.isJsonObject() -> kotlin.runCatching {
+                    val json = JsonPath.parse(mText)
+                    val urls = json.read<List<String>>("$.sourceUrls")
+                    if (!urls.isNullOrEmpty()) {
+                        urls.forEach {
+                            importSourceUrl(it)
+                        }
+                    }
+                }.onFailure {
+                    GSON.fromJsonArray<RssSource>(mText).getOrThrow().let {
+                        val source = it.firstOrNull() ?: return@let
+                        if (source.sourceUrl.isEmpty()) {
+                            throw NoStackTraceException("不是订阅源")
+                        }
+                        allSources.addAll(it)
+                    }
+                }
+
+                mText.isJsonArray() -> {
+                    GSON.fromJsonArray<RssSource>(mText).getOrThrow().let {
+                        val source = it.firstOrNull() ?: return@let
+                        if (source.sourceUrl.isEmpty()) {
+                            throw NoStackTraceException("不是订阅源")
+                        }
+                        allSources.addAll(it)
+                    }
+                }
+
+                mText.isAbsUrl() -> {
+                    importSourceUrl(mText)
+                }
+
+                else -> throw NoStackTraceException(context.getString(R.string.wrong_format))
+            }
         }.onError {
             errorLiveData.postValue("ImportError:${it.localizedMessage}")
             AppLog.put("ImportError:${it.localizedMessage}", it)
         }.onSuccess {
             comparisonSource()
-        }
-    }
-
-    private suspend fun importSourceAwait(text: String) {
-        val mText = text.trim()
-        when {
-            mText.isJsonObject() -> kotlin.runCatching {
-                val json = JsonPath.parse(mText)
-                val urls = json.read<List<String>>("$.sourceUrls")
-                if (!urls.isNullOrEmpty()) {
-                    urls.forEach {
-                        importSourceUrl(it)
-                    }
-                }
-            }.onFailure {
-                GSON.fromJsonArray<RssSource>(mText).getOrThrow().let {
-                    val source = it.firstOrNull() ?: return@let
-                    if (source.sourceUrl.isEmpty()) {
-                        throw NoStackTraceException("不是订阅源")
-                    }
-                    allSources.addAll(it)
-                }
-            }
-
-            mText.isJsonArray() -> {
-                GSON.fromJsonArray<RssSource>(mText).getOrThrow().let {
-                    val source = it.firstOrNull() ?: return@let
-                    if (source.sourceUrl.isEmpty()) {
-                        throw NoStackTraceException("不是订阅源")
-                    }
-                    allSources.addAll(it)
-                }
-            }
-
-            mText.isAbsUrl() -> {
-                importSourceUrl(mText)
-            }
-
-            mText.isUri() -> {
-                importSourceAwait(mText.toUri().readText(appCtx))
-            }
-
-            else -> throw NoStackTraceException(context.getString(R.string.wrong_format))
         }
     }
 
@@ -165,7 +153,7 @@ class ImportRssSourceViewModel(app: Application) : BaseViewModel(app) {
             } else {
                 url(url)
             }
-        }.decompressed().byteStream().use { body ->
+        }.unCompress { body ->
             val items: List<Map<String, Any>> = jsonPath.parse(body).read("$")
             for (item in items) {
                 if (!item.containsKey("sourceUrl")) {
@@ -184,7 +172,7 @@ class ImportRssSourceViewModel(app: Application) : BaseViewModel(app) {
             allSources.forEach {
                 val has = appDb.rssSourceDao.getByKey(it.sourceUrl)
                 checkSources.add(has)
-                selectStatus.add(has == null || has.lastUpdateTime < it.lastUpdateTime)
+                selectStatus.add(has == null)
             }
             successLiveData.postValue(allSources.size)
         }
