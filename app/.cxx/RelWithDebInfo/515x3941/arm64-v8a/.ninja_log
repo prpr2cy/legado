@@ -1,0 +1,5 @@
+# ninja log v5
+3	191	7704032926705945	CMakeFiles/glyphdiff.dir/common.cpp.o	b12bd34cf6742f3b
+5	246	7704032927244982	CMakeFiles/glyphdiff.dir/native-lib.cpp.o	74573e73b9f540b4
+0	304	7704032927827880	CMakeFiles/glyphdiff.dir/arm64/neon_math.cpp.o	971c3c3dc4a4b9b
+304	430	7704032929061789	D:/legado-3.23.110211/app/build/intermediates/cxx/RelWithDebInfo/515x3941/obj/arm64-v8a/libglyphdiff.so	6220fa0adfeee6e1
