@@ -547,7 +547,7 @@ interface JsExtensions : JsEncodeUtils {
         if (map.isNullOrEmpty()) {
             return ""
         }
-        val gson = new GsonBuilder()
+        val gson = GsonBuilder()
             .disableHtmlEscaping()
             .create()
         return gson.toJson(map)
