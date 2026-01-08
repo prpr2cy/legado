@@ -18,26 +18,41 @@ def gitCommits = Integer.parseInt('git rev-list HEAD --count'.execute().text.tri
 
 configurations.all {
     resolutionStrategy {
-        // 强制 Kotlin 标准库全系 1.9.20
-        force 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.20'
+        // Kotlin 全家桶 
+        force 'org.jetbrains.kotlin:kotlin-stdlib:1.9.20'
+        force 'org.jetbrains.kotlin:kotlin-stdlib-common:1.9.20'
         force 'org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.9.20'
+        force 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.20'
         force 'org.jetbrains.kotlin:kotlin-reflect:1.9.20'
+ 
+        // AndroidX 核心
+        force 'androidx.activity:activity:1.8.0'
+        force 'androidx.core:core-ktx:1.12.0'
+        force 'androidx.core:core:1.12.0'
+        force 'androidx.activity:activity-ktx:1.8.0'
+        force 'androidx.fragment:fragment:1.6.1'
+        force 'androidx.fragment:fragment-ktx:1.6.1'
+        force 'androidx.preference:preference:1.2.1'
+        force 'androidx.collection:collection:1.1.0'
+        force 'androidx.recyclerview:recyclerview:1.1.0'
+        force 'androidx.drawerlayout:drawerlayout:1.1.1'
+        force 'androidx.appcompat:appcompat:1.6.1'
+ 
+        // Lifecycle
+        force 'androidx.lifecycle:lifecycle-livedata-core-ktx:2.6.2'
+        force 'androidx.lifecycle:lifecycle-runtime:2.6.2'
+        force 'androidx.lifecycle:lifecycle-service:2.6.2'
+        force 'androidx.constraintlayout:constraintlayout:2.1.4'
+ 
         // 强制协程
         force 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3'
         force 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
- 
+
         // 其他冲突的可以照样子继续加
-        force 'androidx.core:core-ktx:1.12.0'
-        force 'androidx.core:core:1.12.0'
-        force 'androidx.appcompat:appcompat:1.6.1'
-        force 'androidx.activity:activity-ktx:1.8.0'
-        force 'androidx.fragment:fragment-ktx:1.6.1'
-        force 'androidx.constraintlayout:constraintlayout:2.1.4'
-        force 'com.google.android.material:material:1.10.0'
-        force 'androidx.lifecycle:lifecycle-service:2.6.2'
         force 'org.jsoup:jsoup:1.16.2'
         force 'com.squareup.okhttp3:okhttp:4.11.0'
         force 'com.google.protobuf:protobuf-javalite:3.24.3'
+        force 'com.google.android.material:material:1.10.0'
         force 'com.github.bumptech.glide:glide:4.16.0'
     }
 }
