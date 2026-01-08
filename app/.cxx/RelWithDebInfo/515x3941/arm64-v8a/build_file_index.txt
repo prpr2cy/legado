@@ -1,1 +1,0 @@
-D:\legado-3.23.110211\app\src\main\cpp\CMakeLists.txt
