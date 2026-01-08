@@ -236,6 +236,7 @@ class ContentTextView(context: Context, attrs: AttributeSet?) : View(context, at
             (width.toFloat() * column.originalHeight / column.originalWidth).toInt()
         }
         if (height <= 0) return
+        if (column.cropStartY==0) AppLog.put("宽：${width}px 高：${height}px 页数：${column.totalPages} 地址：${column.src}")
 
         if (drawVisibleImageOnly &&
             !cacheIncreased &&
@@ -273,6 +274,7 @@ class ContentTextView(context: Context, attrs: AttributeSet?) : View(context, at
             bitmap.height
         }
         if (pageH <= 0) return
+        AppLog.put("分页高度：${pageH}px")
 
         val rectF = if (textLine.isImage) {
             RectF(column.start, lineTop, column.end, lineBottom)

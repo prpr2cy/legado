@@ -327,10 +327,10 @@ object ChapterProvider {
                 if (durY + segmentHeight > visibleHeight) {
                     val textPage = textPages.last()
 
-                    if (doublePage && absStartX < visibleWidth) {
+                    if (doublePage && absStartX < visibleWidth / 2) {
                         //当前页面左列结束
                         textPage.leftLineSize = textPage.lineSize
-                        absStartX = visibleWidth + x
+                        absStartX = visibleWidth / 2 + x
                     } else {
                         //当前页面结束
                         if (textPage.leftLineSize == 0) {
@@ -368,7 +368,7 @@ object ChapterProvider {
             }
         }
         return if (durY < visibleHeight.toFloat()) {
-            durY + paragraphSpacing.toFloat()
+            durY + contentPaintTextHeight.toFloat() * paragraphSpacing.toFloat() / 10f
         } else {
             durY + paragraphSpacing.toFloat() / 10f
         }

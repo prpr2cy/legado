@@ -106,8 +106,6 @@ class ExploreShowActivity : VMBaseActivity<ActivityExploreShowBinding, ExploreSh
     }
 
     private fun scrollToTop(forceLoad: Boolean = false) {
-        if (oldPage <= 1) return
-
         if ((oldPage > 1 && !loadMoreView.isLoading && !loadMoreViewTop.isLoading) || forceLoad) {
             loadMoreViewTop.hasMore()
             oldPage--
@@ -119,16 +117,14 @@ class ExploreShowActivity : VMBaseActivity<ActivityExploreShowBinding, ExploreSh
         loadMoreView.stopLoad()
         if (books.isEmpty() && adapter.isEmpty()) {
             loadMoreView.noMore(getString(R.string.empty))
-        } else if (books.isEmpty() || adapter.getActualItemCount() == books.size) {
+        } else if (adapter.getActualItemCount() == books.size) {
             loadMoreView.noMore()
         } else {
+            adapter.setItems(books)
             if (isClearAll) {
-                adapter.setItems(books)
                 val layoutManager = binding.recyclerView.layoutManager as LinearLayoutManager
                 layoutManager.scrollToPositionWithOffset(1, 0)
                 isClearAll = false
-            } else {
-                adapter.addItems(books)
             }
         }
     }
@@ -172,7 +168,7 @@ class ExploreShowActivity : VMBaseActivity<ActivityExploreShowBinding, ExploreSh
         val pageMenuItem = menu.add(Menu.NONE, MENU_PAGE_ID, 0, getString(R.string.menu_page, 1))
         pageMenuItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
         menuInflater.inflate(R.menu.explore_show, menu)
-        return true
+        return super.onCompatCreateOptionsMenu(menu)
     }
 
     override fun onCompatOptionsItemSelected(item: MenuItem): Boolean {
