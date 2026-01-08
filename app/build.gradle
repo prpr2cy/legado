@@ -16,6 +16,33 @@ def name = "legado"
 def version = "3." + "23.110211"//releaseTime()
 def gitCommits = Integer.parseInt('git rev-list HEAD --count'.execute().text.trim())
 
+configurations.all {
+    resolutionStrategy {
+        // Kotlin 全家桶
+        force 'org.jetbrains.kotlin:kotlin-stdlib:1.9.20'
+        force 'org.jetbrains.kotlin:kotlin-stdlib-common:1.9.20'
+        force 'org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.9.20'
+        force 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.20'
+        force 'org.jetbrains.kotlin:kotlin-reflect:1.9.20'
+
+        // AndroidX 核心
+        force 'androidx.activity:activity:1.8.0'
+        force 'androidx.activity:activity-ktx:1.8.0'
+        force 'androidx.fragment:fragment:1.6.1'
+        force 'androidx.fragment:fragment-ktx:1.6.1'
+        force 'androidx.preference:preference:1.2.1'
+        force 'androidx.collection:collection:1.1.0'
+        force 'androidx.recyclerview:recyclerview:1.1.0'
+        force 'androidx.drawerlayout:drawerlayout:1.1.1'
+
+        // Lifecycle
+        force 'androidx.lifecycle:lifecycle-livedata-core-ktx:2.6.2'
+        force 'androidx.lifecycle:lifecycle-runtime:2.6.2'
+        force 'androidx.lifecycle:lifecycle-service:2.6.2'
+    }
+}
+
+
 android {
     compileSdk = compile_sdk_version
     namespace 'io.legado.app'
