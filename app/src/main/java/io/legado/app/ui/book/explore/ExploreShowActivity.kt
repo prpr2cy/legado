@@ -189,10 +189,10 @@ class ExploreShowActivity : VMBaseActivity<ActivityExploreShowBinding, ExploreSh
                             handlePageJump(selectedPage)
                         }
                     }
-            },
+            }
             R.id.menu_add_all_to_bookshelf -> {
                 addAllToBookshelf()
-            },
+            }
             else -> {}
         }
         return super.onCompatOptionsItemSelected(item)
