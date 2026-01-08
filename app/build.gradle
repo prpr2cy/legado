@@ -283,8 +283,7 @@ dependencies {
     //Svg
     implementation("com.caverock:androidsvg-aar:1.4")
     //Glide svg plugin
-    // implementation("com.github.qoqa:glide-svg:4.0.2")
-    implementation('ch.qoqa.glide:glide-svg:4.16.0') {
+    implementation("com.github.qoqa:glide-svg:4.0.2") {
         exclude group: 'com.github.bumptech.glide'
     }
 
