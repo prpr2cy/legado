@@ -88,6 +88,7 @@ object ImageProvider {
             bitmapLruCache.remove(key)
             return null
         }
+        AppLog.put("$key")
         return bitmap
     }
 
@@ -158,7 +159,6 @@ object ImageProvider {
         height: Int? = null,
         block: (() -> Unit)? = null
     ): Bitmap? {
-        AppLog.put("宽：${width}px 高：${height}px 地址：${src}")
         //src为空白时 可能被净化替换掉了 或者规则失效
         if (book.getUseReplaceRule() && src.isBlank()) {
             appCtx.toastOnUi(R.string.error_image_url_empty)
