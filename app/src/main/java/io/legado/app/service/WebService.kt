@@ -43,11 +43,6 @@ class WebService : BaseService() {
             context.startService<WebService>()
         }
 
-        fun startForeground(context: Context) {
-            val intent = Intent(context, WebService::class.java)
-            context.startForegroundServiceCompat(intent)
-        }
-
         fun stop(context: Context) {
             context.stopService<WebService>()
         }
