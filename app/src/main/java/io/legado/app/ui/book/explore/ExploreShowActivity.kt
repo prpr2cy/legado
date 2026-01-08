@@ -168,39 +168,35 @@ class ExploreShowActivity : VMBaseActivity<ActivityExploreShowBinding, ExploreSh
     }
 
     override fun onCompatCreateOptionsMenu(menu: Menu): Boolean {
-        menuInflater.inflate(R.menu.explore_show, menu)
-
-        val originalMenuItems = mutableListOf<MenuItem>()
-        for (i in 0 until menu.size()) {
-            originalMenuItems.add(menu.getItem(i))
-        }
         menu.clear()
-
         val pageMenuItem = menu.add(Menu.NONE, MENU_PAGE_ID, 0, getString(R.string.menu_page, 1))
         pageMenuItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
-        pageMenuItem.setOnMenuItemClickListener {
-            val page = viewModel.pageLiveData.value ?: 1
-            NumberPickerDialog(this@ExploreShowActivity)
-                .setTitle(getString(R.string.change_page))
-                .setMaxValue(999)
-                .setMinValue(1)
-                .setValue(page)
-                .show { selectedPage ->
-                    if (page != selectedPage) {
-                        handlePageJump(selectedPage)
-                    }
-                }
-            true
-        }
-
-        originalMenuItems.forEachIndexed { index, originalItem ->
-            val newItem = menu.add(originalItem.groupId, originalItem.itemId, index + 1, originalItem.title)
-            newItem.icon = originalItem.icon
-            newItem.setShowAsAction(originalItem.showAsAction)
-            newItem.setOnMenuItemClickListener(originalItem.onMenuItemClickListener)
-        }
-
+        menuInflater.inflate(R.menu.explore_show, menu)
         return true
+    }
+
+    override fun onCompatOptionsItemSelected(item: MenuItem): Boolean {
+        when (item.itemId) {
+            MENU_PAGE_ID -> {
+                val page = viewModel.pageLiveData.value ?: 1
+                NumberPickerDialog((this@ExploreShowActivity)
+                    .setTitle(getString(R.string.change_page))
+                    .setMaxValue(999)
+                    .setMinValue(1)
+                    .setValue(page)
+                    .show { selectedPage ->
+                        if (page != selectedPage) {
+                            handlePageJump(selectedPage)
+                        }
+                    }
+                return true
+            }
+            R.id.menu_add_all_to_bookshelf -> {
+                addAllToBookshelf()
+                return true
+            }
+        }
+        return super.onCompatOptionsItemSelected(item)
     }
 
     private fun handlePageJump(selectedPage: Int) {
@@ -233,13 +229,6 @@ class ExploreShowActivity : VMBaseActivity<ActivityExploreShowBinding, ExploreSh
                 }
             }
         }
-    }
-
-    override fun onCompatOptionsItemSelected(item: MenuItem): Boolean {
-        when (item.itemId) {
-            R.id.menu_add_all_to_bookshelf -> addAllToBookshelf()
-        }
-        return super.onCompatOptionsItemSelected(item)
     }
 
     private fun addAllToBookshelf() {
