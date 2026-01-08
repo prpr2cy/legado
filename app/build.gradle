@@ -23,7 +23,7 @@ configurations.all {
 }
 
 android {
-    compileSdk 34
+    compileSdkVersion 34
     namespace 'io.legado.app'
     kotlin {
         jvmToolchain {
