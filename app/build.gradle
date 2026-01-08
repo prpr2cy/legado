@@ -16,6 +16,17 @@ def name = "legado"
 def version = "3." + "23.110211"//releaseTime()
 def gitCommits = Integer.parseInt('git rev-list HEAD --count'.execute().text.trim())
 
+configurations.all {
+    resolutionStrategy {
+        force 'androidx.core:core-ktx:1.12.0'
+        force 'androidx.core:core:1.12.0'
+    }
+}
+
+configurations.configureEach {
+    resolutionStrategy.failOnVersionConflict()
+}
+
 android {
     compileSdk = compile_sdk_version
     namespace 'io.legado.app'

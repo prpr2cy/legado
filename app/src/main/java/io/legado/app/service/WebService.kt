@@ -20,6 +20,7 @@ import io.legado.app.web.WebSocketServer
 import splitties.init.appCtx
 import splitties.systemservices.powerManager
 import java.io.IOException
+import java.net.InetAddress
 
 class WebService : BaseService() {
 

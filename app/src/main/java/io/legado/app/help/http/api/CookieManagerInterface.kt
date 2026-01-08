@@ -22,7 +22,7 @@ interface CookieManagerInterface {
      */
     fun removeCookie(url: String)
 
-    fun cookieToMap(cookie: String): MutableMap<String, String>
+    fun cookieToMap(cookie: String?): MutableMap<String, String>
 
     fun mapToCookie(cookieMap: Map<String, String>?): String?
 }

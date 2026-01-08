@@ -96,10 +96,11 @@ object CookieStore : CookieManagerInterface {
     }
 
     fun getWebCookie(url: String): String {
-        try {
-            return webCookieManager.getCookie(url) ?: ""
+        return try {
+            webCookieManager.getCookie(url) ?: ""
         } catch (e: Exception) {
             AppLog.put("获取WebCookie失败\n$e", e)
+            ""
         }
     }
 
