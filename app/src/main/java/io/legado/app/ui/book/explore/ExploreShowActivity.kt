@@ -193,12 +193,11 @@ class ExploreShowActivity : VMBaseActivity<ActivityExploreShowBinding, ExploreSh
             true
         }
 
-        originalMenuItems.forEach { item ->
-            menu.add(item.groupId, item.itemId, menu.size(), item.title).apply {
-                icon = item.icon
-                showAsAction = item.showAsAction
-                onMenuItemClickListener = item.onMenuItemClickListener
-            }
+        originalMenuItems.forEachIndexed { index, originalItem ->
+            val newItem = menu.add(originalItem.groupId, originalItem.itemId, index + 1, originalItem.title)
+            newItem.icon = originalItem.icon
+            newItem.setShowAsAction(originalItem.showAsAction)
+            newItem.setOnMenuItemClickListener(originalItem.onMenuItemClickListener)
         }
 
         return true

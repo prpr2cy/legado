@@ -100,7 +100,7 @@ class WebService : BaseService() {
                 hostAddress = getString(R.string.network_connection_unavailable)
                 notificationList.add(hostAddress)
             }
-            startForegroundNotification()
+            upNotification()
             postEvent(EventBus.WEB_SERVICE, hostAddress)
         }
     }
@@ -164,7 +164,7 @@ class WebService : BaseService() {
                 hostAddress = notificationList.first()
                 isRun = true
                 postEvent(EventBus.WEB_SERVICE, hostAddress)
-                startForegroundNotification()
+                upNotification()
             } catch (e: IOException) {
                 toastOnUi(e.localizedMessage ?: "")
                 e.printOnDebug()
@@ -187,7 +187,7 @@ class WebService : BaseService() {
     /**
      * 更新通知
      */
-    override fun startForegroundNotification() {
+    override fun upNotification() {
         val builder = NotificationCompat.Builder(this, AppConst.channelIdWeb)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setSmallIcon(R.drawable.ic_web_service_noti)
