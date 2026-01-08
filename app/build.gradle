@@ -18,13 +18,12 @@ def gitCommits = Integer.parseInt('git rev-list HEAD --count'.execute().text.tri
 
 configurations.all {
     resolutionStrategy {
-        failOnVersionConflict = false
         selectHighestVersion()
     }
 }
 
 android {
-    compileSdk = compile_sdk_version
+    compileSdk 34
     namespace 'io.legado.app'
     kotlin {
         jvmToolchain {
@@ -46,10 +45,11 @@ android {
             }
         }
     }
+
     defaultConfig {
         applicationId "io.legado.app"
         minSdk 21
-        targetSdk 33
+        targetSdk 34
         ndkVersion "25.1.8937393"
         versionCode 10000 + 418 //gitCommits
         versionName version
