@@ -29,6 +29,16 @@ configurations.all {
         // 其他冲突的可以照样子继续加
         force 'androidx.core:core-ktx:1.12.0'
         force 'androidx.core:core:1.12.0'
+        force 'androidx.appcompat:appcompat:1.6.1'
+        force 'androidx.activity:activity-ktx:1.8.0'
+        force 'androidx.fragment:fragment-ktx:1.6.1'
+        force 'androidx.constraintlayout:constraintlayout:2.1.4'
+        force 'com.google.android.material:material:1.10.0'
+        force 'androidx.lifecycle:lifecycle-service:2.6.2'
+        force 'org.jsoup:jsoup:1.16.2'
+        force 'com.squareup.okhttp3:okhttp:4.11.0'
+        force 'com.google.protobuf:protobuf-javalite:3.24.3'
+        force 'com.github.bumptech.glide:glide:4.16.0'
     }
 }
 
