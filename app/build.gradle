@@ -18,6 +18,15 @@ def gitCommits = Integer.parseInt('git rev-list HEAD --count'.execute().text.tri
 
 configurations.all {
     resolutionStrategy {
+        // 强制 Kotlin 标准库全系 1.9.20
+        force 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.20'
+        force 'org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.9.20'
+        force 'org.jetbrains.kotlin:kotlin-reflect:1.9.20'
+        // 强制协程
+        force 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3'
+        force 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
+ 
+        // 其他冲突的可以照样子继续加
         force 'androidx.core:core-ktx:1.12.0'
         force 'androidx.core:core:1.12.0'
     }
