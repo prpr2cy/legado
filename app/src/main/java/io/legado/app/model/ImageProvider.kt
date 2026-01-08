@@ -5,7 +5,7 @@ import android.graphics.BitmapFactory
 import android.util.Size
 import androidx.collection.LruCache
 import io.legado.app.R
-import io.legado.app.constant.AppLog.putDebug
+import io.legado.app.constant.AppLog
 import io.legado.app.constant.PageAnim
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookSource
@@ -67,8 +67,8 @@ object ImageProvider {
                 if (!oldBitmap.isRecycled) {
                     oldBitmap.recycle()
                     triggerRecycled = true
-                    //putDebug("ImageProvider: trigger bitmap recycle. URI: $filePath")
-                    //putDebug("ImageProvider : cacheUsage ${size()}bytes / ${maxSize()}bytes")
+                    //AppLog.putDebug("ImageProvider: trigger bitmap recycle. URI: $filePath")
+                    //AppLog.putDebug("ImageProvider : cacheUsage ${size()}bytes / ${maxSize()}bytes")
                 }
             }
         }
@@ -141,7 +141,7 @@ object ImageProvider {
             //svg size
             val size = SvgUtils.getSize(file.absolutePath)
             if (size != null) return size
-            putDebug("ImageProvider: $src Unsupported image type")
+            AppLog.putDebug("ImageProvider: $src Unsupported image type")
             //file.delete() 重复下载
             return Size(errorBitmap.width, errorBitmap.height)
         }
