@@ -179,7 +179,7 @@ class ExploreShowActivity : VMBaseActivity<ActivityExploreShowBinding, ExploreSh
         when (item.itemId) {
             MENU_PAGE_ID -> {
                 val page = viewModel.pageLiveData.value ?: 1
-                NumberPickerDialog((this@ExploreShowActivity)
+                NumberPickerDialog(this@ExploreShowActivity)
                     .setTitle(getString(R.string.change_page))
                     .setMaxValue(999)
                     .setMinValue(1)
@@ -190,7 +190,7 @@ class ExploreShowActivity : VMBaseActivity<ActivityExploreShowBinding, ExploreSh
                         }
                     }
                 return true
-            }
+            },
             R.id.menu_add_all_to_bookshelf -> {
                 addAllToBookshelf()
                 return true
