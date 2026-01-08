@@ -44,8 +44,7 @@ android {
         minSdk 21
         targetSdk 33
         ndkVersion "25.1.8937393"
-        //versionCode 10000 + gitCommits
-        versionCode 10418
+        versionCode 10000 + 418 //gitCommits
         versionName version
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         project.ext.set("archivesBaseName", name + "_" + version)
