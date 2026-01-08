@@ -25,3 +25,11 @@ plugins {
 tasks.register('clean', Delete) {
     delete rootProject.layout.buildDirectory
 }
+
+allprojects {
+    configurations.all {
+        resolutionStrategy {
+            preferLatestVersion()
+        }
+    }
+}
