@@ -281,7 +281,7 @@ object ChapterProvider {
         textPages: ArrayList<TextPage>,
         stringBuilder: StringBuilder,
         imageStyle: String?,
-    ): Float {
+    ): Pair<Int, Float> {
         var absStartX = x
         var durY = y
         var doubleY = 0f
@@ -340,7 +340,7 @@ object ChapterProvider {
                     if (doublePage && absStartX < visibleWidth) {
                         //当前页面左列结束
                         textPage.leftLineSize = textPage.lineSize
-                        absStartX = x + viewWidth + paddingRight + x
+                        absStartX = 2x + viewWidth + paddingRight
                         doubleY += durY
                         durY = 0f
                     } else {
