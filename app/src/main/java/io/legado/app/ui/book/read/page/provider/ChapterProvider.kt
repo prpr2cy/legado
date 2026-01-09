@@ -91,9 +91,6 @@ object ChapterProvider {
     private var paragraphSpacing = 0
 
     @JvmStatic
-    private var paragraphFloat = 0f
-
-    @JvmStatic
     private var titleTopSpacing = 0
 
     @JvmStatic
@@ -209,7 +206,7 @@ object ChapterProvider {
                     val text = content.substring(start, matcher.start())
                     if (text.isNotBlank()) {
                         if (start > 0) {
-                            durY += paragraphSpacing + (lineSpacingExtra * 10).toInt()
+                            durY += contentPaintTextHeight * paragraphSpacing.toFloat()
                         }
                         setTypeText(
                             book,
@@ -239,7 +236,7 @@ object ChapterProvider {
                     val text = content.substring(start, content.length)
                     if (text.isNotBlank()) {
                         if (start > 0) {
-                            durY += paragraphSpacing + (lineSpacingExtra * 10).toInt()
+                            durY += contentPaintTextHeight * paragraphSpacing.toFloat()
                         }
                         setTypeText(
                             book, absStartX, durY,
@@ -350,8 +347,8 @@ object ChapterProvider {
                         //当前页面左列结束
                         textPage.leftLineSize = textPage.lineSize
                         absStartX = paddingLeft + viewWidth
-                        //doubleY += durY
-                        //durY = 0f
+                        doubleY += durY
+                        durY = 0f
                     } else {
                         //当前页面结束
                         if (textPage.leftLineSize == 0) {
@@ -392,7 +389,7 @@ object ChapterProvider {
                 textPages.last().addLine(textLine)
             }
         }
-        return absStartX to doubleY + durY + paragraphFloat
+        return absStartX to doubleY + durY + paragraphSpacing.toFloat() / 10f
     }
 
     /**
@@ -536,7 +533,7 @@ object ChapterProvider {
             durY += textHeight * lineSpacingExtra
             textPages.last().height = durY
         }
-        durY += textHeight * paragraphFloat
+        durY += textHeight * paragraphSpacing.toFloat() / 10f
         return Pair(absStartX, durY)
     }
 
@@ -799,7 +796,6 @@ object ChapterProvider {
         //间距
         lineSpacingExtra = ReadBookConfig.lineSpacingExtra / 10f
         paragraphSpacing = ReadBookConfig.paragraphSpacing
-        paragraphFloat = paragraphSpacing.toFloat() / 10f
         titleTopSpacing = ReadBookConfig.titleTopSpacing.dpToPx()
         titleBottomSpacing = ReadBookConfig.titleBottomSpacing.dpToPx()
         val bodyIndent = ReadBookConfig.paragraphIndent
@@ -924,10 +920,10 @@ object ChapterProvider {
             visibleHeight = viewHeight - paddingTop - paddingBottom
             visibleRight = viewWidth - paddingRight
             visibleBottom = paddingTop + visibleHeight
-        }
 
-        if (paddingLeft >= visibleRight || paddingTop >= visibleBottom) {
-            appCtx.toastOnUi("边距设置过大，请重新设置")
+            if (paddingLeft >= visibleRight || paddingTop >= visibleBottom) {
+                appCtx.toastOnUi("边距设置过大，请重新设置")
+            }
         }
     }
 
