@@ -206,7 +206,7 @@ object ChapterProvider {
                     val text = content.substring(start, matcher.start())
                     if (text.isNotBlank()) {
                         if (start > 0) {
-                            durY += contentPaintTextHeight * paragraphSpacing.toFloat()
+                            durY += paragraphSpacing.toFloat()
                         }
                         setTypeText(
                             book,
@@ -236,7 +236,7 @@ object ChapterProvider {
                     val text = content.substring(start, content.length)
                     if (text.isNotBlank()) {
                         if (start > 0) {
-                            durY += contentPaintTextHeight * paragraphSpacing.toFloat()
+                            durY += paragraphSpacing.toFloat()
                         }
                         setTypeText(
                             book, absStartX, durY,
@@ -290,7 +290,6 @@ object ChapterProvider {
     ): Pair<Int, Float> {
         var absStartX = x
         var durY = y
-        var doubleY = 0f
         var ratio = 1f
         val size = ImageProvider.getImageSize(book, src, ReadBook.bookSource)
 
@@ -343,12 +342,10 @@ object ChapterProvider {
                 if (durY + segmentHeight > visibleHeight) {
                     val textPage = textPages.last()
 
-                    if (doublePage && absStartX < visibleWidth) {
+                    if (doublePage && absStartX < visibleWidth / 2) {
                         //当前页面左列结束
                         textPage.leftLineSize = textPage.lineSize
-                        absStartX = paddingLeft + viewWidth
-                        doubleY += durY
-                        durY = 0f
+                        absStartX = paddingLeft + viewWidth / 2
                     } else {
                         //当前页面结束
                         if (textPage.leftLineSize == 0) {
@@ -357,12 +354,10 @@ object ChapterProvider {
                         textPage.text = stringBuilder.toString().ifEmpty { "本页无文字内容" }
                         stringBuilder.clear()
                         textPages.add(TextPage())
-                        doubleY += durY
-                        if (textPage.height < doubleY) {
-                            textPage.height = doubleY
+                        if (textPage.height < durY) {
+                            textPage.height = durY
                         }
                         absStartX = paddingLeft
-                        doubleY = 0f
                         durY = 0f
                     }
                 }
