@@ -193,7 +193,6 @@ dependencies {
     //noinspection GradleDependency,DifferentStdlibGradleVersion
     implementation("org.jetbrains.kotlin:kotlin-reflect:$kotlin_version")
     //协程
-    def coroutines_version = '1.7.3'
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutines_version")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:$coroutines_version")
 
@@ -249,7 +248,7 @@ dependencies {
     implementation('org.jsoup:jsoup:1.17.2')
     implementation('com.jayway.jsonpath:json-path:2.9.0')
     implementation('org.glassfish:jakarta.json:2.0.1')
-    implementation('cn.wanghaomiao:JsoupXpath:2.5.4')
+    implementation('cn.wanghaomiao:JsoupXpath:2.5.3')
     implementation(project(path: ':modules:book'))
 
     //JS rhino
@@ -269,7 +268,7 @@ dependencies {
     //Svg
     implementation("com.caverock:androidsvg-aar:1.4")
     //Glide svg plugin
-    implementation("com.github.qoqa:glide-svg:4.14.2") {
+    implementation("com.github.qoqa:glide-svg:4.0.2") {
         exclude group: 'com.github.bumptech.glide'
     }
 
