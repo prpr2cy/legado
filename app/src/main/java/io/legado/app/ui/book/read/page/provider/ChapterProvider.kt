@@ -1,3 +1,7 @@
+下面korlin代码，横屏显示的时候，当前页分为左右列两部分各占一半，visibleWidth已经是半屏宽度了，现在有一张长图片要分屏显示，我按高度切割成多张图片，想要左右列各显示一张图片，但我的代码图片每页只能在其中一边显示一张，不能左右各一张，检查一下下面代码有什么问题
+
+
+
 package io.legado.app.ui.book.read.page.provider
 
 import android.graphics.Paint
@@ -327,10 +331,11 @@ object ChapterProvider {
                 if (durY + segmentHeight > visibleHeight) {
                     val textPage = textPages.last()
 
-                    if (doublePage && absStartX < visibleWidth / 2) {
+                    if (doublePage && absStartX < visibleWidth) {
                         //当前页面左列结束
                         textPage.leftLineSize = textPage.lineSize
-                        absStartX = visibleWidth / 2 + x
+                        absStartX = visibleWidth + x
+                        durY = 0f
                     } else {
                         //当前页面结束
                         if (textPage.leftLineSize == 0) {
@@ -368,7 +373,7 @@ object ChapterProvider {
             }
         }
         return if (durY < visibleHeight.toFloat()) {
-            durY + contentPaintTextHeight.toFloat() * paragraphSpacing.toFloat() / 10f
+            durY + contentPaintTextHeight.toFloat()
         } else {
             durY + paragraphSpacing.toFloat() / 10f
         }
