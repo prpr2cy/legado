@@ -205,6 +205,9 @@ object ChapterProvider {
                 while (matcher.find()) {
                     val text = content.substring(start, matcher.start())
                     if (text.isNotBlank()) {
+                        if (start > 0) {
+                            durY += contentPaintTextHeight.toFloat()
+                        }
                         setTypeText(
                             book,
                             absStartX,
@@ -232,6 +235,9 @@ object ChapterProvider {
                 if (start < content.length) {
                     val text = content.substring(start, content.length)
                     if (text.isNotBlank()) {
+                        if (start > 0) {
+                            durY += contentPaintTextHeight.toFloat()
+                        }
                         setTypeText(
                             book, absStartX, durY,
                             if (AppConfig.enableReview) text + reviewChar else text,
@@ -341,7 +347,7 @@ object ChapterProvider {
                         //当前页面左列结束
                         textPage.leftLineSize = textPage.lineSize
                         absStartX = x * 2 + viewWidth + paddingRight
-                        doubleY += durY
+                        //doubleY += durY
                         durY = 0f
                     } else {
                         //当前页面结束
@@ -383,7 +389,7 @@ object ChapterProvider {
                 textPages.last().addLine(textLine)
             }
         }
-        return absStartX to doubleY + durY + contentPaintTextHeight.toFloat() * paragraphSpacing / 10f
+        return absStartX to doubleY + durY + paragraphSpacing.toFloat() / 10f
     }
 
     /**
@@ -910,14 +916,14 @@ object ChapterProvider {
                 viewWidth - paddingLeft - paddingRight
             }
 
-            if (paddingLeft >= visibleRight || paddingTop >= visibleBottom) {
-                appCtx.toastOnUi("边距设置过大，请重新设置")
-            }
-
             //留1dp画最后一行下划线
             visibleHeight = viewHeight - paddingTop - paddingBottom
             visibleRight = viewWidth - paddingRight
             visibleBottom = paddingTop + visibleHeight
+
+            if (paddingLeft >= visibleRight || paddingTop >= visibleBottom) {
+                appCtx.toastOnUi("边距设置过大，请重新设置")
+            }
         }
     }
 
