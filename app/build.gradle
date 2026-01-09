@@ -169,7 +169,7 @@ android {
         }
     }
 
-    // ✅ 指定 CMake 路径
+    // 指定 CMake 路径
     externalNativeBuild {
         cmake {
             path "src/main/cpp/CMakeLists.txt"
@@ -209,7 +209,7 @@ dependencies {
     implementation('androidx.constraintlayout:constraintlayout:2.1.4')
     implementation('androidx.swiperefreshlayout:swiperefreshlayout:1.1.0')
     implementation('androidx.viewpager2:viewpager2:1.0.0')
-    implementation('androidx.webkit:webkit:1.8.0')
+    implementation('androidx.webkit:webkit:1.9.0')
 
     //google
     implementation('com.google.android.material:material:1.10.0')
@@ -222,7 +222,7 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-service:$lifecycle_version")
 
     //media
-    implementation("androidx.media:media:1.6.0")
+    implementation("androidx.media:media:1.7.0")
     // For media playback using ExoPlayer
     implementation "androidx.media3:media3-exoplayer:$media3_version"
     // For loading data using the OkHttp network stack
@@ -246,13 +246,14 @@ dependencies {
     implementation('io.github.jeremyliao:live-event-bus-x:1.8.0')
 
     //规则相关
-    implementation('org.jsoup:jsoup:1.16.2')
-    implementation('com.jayway.jsonpath:json-path:2.8.0')
-    implementation('cn.wanghaomiao:JsoupXpath:2.5.3')
+    implementation('org.jsoup:jsoup:1.17.2')
+    implementation('com.jayway.jsonpath:json-path:2.9.0')
+    implementation('org.glassfish:jakarta.json:2.0.1')
+    implementation('cn.wanghaomiao:JsoupXpath:2.5.4')
     implementation(project(path: ':modules:book'))
 
     //JS rhino
-    implementation(project(path: ':modules:rhino1.7.3'))
+    implementation(project(path: ':modules:rhino1.7.14'))
 
     //网络
     implementation('com.squareup.okhttp3:okhttp:4.11.0')
@@ -268,7 +269,7 @@ dependencies {
     //Svg
     implementation("com.caverock:androidsvg-aar:1.4")
     //Glide svg plugin
-    implementation("com.github.qoqa:glide-svg:4.0.2") {
+    implementation("com.github.qoqa:glide-svg:4.14.2") {
         exclude group: 'com.github.bumptech.glide'
     }
 

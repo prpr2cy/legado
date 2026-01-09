@@ -206,7 +206,7 @@ object ChapterProvider {
                     val text = content.substring(start, matcher.start())
                     if (text.isNotBlank()) {
                         if (start > 0) {
-                            durY += contentPaintTextHeight.toFloat()
+                            durY += paragraphSpacing.toFloat()
                         }
                         setTypeText(
                             book,
@@ -236,7 +236,7 @@ object ChapterProvider {
                     val text = content.substring(start, content.length)
                     if (text.isNotBlank()) {
                         if (start > 0) {
-                            durY += contentPaintTextHeight.toFloat()
+                            durY += paragraphSpacing.toFloat()
                         }
                         setTypeText(
                             book, absStartX, durY,
@@ -346,8 +346,8 @@ object ChapterProvider {
                     if (doublePage && absStartX < visibleWidth) {
                         //当前页面左列结束
                         textPage.leftLineSize = textPage.lineSize
-                        absStartX = x * 2 + viewWidth + paddingRight
-                        //doubleY += durY
+                        absStartX = x + viewWidth / 2
+                        doubleY += durY
                         durY = 0f
                     } else {
                         //当前页面结束
