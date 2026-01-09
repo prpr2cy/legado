@@ -264,7 +264,7 @@ class ContentTextView(context: Context, attrs: AttributeSet?) : View(context, at
         } ?: return
 
         val pageH = if (column.totalPages > 1) {
-            AppLog.put("计算宽高：${width}x${height}_${cropStartY}_${cropEndY} 页数：${column.totalPages} Bitmap宽高：${bitmap.width}x${bitmap.height}")
+            AppLog.put("计算宽高：${width}x${height}_${column.cropStartY}_${column.cropEndY} 页数：${column.totalPages} Bitmap宽高：${bitmap.width}x${bitmap.height}")
             val cropStartY = column.cropStartY.coerceIn(0, bitmap.height - 1)
             val cropEndY = column.cropEndY.coerceIn(cropStartY, bitmap.height)
             column.cropStartY = cropStartY

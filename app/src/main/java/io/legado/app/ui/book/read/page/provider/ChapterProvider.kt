@@ -280,6 +280,7 @@ object ChapterProvider {
     ): Float {
         var absStartX = x
         var durY = y
+        var doubleY = 0f
         val size = ImageProvider.getImageSize(book, src, ReadBook.bookSource)
         if (size.width > 0 && size.height > 0) {
 
@@ -330,10 +331,8 @@ object ChapterProvider {
                     if (doublePage && absStartX < visibleWidth) {
                         //当前页面左列结束
                         textPage.leftLineSize = textPage.lineSize
-                        if (textPage.height < durY) {
-                            textPage.height = durY
-                        }
                         absStartX = visibleWidth + x
+                        doubleY += durY
                         durY = 0f
                     } else {
                         //当前页面结束
@@ -343,10 +342,12 @@ object ChapterProvider {
                         textPage.text = stringBuilder.toString().ifEmpty { "本页无文字内容" }
                         stringBuilder.clear()
                         textPages.add(TextPage())
-                        if (textPage.height < durY) {
-                            textPage.height = durY
+                        doubleY += durY
+                        if (textPage.height < doubleY) {
+                            textPage.height = doubleY
                         }
                         absStartX = x
+                        doubleY = 0f
                         durY = 0f
                     }
                 }
