@@ -372,7 +372,7 @@ object ChapterProvider {
                 textPages.last().addLine(textLine)
             }
         }
-        return durY + contentPaintTextHeight.toFloat() * paragraphSpacing.toFloat() / 10f
+        return doubleY + durY + contentPaintTextHeight.toFloat() * paragraphSpacing.toFloat() / 10f
     }
 
     /**
