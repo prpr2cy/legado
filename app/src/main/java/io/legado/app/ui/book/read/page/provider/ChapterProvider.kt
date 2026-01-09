@@ -220,10 +220,13 @@ object ChapterProvider {
                             durY = it.second
                         }
                     }
-                    durY = setTypeImage(
+                    setTypeImage(
                         book, matcher.group(1)!!,
                         absStartX, durY, textPages, stringBuilder, book.getImageStyle()
-                    )
+                    ).let {
+                        absStartX = it.first
+                        durY = it.second
+                    }
                     start = matcher.end()
                 }
                 if (start < content.length) {
@@ -284,8 +287,8 @@ object ChapterProvider {
         var doubleY = 0f
         var ratio = 1f
         val size = ImageProvider.getImageSize(book, src, ReadBook.bookSource)
-        if (size.width > 0 && size.height > 0) {
 
+        if (size.width > 0 && size.height > 0) {
             var height = size.height
             var width = size.width
             when (imageStyle?.toUpperCase(Locale.ROOT)) {
@@ -296,7 +299,7 @@ object ChapterProvider {
                         height = visibleHeight
                         width = height * size.width / size.height
                     }
-                    if (size.width < visibleWidth) {
+                    if (height > visibleHeight && size.width < visibleWidth) {
                         // 原图宽度小于visibleWidth时，分页裁剪高度要按比例缩小
                         ratio = size.width.toFloat() / visibleWidth
                     }
@@ -337,7 +340,7 @@ object ChapterProvider {
                     if (doublePage && absStartX < visibleWidth) {
                         //当前页面左列结束
                         textPage.leftLineSize = textPage.lineSize
-                        absStartX = x + viewWidth
+                        absStartX = x + viewWidth + paddingRight + x
                         doubleY += durY
                         durY = 0f
                     } else {
@@ -375,10 +378,12 @@ object ChapterProvider {
                         originalHeight = size.height
                     )
                 )
+                calcTextLinePosition(textPages, textLine, stringBuilder.length)
+                stringBuilder.append(" ") // 确保翻页时索引计算正确
                 textPages.last().addLine(textLine)
             }
         }
-        return doubleY + durY + contentPaintTextHeight.toFloat() * paragraphSpacing / 10f
+        return absStartX to doubleY + durY + contentPaintTextHeight.toFloat() * paragraphSpacing / 10f
     }
 
     /**
@@ -516,19 +521,7 @@ object ChapterProvider {
             if (textLine.isParagraphEnd) {
                 stringBuilder.append("\n")
             }
-            val lastLine = textPages.last().lines.lastOrNull { it.paragraphNum > 0 }
-                ?: textPages.getOrNull(textPages.lastIndex - 1)?.lines?.lastOrNull { it.paragraphNum > 0 }
-            val paragraphNum = when {
-                lastLine == null -> 1
-                lastLine.isParagraphEnd -> lastLine.paragraphNum + 1
-                else -> lastLine.paragraphNum
-            }
-            textLine.paragraphNum = paragraphNum
-            textLine.chapterPosition =
-                (textPages.getOrNull(textPages.lastIndex - 1)?.lines?.lastOrNull()?.run {
-                    chapterPosition + charSize + if (isParagraphEnd) 1 else 0
-                } ?: 0) + sbLength
-            textLine.pagePosition = sbLength
+            calcTextLinePosition(textPages, textLine, stringBuilder.length)
             textPages.last().addLine(textLine)
             textLine.upTopBottom(durY, textHeight, fontMetrics)
             durY += textHeight * lineSpacingExtra
@@ -536,6 +529,26 @@ object ChapterProvider {
         }
         durY += textHeight * paragraphSpacing / 10f
         return Pair(absStartX, durY)
+    }
+
+    private fun calcTextLinePosition(
+        textPages: ArrayList<TextPage>,
+        textLine: TextLine,
+        sbLength: Int
+    ) {
+        val lastLine = textPages.last().lines.lastOrNull { it.paragraphNum > 0 }
+            ?: textPages.getOrNull(textPages.lastIndex - 1)?.lines?.lastOrNull { it.paragraphNum > 0 }
+        val paragraphNum = when {
+            lastLine == null -> 1
+            lastLine.isParagraphEnd -> lastLine.paragraphNum + 1
+            else -> lastLine.paragraphNum
+        }
+        textLine.paragraphNum = paragraphNum
+        textLine.chapterPosition =
+            (textPages.getOrNull(textPages.lastIndex - 1)?.lines?.lastOrNull()?.run {
+                chapterPosition + charSize + if (isParagraphEnd) 1 else 0
+            } ?: 0) + sbLength
+        textLine.pagePosition = sbLength
     }
 
     /**
@@ -896,6 +909,11 @@ object ChapterProvider {
             } else {
                 viewWidth - paddingLeft - paddingRight
             }
+
+            if (paddingLeft >= visibleRight || paddingTop >= visibleBottom) {
+                appCtx.toastOnUi("边距设置过大，请重新设置")
+            }
+
             //留1dp画最后一行下划线
             visibleHeight = viewHeight - paddingTop - paddingBottom
             visibleRight = viewWidth - paddingRight
