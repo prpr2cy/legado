@@ -340,7 +340,7 @@ object ChapterProvider {
                     if (doublePage && absStartX < visibleWidth) {
                         //当前页面左列结束
                         textPage.leftLineSize = textPage.lineSize
-                        absStartX = 2x + viewWidth + paddingRight
+                        absStartX = x * 2 + viewWidth + paddingRight
                         doubleY += durY
                         durY = 0f
                     } else {
