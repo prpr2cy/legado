@@ -79,7 +79,7 @@ class VerificationCodeDialog() : BaseDialogFragment(R.layout.dialog_verification
 
     @SuppressLint("CheckResult")
     private fun loadImage(url: String, sourceUrl: String?) {
-        ImageProvider.bitmapLruCache.remove(url)
+        ImageProvider.remove(url)
         ImageLoader.loadBitmap(requireContext(), url).apply {
             sourceUrl?.let {
                 apply(RequestOptions().set(OkHttpModelLoader.sourceOriginOption, it))
@@ -100,7 +100,7 @@ class VerificationCodeDialog() : BaseDialogFragment(R.layout.dialog_verification
                 ) {
                     view ?: return
                     val bitmap = resource.copy(resource.config, true)
-                    ImageProvider.bitmapLruCache.put(url, bitmap)
+                    ImageProvider.put(url, bitmap)
                     binding.verificationCodeImageView.setImageBitmap(bitmap)
                 }
 

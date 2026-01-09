@@ -27,8 +27,9 @@ import io.legado.app.utils.*
 import splitties.init.appCtx
 import java.util.LinkedList
 import java.util.Locale
-import kotlin.math.ceil
 import kotlin.math.min
+import kotlin.math.ceil
+import kotlin.math.floor
 import kotlin.collections.ArrayList
 
 /**
@@ -281,6 +282,7 @@ object ChapterProvider {
         var absStartX = x
         var durY = y
         var doubleY = 0f
+        var ratio = 1f
         val size = ImageProvider.getImageSize(book, src, ReadBook.bookSource)
         if (size.width > 0 && size.height > 0) {
 
@@ -293,6 +295,10 @@ object ChapterProvider {
                     if (height > visibleHeight && height.toFloat() < visibleHeight.toFloat() * 1.2f) {
                         height = visibleHeight
                         width = height * size.width / size.height
+                    }
+                    if (size.width < visibleWidth) {
+                        // 原图宽度小于visibleWidth时，分页裁剪高度要按比例缩小
+                        ratio = size.width.toFloat() / visibleWidth
                     }
                 }
 
@@ -331,7 +337,7 @@ object ChapterProvider {
                     if (doublePage && absStartX < visibleWidth) {
                         //当前页面左列结束
                         textPage.leftLineSize = textPage.lineSize
-                        absStartX = x + viewWidth + paddingRight
+                        absStartX = x + viewWidth
                         doubleY += durY
                         durY = 0f
                     } else {
@@ -363,8 +369,8 @@ object ChapterProvider {
                         end = absStartX + end,
                         src = src,
                         totalPages = totalPages,
-                        cropStartY = cropStartY,
-                        cropEndY = cropEndY,
+                        cropStartY = floor(cropStartY.toFloat() * ratio).toInt(),
+                        cropEndY = floor(cropEndY.toFloat() * ratio).toInt(),
                         originalWidth = size.width,
                         originalHeight = size.height
                     )
@@ -372,7 +378,7 @@ object ChapterProvider {
                 textPages.last().addLine(textLine)
             }
         }
-        return doubleY + durY + contentPaintTextHeight.toFloat() * paragraphSpacing.toFloat() / 10f
+        return doubleY + durY + contentPaintTextHeight.toFloat() * paragraphSpacing / 10f
     }
 
     /**

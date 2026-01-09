@@ -28,6 +28,8 @@ import splitties.init.appCtx
 import java.io.File
 import java.io.FileOutputStream
 import java.util.Collections
+import kotlin.math.max
+import kotlin.math.min
 
 object ImageProvider {
 
@@ -45,12 +47,24 @@ object ImageProvider {
     private const val M = 1024 * 1024
     val cacheSize: Int
         get() {
-            if (AppConfig.bitmapCacheSize <= 0) {
+            if (AppConfig.bitmapCacheSize <= 0 || AppConfig.bitmapCacheSize >= 2048) {
                 AppConfig.bitmapCacheSize = 50
             }
             return AppConfig.bitmapCacheSize * M
         }
+
+    val maxSize: Int
+        get() {
+            return bitmapLruCache.maxSize()
+        }
+
+    val nowSize: Int
+        get() {
+            return bitmapLruCache.size()
+        }
+
     var triggerRecycled = false
+
     val bitmapLruCache = object : LruCache<String, Bitmap>(cacheSize) {
 
         override fun sizeOf(filePath: String, bitmap: Bitmap): Int {
@@ -74,12 +88,35 @@ object ImageProvider {
         }
     }
 
+    fun resize(size: Int) {
+        val newSize = if (size + maxSize > 2048 * M || size + maxSize > cacheSize * 5) {
+            bitmapLruCache.evictAll()
+            AppLog.put("图片缓存超过最大容量或5倍设置容量，已自动重置缓存")
+            min(size + 50 * M, cacheSize)
+        } else {
+            size + 50 * M
+        }
+        bitmapLruCache.resize(newSize)
+        AppLog.put("图片缓存不够大，自动扩增至${(newSize / 1024 / 1024)}MB。")
+    }
+
+
     fun put(key: String, bitmap: Bitmap) {
+        val byteCount = bitmap.byteCount.toInt()
+        if (byteCount > maxSize) {
+            LruResize(byteCount)
+        } else if (byteCount + nowSize > maxSize) {
+            LruResize(byteCount + nowSize)
+        }
         bitmapLruCache.put(key, bitmap)
     }
 
     fun get(key: String): Bitmap? {
         return bitmapLruCache.get(key)
+    }
+
+    fun remove(key: String): Bitmap? {
+        return bitmapLruCache.remove(key)
     }
 
     private fun getNotRecycled(key: String): Bitmap? {
@@ -88,7 +125,6 @@ object ImageProvider {
             bitmapLruCache.remove(key)
             return null
         }
-        AppLog.put("$key")
         return bitmap
     }
 
@@ -169,11 +205,10 @@ object ImageProvider {
         //epub文件提供图片链接是相对链接，同时阅读多个epub文件，缓存命中错误
         //bitmapLruCache的key同一改成缓存文件的路径
 
-        val cacheKey = getCacheKey(vFile.absolutePath, width, height)
         // 检查解码失败记录
-        if (decodeFailedCache.contains(cacheKey)) return errorBitmap
+        if (decodeFailedCache.contains(vFile.absolutePath)) return errorBitmap
 
-        val cacheBitmap = getNotRecycled(cacheKey)
+        val cacheBitmap = getNotRecycled(vFile.absolutePath)
         if (cacheBitmap != null) return cacheBitmap
 
         if (height != null && AppConfig.asyncLoadImage && ReadBook.pageAnim() == PageAnim.scrollPageAnim) {
@@ -182,11 +217,11 @@ object ImageProvider {
                     ?: SvgUtils.createBitmap(vFile.absolutePath, width, height)
                     ?: throw NoStackTraceException(appCtx.getString(R.string.error_decode_bitmap))
                 withContext(Main) {
-                    bitmapLruCache.put(cacheKey, bitmap)
+                    bitmapLruCache.put(vFile.absolutePath, bitmap)
                 }
             }.onError {
                 // 记录解码失败
-                decodeFailedCache.add(cacheKey)
+                decodeFailedCache.add(vFile.absolutePath)
             }.onFinally {
                 block?.invoke()
             }
@@ -197,42 +232,18 @@ object ImageProvider {
             val bitmap = BitmapUtils.decodeBitmap(vFile.absolutePath, width, height)
                 ?: SvgUtils.createBitmap(vFile.absolutePath, width, height)
                 ?: throw NoStackTraceException(appCtx.getString(R.string.error_decode_bitmap))
-            bitmapLruCache.put(cacheKey, bitmap)
+            bitmapLruCache.put(vFile.absolutePath, bitmap)
             bitmap
         }.onFailure {
             // 记录解码失败
-            decodeFailedCache.add(cacheKey)
+            decodeFailedCache.add(vFile.absolutePath)
         }.getOrDefault(errorBitmap)
     }
 
-    fun getCacheKey(filePath: String, width: Int? = null, height: Int? = null): String {
-        return if (width != null && height != null) {
-            "${filePath}_w${width}_h${height}"
-        } else filePath
-    }
-
-    /**
-     * 清理与同一文件路径相关的所有缓存（忽略 _wXXX_hXXX 后缀）
-     */
-    fun clearCache(filePath: String) {
-        // 快照，防止遍历时并发修改 
-        val keysToRemove = mutableListOf<String>()
-        synchronized(bitmapLruCache) {
-            for (key in bitmapLruCache.snapshot().keys) {
-                if (key.startsWith(filePath)) {
-                    keysToRemove += key 
-                }
-            }
-        }
-        // 统一删，触发 entryRemoved 回收 bitmap 
-        keysToRemove.forEach { bitmapLruCache.remove(it) }
-    }
-
-    fun isImageAlive(book: Book, src: String, width: Int? = null, height: Int? = null): Boolean {
+    fun isImageAlive(book: Book, src: String): Boolean {
         val vFile = BookHelp.getImage(book, src)
-        if (!vFile.exists()) return true // 使用 errorBitmap
-        val cacheKey = getCacheKey(vFile.absolutePath, width, height)
-        val cacheBitmap = bitmapLruCache.get(cacheKey)
+        if (!vFile.exists()) return true // 使用errorBitmap
+        val cacheBitmap = bitmapLruCache.get(vFile.absolutePath)
         return cacheBitmap != null
     }
 

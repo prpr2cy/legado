@@ -16,7 +16,7 @@ import kotlin.math.*
 object BitmapUtils {
 
     /**
-     * 从path中获取图片信息,在通过BitmapFactory.decodeFile(String path)方法将突破转成Bitmap时，
+     * 从path中获取图片信息,在通过BitmapFactory.decodeFile(String path)方法将图片转成Bitmap时，
      * 遇到大一些的图片，我们经常会遇到OOM(Out Of Memory)的问题。所以用到了我们上面提到的BitmapFactory.Options这个类。
      *
      * @param path   文件路径
@@ -26,16 +26,45 @@ object BitmapUtils {
      */
     @Throws(IOException::class)
     fun decodeBitmap(path: String, width: Int, height: Int? = null): Bitmap? {
-        val fis = FileInputStream(path)
-        return fis.use {
+        return FileInputStream(path).use { fis ->
             val op = BitmapFactory.Options()
             // inJustDecodeBounds如果设置为true,仅仅返回图片实际的宽和高,宽和高是赋值给opts.outWidth,opts.outHeight;
             op.inJustDecodeBounds = true
             BitmapFactory.decodeFileDescriptor(fis.fd, null, op)
-            op.inSampleSize = calculateInSampleSize(op, width, height)
+            if (op.outWidth <= 0 || op.outHeight <= 0) {
+                return@use null
+            }
+
+            // 重置文件指针
+            fis.channel.position(0)
+
+            // op.inSampleSize = calculateInSampleSize(op, width, height)
+            op.inSampleSize = computeRoughInSampleSize(
+                op.outWidth, op.outHeight,
+                width, height ?: op.outHeight
+            )
             op.inJustDecodeBounds = false
-            BitmapFactory.decodeFileDescriptor(fis.fd, null, op)
+            val bitmap = BitmapFactory.decodeFileDescriptor(fis.fd, null, op) ?: return@use null
+            if (op.inSampleSize == 1 || height == null) bitmap
+            else Toolkit.resize(bitmap, width, height)
         }
+    }
+
+    /**
+     * 计算采样率，保证缩放后尺寸略大于目标尺寸
+     */
+    private fun computeRoughInSampleSize(srcW: Int, srcH: Int, dstW: Int, dstH: Int): Int {
+        var sample = 1
+        // 如果原图已经小于目标尺寸，直接返回1
+        if (srcW <= dstW && srcH <= dstH) {
+            return 1
+        }
+    
+        while (srcW / sample >= dstW && srcH / sample >= dstH) {
+            sample = sample shl 1 // *=2
+        }
+        // 确保最小采样率为1
+        return max(1, sample shr 1)
     }
 
     /**

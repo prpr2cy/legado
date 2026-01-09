@@ -39,7 +39,7 @@ class PhotoDialog() : BaseDialogFragment(R.layout.dialog_photo_view) {
     override fun onFragmentCreated(view: View, savedInstanceState: Bundle?) {
         val arguments = arguments ?: return
         arguments.getString("src")?.let { src ->
-            ImageProvider.bitmapLruCache.get(src)?.let {
+            ImageProvider.get(src)?.let {
                 binding.photoView.setImageBitmap(it)
                 return
             }

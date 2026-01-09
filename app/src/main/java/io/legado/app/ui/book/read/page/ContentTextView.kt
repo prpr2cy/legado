@@ -242,10 +242,9 @@ class ContentTextView(context: Context, attrs: AttributeSet?) : View(context, at
             ImageProvider.isTriggerRecycled() &&
             !ImageProvider.isImageAlive(book, column.src, width, height)
         ) {
-            val newSize = ImageProvider.bitmapLruCache.maxSize() + increaseSize
+            val newSize = ImageProvider.maxSize + increaseSize
             if (newSize < maxCacheSize) {
-                ImageProvider.bitmapLruCache.resize(newSize)
-                AppLog.put("图片缓存不够大，自动扩增至${(newSize / 1024 / 1024)}MB。")
+                ImageProvider.resize(newSize)
                 cacheIncreased = true
             }
             return
@@ -264,7 +263,7 @@ class ContentTextView(context: Context, attrs: AttributeSet?) : View(context, at
         } ?: return
 
         val pageH = if (column.totalPages > 1) {
-            AppLog.put("计算宽高：${width}x${height}_${column.cropStartY}_${column.cropEndY} 页数：${column.totalPages} Bitmap宽高：${bitmap.width}x${bitmap.height}")
+            AppLog.put("计算宽高：${width}x${height}_${column.cropStartY}-${column.cropEndY} 页数：${column.totalPages} Bitmap宽高：${bitmap.width}x${bitmap.height}")
             val cropStartY = column.cropStartY.coerceIn(0, bitmap.height - 1)
             val cropEndY = column.cropEndY.coerceIn(cropStartY, bitmap.height)
             column.cropStartY = cropStartY

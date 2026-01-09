@@ -81,7 +81,7 @@ class OtherConfigFragment : PreferenceFragment(),
             }
             PreferKey.preDownloadNum -> NumberPickerDialog(requireContext())
                 .setTitle(getString(R.string.pre_download))
-                .setMaxValue(9999)
+                .setMaxValue(999)
                 .setMinValue(0)
                 .setValue(AppConfig.preDownloadNum)
                 .show {
@@ -109,12 +109,12 @@ class OtherConfigFragment : PreferenceFragment(),
             PreferKey.bitmapCacheSize -> {
                 NumberPickerDialog(requireContext())
                     .setTitle(getString(R.string.bitmap_cache_size))
-                    .setMaxValue(9999)
+                    .setMaxValue(2048)
                     .setMinValue(1)
                     .setValue(AppConfig.bitmapCacheSize)
                     .show {
                         AppConfig.bitmapCacheSize = it
-                        ImageProvider.bitmapLruCache.resize(ImageProvider.cacheSize)
+                        ImageProvider.resize(ImageProvider.cacheSize)
                     }
             }
             PreferKey.sourceEditMaxLine -> {
