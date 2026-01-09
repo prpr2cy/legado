@@ -29,7 +29,6 @@ import java.io.File
 import java.io.FileOutputStream
 import java.util.Collections
 import kotlin.math.max
-import kotlin.math.min
 
 object ImageProvider {
 
@@ -92,7 +91,7 @@ object ImageProvider {
         val newSize = if (size + maxSize > 2048 * M || size + maxSize > cacheSize * 5) {
             bitmapLruCache.evictAll()
             AppLog.put("图片缓存超过最大容量或5倍设置容量，已自动重置缓存")
-            min(size + 50 * M, cacheSize)
+            max(size + 50 * M, cacheSize)
         } else {
             size + 50 * M
         }
@@ -104,9 +103,9 @@ object ImageProvider {
     fun put(key: String, bitmap: Bitmap) {
         val byteCount = bitmap.byteCount.toInt()
         if (byteCount > maxSize) {
-            LruResize(byteCount)
+            resize(byteCount)
         } else if (byteCount + nowSize > maxSize) {
-            LruResize(byteCount + nowSize)
+            resize(byteCount + nowSize)
         }
         bitmapLruCache.put(key, bitmap)
     }
@@ -217,7 +216,7 @@ object ImageProvider {
                     ?: SvgUtils.createBitmap(vFile.absolutePath, width, height)
                     ?: throw NoStackTraceException(appCtx.getString(R.string.error_decode_bitmap))
                 withContext(Main) {
-                    bitmapLruCache.put(vFile.absolutePath, bitmap)
+                    ImageProvider.put(vFile.absolutePath, bitmap)
                 }
             }.onError {
                 // 记录解码失败
@@ -232,7 +231,7 @@ object ImageProvider {
             val bitmap = BitmapUtils.decodeBitmap(vFile.absolutePath, width, height)
                 ?: SvgUtils.createBitmap(vFile.absolutePath, width, height)
                 ?: throw NoStackTraceException(appCtx.getString(R.string.error_decode_bitmap))
-            bitmapLruCache.put(vFile.absolutePath, bitmap)
+            ImageProvider.put(vFile.absolutePath, bitmap)
             bitmap
         }.onFailure {
             // 记录解码失败

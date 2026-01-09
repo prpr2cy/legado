@@ -471,7 +471,7 @@ class ReadBookViewModel(application: Application) : BaseViewModel(application) {
         execute {
             ReadBook.book?.let { book ->
                 val vFile = BookHelp.getImage(book, src)
-                ImageProvider.clearCache(vFile.absolutePath)
+                ImageProvider.remove(vFile.absolutePath)
                 vFile.delete()
             }
         }.onFinally {
