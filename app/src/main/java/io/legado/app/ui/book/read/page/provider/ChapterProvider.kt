@@ -91,6 +91,9 @@ object ChapterProvider {
     private var paragraphSpacing = 0
 
     @JvmStatic
+    private var paragraphFloat = 0f
+
+    @JvmStatic
     private var titleTopSpacing = 0
 
     @JvmStatic
@@ -206,7 +209,7 @@ object ChapterProvider {
                     val text = content.substring(start, matcher.start())
                     if (text.isNotBlank()) {
                         if (start > 0) {
-                            durY += titlePaintTextHeight * (paragraphSpacing.toFloat() / 10f + lineSpacingExtra)
+                            durY += paragraphSpacing + (lineSpacingExtra * 10).toInt()
                         }
                         setTypeText(
                             book,
@@ -236,7 +239,7 @@ object ChapterProvider {
                     val text = content.substring(start, content.length)
                     if (text.isNotBlank()) {
                         if (start > 0) {
-                            durY += titlePaintTextHeight * (paragraphSpacing.toFloat() / 10f + lineSpacingExtra)
+                            durY += paragraphSpacing + (lineSpacingExtra * 10).toInt()
                         }
                         setTypeText(
                             book, absStartX, durY,
@@ -346,9 +349,9 @@ object ChapterProvider {
                     if (doublePage && absStartX < visibleWidth) {
                         //当前页面左列结束
                         textPage.leftLineSize = textPage.lineSize
-                        absStartX = x + viewWidth
-                        doubleY += durY
-                        durY = 0f
+                        absStartX = paddingLeft + viewWidth
+                        //doubleY += durY
+                        //durY = 0f
                     } else {
                         //当前页面结束
                         if (textPage.leftLineSize == 0) {
@@ -361,7 +364,7 @@ object ChapterProvider {
                         if (textPage.height < doubleY) {
                             textPage.height = doubleY
                         }
-                        absStartX = x
+                        absStartX = paddingLeft
                         doubleY = 0f
                         durY = 0f
                     }
@@ -378,8 +381,8 @@ object ChapterProvider {
                         end = absStartX + end,
                         src = src,
                         totalPages = totalPages,
-                        cropStartY = floor(cropStartY.toFloat() * ratio).toInt(),
-                        cropEndY = floor(cropEndY.toFloat() * ratio).toInt(),
+                        cropStartY = floor(ratio * cropStartY).toInt(),
+                        cropEndY = floor(ratio * cropEndY).toInt(),
                         originalWidth = size.width,
                         originalHeight = size.height
                     )
@@ -389,7 +392,7 @@ object ChapterProvider {
                 textPages.last().addLine(textLine)
             }
         }
-        return absStartX to doubleY + durY + paragraphSpacing.toFloat() / 10f
+        return absStartX to doubleY + durY + paragraphFloat
     }
 
     /**
@@ -533,7 +536,7 @@ object ChapterProvider {
             durY += textHeight * lineSpacingExtra
             textPages.last().height = durY
         }
-        durY += textHeight * paragraphSpacing / 10f
+        durY += textHeight * paragraphFloat
         return Pair(absStartX, durY)
     }
 
@@ -796,6 +799,7 @@ object ChapterProvider {
         //间距
         lineSpacingExtra = ReadBookConfig.lineSpacingExtra / 10f
         paragraphSpacing = ReadBookConfig.paragraphSpacing
+        paragraphFloat = paragraphSpacing.toFloat() / 10f
         titleTopSpacing = ReadBookConfig.titleTopSpacing.dpToPx()
         titleBottomSpacing = ReadBookConfig.titleBottomSpacing.dpToPx()
         val bodyIndent = ReadBookConfig.paragraphIndent
@@ -920,10 +924,10 @@ object ChapterProvider {
             visibleHeight = viewHeight - paddingTop - paddingBottom
             visibleRight = viewWidth - paddingRight
             visibleBottom = paddingTop + visibleHeight
+        }
 
-            if (paddingLeft >= visibleRight || paddingTop >= visibleBottom) {
-                appCtx.toastOnUi("边距设置过大，请重新设置")
-            }
+        if (paddingLeft >= visibleRight || paddingTop >= visibleBottom) {
+            appCtx.toastOnUi("边距设置过大，请重新设置")
         }
     }
 
