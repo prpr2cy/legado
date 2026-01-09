@@ -384,7 +384,7 @@ object ChapterProvider {
                 textPages.last().addLine(textLine)
             }
         }
-        return absStartX to doubleY + durY + paragraphSpacing.toFloat() / 10f
+        return absStartX to durY + paragraphSpacing.toFloat() / 10f
     }
 
     /**
