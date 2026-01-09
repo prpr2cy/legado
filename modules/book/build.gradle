@@ -1,11 +1,11 @@
 plugins {
-    id 'com.android.library'
-    id 'org.jetbrains.kotlin.android'
+    id "com.android.library"
+    id "org.jetbrains.kotlin.android"
 }
 
 android {
     compileSdk = compile_sdk_version
-    namespace 'me.ag2s'
+    namespace "me.ag2s"
     kotlin {
         jvmToolchain {
             languageVersion.set(JavaLanguageVersion.of(17))
@@ -30,5 +30,5 @@ android {
 
 dependencies {
     compileOnly "com.android.tools.build:gradle:$agp_version"
-    implementation 'androidx.annotation:annotation:1.7.0'
+    implementation "androidx.annotation:annotation:1.7.0"
 }

@@ -1,11 +1,11 @@
 plugins {
-    id 'com.android.library'
-    id 'org.jetbrains.kotlin.android'
+    id "com.android.library"
+    id "org.jetbrains.kotlin.android"
 }
 
 android {
     compileSdk = compile_sdk_version
-    namespace 'com.script'
+    namespace "com.script"
     kotlin {
         jvmToolchain {
             languageVersion.set(JavaLanguageVersion.of(17))
@@ -31,5 +31,5 @@ android {
 }
 
 dependencies {
-    api(fileTree(dir: 'lib', include: ['rhino-1.7.14.jar']))
+    api(fileTree(dir: "lib", include: ["rhino-1.7.14.jar"]))
 }

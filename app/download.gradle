@@ -1,6 +1,6 @@
 import java.security.MessageDigest
 
-apply plugin: 'de.undercouch.download'
+apply plugin: "de.undercouch.download"
 
 def BASE_PATH = "https://storage.googleapis.com/chromium-cronet/android/" + CronetVersion + "/Release/cronet/"
 def assetsDir = projectDir.toString() + "/src/main/assets"
@@ -28,7 +28,7 @@ static def generateMD5(final file) {
 /**
  * 下载Cronet相关的jar
  */
-tasks.register('downloadJar', Download) {
+tasks.register("downloadJar", Download) {
     src([
             BASE_PATH + "cronet_api.jar",
             BASE_PATH + "cronet_impl_common_java.jar",
@@ -42,7 +42,7 @@ tasks.register('downloadJar', Download) {
 /**
  * 下载Cronet的arm64-v8a so
  */
-tasks.register('downloadARM64', Download) {
+tasks.register("downloadARM64", Download) {
     src BASE_PATH + "libs/arm64-v8a/libcronet." + CronetVersion + ".so"
     dest soPath + "/arm64-v8a.so"
     overwrite true
@@ -51,7 +51,7 @@ tasks.register('downloadARM64', Download) {
 /**
  * 下载Cronet的armeabi-v7a so
  */
-tasks.register('downloadARMv7', Download) {
+tasks.register("downloadARMv7", Download) {
     src BASE_PATH + "libs/armeabi-v7a/libcronet." + CronetVersion + ".so"
     dest soPath + "/armeabi-v7a.so"
     overwrite true
@@ -60,7 +60,7 @@ tasks.register('downloadARMv7', Download) {
 /**
  * 下载Cronet的x86_64 so
  */
-tasks.register('downloadX86_64', Download) {
+tasks.register("downloadX86_64", Download) {
     src BASE_PATH + "libs/x86_64/libcronet." + CronetVersion + ".so"
     dest soPath + "/x86_64.so"
     overwrite true
@@ -69,7 +69,7 @@ tasks.register('downloadX86_64', Download) {
 /**
  * 下载Cronet的x86 so
  */
-tasks.register('downloadX86', Download) {
+tasks.register("downloadX86", Download) {
     src BASE_PATH + "libs/x86/libcronet." + CronetVersion + ".so"
     dest soPath + "/x86.so"
     overwrite true
@@ -81,7 +81,7 @@ tasks.register('downloadX86', Download) {
  * 先更改gradle.properties 里面的版本号，然后再执行
  * gradlew app:downloadCronet
  */
-tasks.register('downloadCronet') {
+tasks.register("downloadCronet") {
     dependsOn downloadJar, downloadARM64, downloadARMv7, downloadX86_64, downloadX86
 
     doLast {

@@ -8,6 +8,7 @@ import android.os.Build
 import android.text.Layout
 import android.text.StaticLayout
 import android.text.TextPaint
+import io.legado.app.constant.AppLog
 import io.legado.app.constant.AppPattern
 import io.legado.app.constant.EventBus
 import io.legado.app.data.entities.Book
@@ -206,7 +207,7 @@ object ChapterProvider {
                     val text = content.substring(start, matcher.start())
                     if (text.isNotBlank()) {
                         if (start > 0) {
-                            durY += paragraphSpacing.toFloat()
+                            durY += paragraphSpacing.toFloat() + lineSpacingExtra * 10f
                         }
                         setTypeText(
                             book,
@@ -236,7 +237,7 @@ object ChapterProvider {
                     val text = content.substring(start, content.length)
                     if (text.isNotBlank()) {
                         if (start > 0) {
-                            durY += paragraphSpacing.toFloat()
+                            durY += paragraphSpacing.toFloat() + lineSpacingExtra * 10f
                         }
                         setTypeText(
                             book, absStartX, durY,
@@ -331,6 +332,7 @@ object ChapterProvider {
             }
 
             val totalPages = ceil(height.toFloat() / visibleHeight).toInt()
+            AppLog.put("屏幕宽度：${viewWidth}，可视宽度：${viewWidth}")
 
             for (page in 0 until totalPages) {
                 // 计算当前分段的高度
@@ -342,10 +344,11 @@ object ChapterProvider {
                 if (durY + segmentHeight > visibleHeight) {
                     val textPage = textPages.last()
 
-                    if (doublePage && absStartX < visibleWidth / 2) {
+                    if (doublePage && absStartX < visibleWidth) {
                         //当前页面左列结束
                         textPage.leftLineSize = textPage.lineSize
-                        absStartX = paddingLeft + viewWidth / 2
+                        absStartX = x + viewWidth
+                        AppLog.put("右页：${absStartX}")
                     } else {
                         //当前页面结束
                         if (textPage.leftLineSize == 0) {
@@ -357,7 +360,8 @@ object ChapterProvider {
                         if (textPage.height < durY) {
                             textPage.height = durY
                         }
-                        absStartX = paddingLeft
+                        absStartX = x
+                        AppLog.put("左页：${absStartX}")
                         durY = 0f
                     }
                 }
@@ -379,6 +383,12 @@ object ChapterProvider {
                         originalHeight = size.height
                     )
                 )
+                
+                // 记录最终图片显示区域的中心坐标
+                val finalCenterX = absStartX + (start + end) / 2
+                val finalCenterY = (textLine.lineTop + textLine.lineBottom) / 2
+                AppLog.put("图片最终中心坐标: page=$page, centerX=$finalCenterX, centerY=$finalCenterY, lineTop=${textLine.lineTop}, lineBottom=${textLine.lineBottom}")                
+                
                 calcTextLinePosition(textPages, textLine, stringBuilder.length)
                 stringBuilder.append(" ") // 确保翻页时索引计算正确
                 textPages.last().addLine(textLine)
