@@ -240,7 +240,7 @@ class ContentTextView(context: Context, attrs: AttributeSet?) : View(context, at
         if (drawVisibleImageOnly &&
             !cacheIncreased &&
             ImageProvider.isTriggerRecycled() &&
-            !ImageProvider.isImageAlive(book, column.src, width, height)
+            !ImageProvider.isImageAlive(book, column.src)
         ) {
             val newSize = ImageProvider.maxSize + increaseSize
             if (newSize < maxCacheSize) {
