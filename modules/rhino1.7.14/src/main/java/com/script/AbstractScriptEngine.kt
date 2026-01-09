@@ -3,12 +3,9 @@
  */
 package com.script
 
-import com.script.ScriptContext.Companion.ENGINE_SCOPE
-import com.script.ScriptContext.Companion.GLOBAL_SCOPE
 import org.mozilla.javascript.Scriptable
 import java.io.Reader
 import java.io.StringReader
-import kotlin.coroutines.CoroutineContext
 
 abstract class AbstractScriptEngine(val bindings: Bindings? = null) : ScriptEngine {
 
@@ -16,28 +13,28 @@ abstract class AbstractScriptEngine(val bindings: Bindings? = null) : ScriptEngi
 
     init {
         bindings?.let {
-            context.setBindings(bindings, ENGINE_SCOPE)
+            context.setBindings(bindings, 100)
         }
     }
 
     override fun getBindings(scope: Int): Bindings? {
-        if (scope == GLOBAL_SCOPE) {
-            return context.getBindings(GLOBAL_SCOPE)
+        if (scope == 200) {
+            return context.getBindings(200)
         }
-        if (scope == ENGINE_SCOPE) {
-            return context.getBindings(ENGINE_SCOPE)
+        if (scope == 100) {
+            return context.getBindings(100)
         }
         throw IllegalArgumentException("Invalid scope value.")
     }
 
     override fun setBindings(bindings: Bindings?, scope: Int) {
         when (scope) {
-            GLOBAL_SCOPE -> {
-                context.setBindings(bindings, GLOBAL_SCOPE)
+            200 -> {
+                context.setBindings(bindings, 200)
             }
 
-            ENGINE_SCOPE -> {
-                context.setBindings(bindings, ENGINE_SCOPE)
+            100 -> {
+                context.setBindings(bindings, 100)
             }
 
             else -> {
@@ -47,19 +44,11 @@ abstract class AbstractScriptEngine(val bindings: Bindings? = null) : ScriptEngi
     }
 
     override fun put(key: String, value: Any?) {
-        getBindings(ENGINE_SCOPE)?.put(key, value)
+        getBindings(100)?.put(key, value)
     }
 
     override fun get(key: String): Any? {
-        return getBindings(ENGINE_SCOPE)?.get(key)
-    }
-
-    override fun eval(reader: Reader, scope: Scriptable): Any? {
-        return eval(reader, scope, null)
-    }
-
-    override suspend fun evalSuspend(script: String, scope: Scriptable): Any? {
-        return this.evalSuspend(StringReader(script), scope)
+        return getBindings(100)?.get(key)
     }
 
     override fun eval(script: String, scope: Scriptable): Any? {
@@ -71,10 +60,6 @@ abstract class AbstractScriptEngine(val bindings: Bindings? = null) : ScriptEngi
         return this.eval(reader, getRuntimeScope(context))
     }
 
-    override fun eval(script: String, scope: Scriptable, coroutineContext: CoroutineContext?): Any? {
-        return this.eval(StringReader(script), scope, coroutineContext)
-    }
-
     @Throws(ScriptException::class)
     override fun eval(reader: Reader, bindings: Bindings): Any? {
         return this.eval(reader, getScriptContext(bindings))
@@ -83,11 +68,6 @@ abstract class AbstractScriptEngine(val bindings: Bindings? = null) : ScriptEngi
     @Throws(ScriptException::class)
     override fun eval(script: String, bindings: Bindings): Any? {
         return this.eval(script, getScriptContext(bindings))
-    }
-
-    @Throws(ScriptException::class)
-    override fun eval(script: String, bindings: ScriptBindings): Any? {
-        return this.eval(script, getRuntimeScope(bindings))
     }
 
     @Throws(ScriptException::class)
@@ -107,9 +87,9 @@ abstract class AbstractScriptEngine(val bindings: Bindings? = null) : ScriptEngi
 
     override fun getScriptContext(bindings: Bindings): ScriptContext {
         val ctx = SimpleScriptContext(bindings, context.errorWriter, context.reader, context.writer)
-        val gs = getBindings(GLOBAL_SCOPE)
+        val gs = getBindings(200)
         if (gs != null) {
-            ctx.setBindings(gs, GLOBAL_SCOPE)
+            ctx.setBindings(gs, 200)
         }
         return ctx
     }

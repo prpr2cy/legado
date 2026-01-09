@@ -5,7 +5,6 @@ package com.script
 
 import org.mozilla.javascript.Scriptable
 import java.io.Reader
-import kotlin.coroutines.CoroutineContext
 
 interface ScriptEngine {
     var context: ScriptContext
@@ -16,19 +15,7 @@ interface ScriptEngine {
     fun eval(reader: Reader, scope: Scriptable): Any?
 
     @Throws(ScriptException::class)
-    fun eval(reader: Reader, scope: Scriptable, coroutineContext: CoroutineContext?): Any?
-
-    @Throws(ScriptException::class)
-    suspend fun evalSuspend(reader: Reader, scope: Scriptable): Any?
-
-    @Throws(ScriptException::class)
     fun eval(script: String, scope: Scriptable): Any?
-
-    @Throws(ScriptException::class)
-    suspend fun evalSuspend(script: String, scope: Scriptable): Any?
-
-    @Throws(ScriptException::class)
-    fun eval(script: String, scope: Scriptable, coroutineContext: CoroutineContext?): Any?
 
     @Throws(ScriptException::class)
     fun eval(reader: Reader): Any?
@@ -46,12 +33,7 @@ interface ScriptEngine {
     fun eval(script: String, bindings: Bindings): Any?
 
     @Throws(ScriptException::class)
-    fun eval(script: String, bindings: ScriptBindings): Any?
-
-    @Throws(ScriptException::class)
     fun eval(script: String, context: ScriptContext): Any?
-
-    fun getRuntimeScope(bindings: ScriptBindings): Scriptable
 
     fun getRuntimeScope(context: ScriptContext): Scriptable
 

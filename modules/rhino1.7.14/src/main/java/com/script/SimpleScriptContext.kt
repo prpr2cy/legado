@@ -3,12 +3,11 @@
  */
 package com.script
 
-import com.script.ScriptContext.Companion.ENGINE_SCOPE
-import com.script.ScriptContext.Companion.GLOBAL_SCOPE
 import java.io.InputStreamReader
 import java.io.PrintWriter
 import java.io.Reader
 import java.io.Writer
+import java.util.*
 
 open class SimpleScriptContext(
     private var engineScope: Bindings = SimpleBindings(),
@@ -20,7 +19,7 @@ open class SimpleScriptContext(
 
     override fun setBindings(bindings: Bindings?, scope: Int) {
         when (scope) {
-            ENGINE_SCOPE -> {
+            100 -> {
                 if (bindings == null) {
                     throw NullPointerException("Engine scope cannot be null.")
                 }
@@ -28,7 +27,7 @@ open class SimpleScriptContext(
                 return
             }
 
-            GLOBAL_SCOPE -> {
+            200 -> {
                 globalScope = bindings
                 return
             }
@@ -37,22 +36,21 @@ open class SimpleScriptContext(
     }
 
     override fun getAttribute(name: String): Any? {
-        return if (engineScope.containsKey(name)) {
-            this.getAttribute(name, ENGINE_SCOPE)
-        } else if (globalScope?.containsKey(name) == true) {
-            this.getAttribute(name, GLOBAL_SCOPE)
-        } else {
-            null
+        if (engineScope.containsKey(name)) {
+            return this.getAttribute(name, 100)
         }
+        return if (globalScope?.containsKey(name) != true) {
+            null
+        } else this.getAttribute(name, 200)
     }
 
     override fun getAttribute(name: String, scope: Int): Any? {
         when (scope) {
-            ENGINE_SCOPE -> {
+            100 -> {
                 return engineScope[name]
             }
 
-            GLOBAL_SCOPE -> {
+            200 -> {
                 return globalScope?.get(name)
             }
         }
@@ -61,12 +59,12 @@ open class SimpleScriptContext(
 
     override fun removeAttribute(name: String, scope: Int): Any? {
         when (scope) {
-            ENGINE_SCOPE -> {
-                return getBindings(ENGINE_SCOPE)?.remove(name)
+            100 -> {
+                return getBindings(100)?.remove(name)
             }
 
-            GLOBAL_SCOPE -> {
-                return getBindings(GLOBAL_SCOPE)?.remove(name)
+            200 -> {
+                return getBindings(200)?.remove(name)
             }
         }
         throw IllegalArgumentException("Illegal scope value.")
@@ -74,27 +72,33 @@ open class SimpleScriptContext(
 
     override fun setAttribute(name: String, value: Any?, scope: Int) {
         when (scope) {
-            ENGINE_SCOPE -> engineScope[name] = value
-            GLOBAL_SCOPE -> globalScope?.put(name, value)
-            else -> throw IllegalArgumentException("Illegal scope value.")
+            100 -> {
+                engineScope[name] = value
+                return
+            }
+
+            200 -> {
+                globalScope?.put(name, value)
+                return
+            }
         }
+        throw IllegalArgumentException("Illegal scope value.")
     }
 
     override fun getAttributesScope(name: String): Int {
-        return if (engineScope.containsKey(name)) {
-            ENGINE_SCOPE
-        } else if (globalScope?.containsKey(name) == true) {
-            GLOBAL_SCOPE
-        } else {
-            -1
+        if (engineScope.containsKey(name)) {
+            return 100
         }
+        return if (globalScope?.containsKey(name) != true) {
+            -1
+        } else 200
     }
 
     override fun getBindings(scope: Int): Bindings? {
-        if (scope == ENGINE_SCOPE) {
+        if (scope == 100) {
             return engineScope
         }
-        if (scope == GLOBAL_SCOPE) {
+        if (scope == 200) {
             return globalScope
         }
         throw IllegalArgumentException("Illegal scope value.")
@@ -104,6 +108,12 @@ open class SimpleScriptContext(
         get() = Companion.scopes
 
     companion object {
-        private val scopes = listOf(ENGINE_SCOPE, GLOBAL_SCOPE)
+        private var scopes: MutableList<Int> = ArrayList(2)
+
+        init {
+            scopes.add(100)
+            scopes.add(200)
+            scopes = Collections.unmodifiableList(scopes)
+        }
     }
 }

@@ -3,38 +3,20 @@
  */
 package com.script
 
-import com.script.ScriptContext.Companion.ENGINE_SCOPE
-import com.script.ScriptContext.Companion.GLOBAL_SCOPE
-import org.mozilla.javascript.Scriptable
-import kotlin.coroutines.CoroutineContext
-
 abstract class CompiledScript {
 
     abstract fun getEngine(): ScriptEngine
 
     @Throws(ScriptException::class)
-    fun eval(context: ScriptContext): Any? {
-        return eval(getEngine().getRuntimeScope(context))
-    }
-
-    @Throws(ScriptException::class)
-    fun eval(scope: Scriptable): Any? {
-        return eval(scope, null)
-    }
-
-    @Throws(ScriptException::class)
-    abstract fun eval(scope: Scriptable, coroutineContext: CoroutineContext?): Any?
-
-    @Throws(ScriptException::class)
-    abstract suspend fun evalSuspend(scope: Scriptable): Any?
+    abstract fun eval(context: ScriptContext): Any?
 
     @Throws(ScriptException::class)
     fun eval(bindings: Bindings?): Any? {
         var ctxt = getEngine().context
         if (bindings != null) {
             val tempContext = SimpleScriptContext()
-            tempContext.setBindings(bindings, ENGINE_SCOPE)
-            tempContext.setBindings(ctxt.getBindings(GLOBAL_SCOPE), GLOBAL_SCOPE)
+            tempContext.setBindings(bindings, 100)
+            tempContext.setBindings(ctxt.getBindings(200), 200)
             tempContext.writer = ctxt.writer
             tempContext.reader = ctxt.reader
             tempContext.errorWriter = ctxt.errorWriter
