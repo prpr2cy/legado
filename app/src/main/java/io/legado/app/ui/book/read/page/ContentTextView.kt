@@ -27,6 +27,7 @@ import io.legado.app.ui.book.read.page.provider.ChapterProvider
 import io.legado.app.ui.book.read.page.provider.TextPageFactory
 import io.legado.app.ui.widget.dialog.PhotoDialog
 import io.legado.app.utils.*
+import kotlin.math.floor
 import kotlin.math.min
 
 /**
@@ -229,11 +230,11 @@ class ContentTextView(context: Context, attrs: AttributeSet?) : View(context, at
         }
         if (drawVisibleImageOnly && !isVisible) return
 
-        val width = (column.end - column.start).toInt()
+        val width = floor(column.end - column.start).toInt()
         val height = if (column.totalPages == 0) {
-            (lineBottom - lineTop).toInt()
+            floor(lineBottom - lineTop).toInt()
         } else {
-            (width.toFloat() * column.originalHeight / column.originalWidth).toInt()
+            floor(width.toFloat() * column.originalHeight / column.originalWidth).toInt()
         }
         if (height <= 0) return
 
