@@ -6,9 +6,9 @@ import android.os.Looper
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.LayoutInflater
-import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
+import android.view.inputmethod.InputMethodManager
 import androidx.recyclerview.widget.RecyclerView
 import io.legado.app.R
 import io.legado.app.databinding.ItemSourceEditBinding
@@ -17,6 +17,8 @@ import io.legado.app.ui.widget.code.addJsPattern
 import io.legado.app.ui.widget.code.addJsonPattern
 import io.legado.app.ui.widget.code.addLegadoPattern
 import io.legado.app.ui.widget.text.EditEntity
+import java.util.Collections
+import java.util.WeakHashMap
 
 class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewHolder>() {
 
@@ -29,6 +31,10 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
             notifyDataSetChanged()
         }
 
+    // 全局焦点管理 - 分离key和position避免复用冲突
+    private var focusedKey: String? = null
+    private val selectionStates = Collections.synchronizedMap(WeakHashMap<String, Pair<Int, Int>>())
+
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MyViewHolder {
         val binding = ItemSourceEditBinding
             .inflate(LayoutInflater.from(parent.context), parent, false)
@@ -39,7 +45,7 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
     }
 
     override fun onBindViewHolder(holder: MyViewHolder, position: Int) {
-        holder.bind(editEntities[position])
+        holder.bind(editEntities[position], position)
     }
 
     override fun getItemCount(): Int {
@@ -51,81 +57,84 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
 
         private val mainHandler = Handler(Looper.getMainLooper())
         private var currentKey: String? = null
-        private var lastTouchX = 0f
-        private var lastTouchY = 0f
+        private var currentPosition = -1
 
-        fun bind(editEntity: EditEntity) = binding.run {
+        fun bind(editEntity: EditEntity, position: Int) = binding.run {
             currentKey = editEntity.key
+            currentPosition = position
 
             editText.setTag(R.id.tag, editEntity.key)
             editText.maxLines = editEntityMaxLine
 
+            // 初始化监听器（只做一次）
             if (editText.getTag(R.id.tag1) == null) {
-                val listener = object : View.OnAttachStateChangeListener {
-                    override fun onViewAttachedToWindow(v: View) {
-                        editText.isFocusable = true
-                        editText.isFocusableInTouchMode = true
-                    }
-
-                    override fun onViewDetachedFromWindow(v: View) {
-                        editText.clearFocus()
-                    }
-                }
-                editText.addOnAttachStateChangeListener(listener)
-                editText.setTag(R.id.tag1, listener)
-
-                // 触摸监听 - 记录点击位置
-                editText.setOnTouchListener { v, event ->
-                    when (event.action) {
-                        MotionEvent.ACTION_DOWN -> {
-                            // 记录触摸位置
-                            lastTouchX = event.x
-                            lastTouchY = event.y
-                        }
-                        MotionEvent.ACTION_UP -> {
-                            // 只在点击释放时处理，避免干扰滚动
-                            if (currentKey == editText.getTag(R.id.tag)) {
-                                mainHandler.post {
-                                    if (editText.hasFocus()) {
-                                        // 根据触摸位置设置光标
-                                        setCursorAtTouchPosition()
+                // 焦点状态管理
+                editText.setOnFocusChangeListener { _, hasFocus ->
+                    if (hasFocus) {
+                        focusedKey = currentKey
+                        // 延迟恢复选择状态，避免干扰输入法
+                        mainHandler.postDelayed({
+                            if (editText.hasFocus() && focusedKey == currentKey) {
+                                selectionStates[currentKey]?.let { (start, end) ->
+                                    if (start >= 0 && end >= 0 && start <= editText.text.length && end <= editText.text.length) {
+                                        editText.setSelection(start, end)
                                     }
                                 }
                             }
-                        }
-                    }
-                    false // 不消费事件，让点击处理正常进行
-                }
-
-                // 焦点监听
-                editText.setOnFocusChangeListener { _, hasFocus ->
-                    if (hasFocus && currentKey == editText.getTag(R.id.tag)) {
-                        mainHandler.post {
-                            if (editText.hasFocus() && currentKey == editText.getTag(R.id.tag)) {
-                                editText.isCursorVisible = true
-                                // 焦点获得时，如果有记录的触摸位置，设置光标
-                                if (lastTouchX != 0f || lastTouchY != 0f) {
-                                    setCursorAtTouchPosition()
-                                }
-                            }
-                        }
+                        }, 100)
                     } else {
-                        editText.isCursorVisible = false
-                        // 重置触摸位置
-                        lastTouchX = 0f
-                        lastTouchY = 0f
+                        // 失去焦点时保存选择状态
+                        if (focusedKey == currentKey) {
+                            selectionStates[currentKey] = editText.selectionStart to editText.selectionEnd
+                            focusedKey = null
+                        }
                     }
                 }
 
-                // 点击处理
+                // 点击处理 - 直接请求焦点，不主动设置选择
                 editText.setOnClickListener {
                     if (currentKey == editText.getTag(R.id.tag)) {
                         editText.requestFocus()
+                        // 显示输入法
+                        (context.getSystemService(InputMethodManager::class.java) as? InputMethodManager)?.showSoftInput(editText, InputMethodManager.SHOW_IMPLICIT)
+                    }
+                }
+
+                // 选择变化监听 - 实时保存选择状态
+                editText.setOnSelectionChangeListener { _, selStart, selEnd ->
+                    if (editText.hasFocus() && focusedKey == currentKey) {
+                        selectionStates[currentKey] = selStart to selEnd
+                    }
+                }
+
+                editText.setTag(R.id.tag1, true)
+            }
+
+            // 文本绑定 - 避免干扰选择状态
+            val currentText = editText.text?.toString().orEmpty()
+            val newText = editEntity.value.orEmpty()
+            if (currentText != newText) {
+                // 保存当前选择状态（如果有焦点）
+                val isFocused = editText.hasFocus() && focusedKey == currentKey
+                val selStart = if (isFocused) editText.selectionStart else -1
+                val selEnd = if (isFocused) editText.selectionEnd else -1
+
+                // 更新文本
+                editText.setText(newText)
+
+                // 只有在当前项有焦点且选择范围有效时才恢复选择
+                if (isFocused && selStart >= 0 && selEnd >= 0 &&
+                    selStart <= newText.length && selEnd <= newText.length
+                ) {
+                    mainHandler.post {
+                        if (editText.hasFocus() && focusedKey == currentKey) {
+                            editText.setSelection(selStart, selEnd)
+                        }
                     }
                 }
             }
 
-            // 移除旧监听器
+            // 文本变化监听 - 安全更新数据
             editText.getTag(R.id.tag2)?.let {
                 if (it is TextWatcher) {
                     editText.removeTextChangedListener(it)
@@ -133,20 +142,8 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
             }
 
             val textWatcher = object : TextWatcher {
-                override fun beforeTextChanged(
-                    s: CharSequence?,
-                    start: Int,
-                    count: Int,
-                    after: Int
-                ) = Unit
-
-                override fun onTextChanged(
-                    s: CharSequence?,
-                    start: Int,
-                    before: Int,
-                    count: Int
-                ) = Unit
-
+                override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
+                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) = Unit
                 override fun afterTextChanged(s: Editable?) {
                     if (currentKey == editText.getTag(R.id.tag)) {
                         editEntity.value = s?.toString()
@@ -154,53 +151,19 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
                 }
             }
 
-            // 智能文本更新
-            val currentText = editText.text?.toString().orEmpty()
-            val newText = editEntity.value.orEmpty()
+            editText.addTextChangedListener(textWatcher)
+            editText.setTag(R.id.tag2, textWatcher)
 
-            if (currentText != newText) {
-                // 保存当前选择状态
-                val hadFocus = editText.hasFocus()
-                val selStart = editText.selectionStart
-                val selEnd = editText.selectionEnd
+            textInputLayout.hint = editEntity.hint
 
-                editText.setText(newText)
-
-                // 如果之前有焦点且选择有效，恢复选择
-                if (hadFocus && selStart >= 0 && selEnd >= 0 &&
-                    selStart <= newText.length && selEnd <= newText.length
-                ) {
-                    mainHandler.post {
-                        if (editText.hasFocus() && currentKey == editText.getTag(R.id.tag)) {
-                            editText.setSelection(selStart, selEnd)
-                        }
+            // 恢复焦点状态（只在当前项是焦点项时请求）
+            if (focusedKey == currentKey) {
+                mainHandler.post {
+                    if (focusedKey == currentKey) {
+                        editText.requestFocus()
                     }
                 }
             }
-
-            editText.addTextChangedListener(textWatcher)
-            editText.setTag(R.id.tag2, textWatcher)
-            textInputLayout.hint = editEntity.hint
-        }
-
-        /**
-         * 根据记录的触摸位置设置光标
-         */
-        private fun setCursorAtTouchPosition() {
-            if (lastTouchX == 0f && lastTouchY == 0f) return
-
-            try {
-                val offset = binding.editText.getOffsetForPosition(lastTouchX, lastTouchY)
-                if (offset != -1) {
-                    binding.editText.setSelection(offset)
-                }
-            } catch (e: Exception) {
-                // 忽略异常，使用默认行为
-            }
-
-            // 重置触摸位置
-            lastTouchX = 0f
-            lastTouchY = 0f
         }
     }
 }

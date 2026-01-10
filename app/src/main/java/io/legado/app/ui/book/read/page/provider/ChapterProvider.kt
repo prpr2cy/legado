@@ -394,7 +394,7 @@ object ChapterProvider {
             }
         }
         beforeLineIsImage = true
-        return absStartX to doubleY + durY
+        return Pair(absStartX, doubleY + durY)
     }
 
     /**
@@ -418,7 +418,8 @@ object ChapterProvider {
         var absStartX = x
         var durY = y
         if (beforeLineIsImage) {
-            durY += textHeight * lineSpacingExtra + textHeight * paragraphSpacing.toFloat() / 10f
+            durY += textHeight * paragraphSpacing.toFloat() / 5f
+            AppLog.put("图片行：${textHeight * paragraphSpacing.toFloat() / 5f}")
             beforeLineIsImage = false
         }
         val widthsArray = FloatArray(text.length)
@@ -544,6 +545,7 @@ object ChapterProvider {
             durY += textHeight * lineSpacingExtra
             textPages.last().height = durY
         }
+        AppLog.put("文本行：${textHeight * lineSpacingExtra + textHeight * paragraphSpacing.toFloat() / 10f}")
         durY += textHeight * paragraphSpacing.toFloat() / 10f
         return Pair(absStartX, durY)
     }
