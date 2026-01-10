@@ -292,39 +292,35 @@ object ChapterProvider {
         stringBuilder: StringBuilder,
         imageStyle: String?,
     ): Pair<Int, Float> {
-        if (textPages.last().height < y) {
-            textPages.last().height = y
-        }
         var absStartX = x
         var durY = y
         var doubleY = 0f
         var ratio = 1f
         val size = ImageProvider.getImageSize(book, src, ReadBook.bookSource)
-        val isScroll = ReadBook.pageAnim() == 3
-        val visibleWidth2 = if (doublePage && isScroll) {
-            viewWidth - paddingLeft - paddingRight
-        } else viewWidth
+        if (ReadBook.pageAnim() == 3 && !beforeLineIsImage) {
+            textPages.last().add(TextPage())
+        }
 
         if (size.width > 0 && size.height > 0) {
             var height = size.height
             var width = size.width
             when (imageStyle?.toUpperCase(Locale.ROOT)) {
                 Book.imgStyleFull -> {
-                    width = visibleWidth2
+                    width = visibleWidth
                     height = width * size.height / size.width
                     if (height > visibleHeight && height.toFloat() < visibleHeight.toFloat() * 1.2f) {
                         height = visibleHeight
                         width = height * size.width / size.height
                     }
-                    if (height > visibleHeight && size.width < visibleWidth2) {
+                    if (height > visibleHeight && size.width < visibleWidth) {
                         // 原图宽度小于visibleWidth时，分页裁剪高度要按比例缩小
-                        ratio = size.width.toFloat() / visibleWidth2
+                        ratio = size.width.toFloat() / visibleWidth
                     }
                 }
 
                 else -> {
                     if (size.width > visibleWidth) {
-                        width = visibleWidth2
+                        width = visibleWidth
                         height = width * size.height / size.width
                     }
                     if (height > visibleHeight && height.toFloat() < visibleHeight.toFloat() * 1.2f) {
@@ -335,14 +331,14 @@ object ChapterProvider {
             }
 
             // 计算水平居中位置
-            val (start, end) = if (visibleWidth2 > width) {
-                val adjustWidth = (visibleWidth2.toFloat() - width.toFloat()) / 2f
+            val (start, end) = if (visibleWidth > width) {
+                val adjustWidth = (visibleWidth.toFloat() - width.toFloat()) / 2f
                 Pair(adjustWidth, adjustWidth + width.toFloat())
             } else {
                 Pair(0f, width.toFloat())
             }
 
-            val totalPages = ceil(height.toFloat() / visibleHeight).toInt()
+            val totalPages = if (!isScroll) ceil(height.toFloat() / visibleHeight).toInt() else 1
 
             for (page in 0 until totalPages) {
                 // 计算当前分段的高度
@@ -354,7 +350,7 @@ object ChapterProvider {
                 if (durY + segmentHeight > visibleHeight) {
                     val textPage = textPages.last()
 
-                    if (doublePage && !isScroll && absStartX < viewWidth / 2) {
+                    if (doublePage && absStartX < viewWidth / 2) {
                         //当前页面左列结束
                         textPage.leftLineSize = textPage.lineSize
                         absStartX = viewWidth / 2 + paddingLeft
@@ -401,7 +397,7 @@ object ChapterProvider {
             }
         }
         beforeLineIsImage = true
-        return absStartX to doubleY + durY + paragraphSpacing.toFloat() / 10f
+        return absStartX to doubleY + durY
     }
 
     /**
@@ -422,11 +418,11 @@ object ChapterProvider {
         isVolumeTitle: Boolean = false,
         srcList: LinkedList<String>? = null
     ): Pair<Int, Float> {
-        if (textPages.last().height < y) {
-            textPages.last().height = y
-        }
         var absStartX = x
         var durY = y
+        if (ReadBook.pageAnim() == 3 && beforeLineIsImage) {
+            textPages.last().add(TextPage())
+        }
         if (beforeLineIsImage) {
             durY += textHeight * lineSpacingExtra / 2f
             beforeLineIsImage = false
@@ -917,12 +913,12 @@ object ChapterProvider {
             "1" -> doublePage = true
             "2" -> {
                 doublePage = (viewWidth > viewHeight)
-                        && ReadBook.pageAnim() != 3
+                    && ReadBook.pageAnim() != 3
             }
 
             "3" -> {
                 doublePage = (viewWidth > viewHeight || appCtx.isPad)
-                        && ReadBook.pageAnim() != 3
+                    && ReadBook.pageAnim() != 3
             }
         }
 

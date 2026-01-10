@@ -64,11 +64,12 @@ class BookSourceEditActivity :
     override val binding by viewBinding(ActivityBookSourceEditBinding::inflate)
     override val viewModel by viewModels<BookSourceEditViewModel>()
 
-    // 修改这里：使用带状态管理器的适配器
+    // 使用带状态管理器的适配器
     private val adapter by lazy {
         BookSourceEditAdapter(
             focusStateManager = viewModel.focusStateManager,
-            scrollStateManager = viewModel.scrollStateManager
+            scrollStateManager = viewModel.scrollStateManager,
+            binding.recyclerView
         )
     }
     private val sourceEntities: ArrayList<EditEntity> = ArrayList()
