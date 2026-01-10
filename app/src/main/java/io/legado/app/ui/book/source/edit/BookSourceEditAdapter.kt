@@ -184,7 +184,7 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
     /**
      * 焦点管理器 - 基于key的焦点管理，避免position复用冲突
      */
-    private inner class FocusManager {
+    private class FocusManager {
         // 当前获得焦点的key
         private var currentFocusKey: String? = null
 
