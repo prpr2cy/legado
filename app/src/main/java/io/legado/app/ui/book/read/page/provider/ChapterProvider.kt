@@ -416,8 +416,9 @@ object ChapterProvider {
         srcList: LinkedList<String>? = null
     ): Pair<Int, Float> {
         var absStartX = x
+        var durY = y
         if (beforeLineIsImage) {
-            y += textHeight * (lineSpacingExtra + paragraphSpacing.toFloat() / 10f)
+            durY  += textHeight * (lineSpacingExtra + paragraphSpacing.toFloat() / 10f)
             beforeLineIsImage = false
         }
         val widthsArray = FloatArray(text.length)
@@ -446,14 +447,14 @@ object ChapterProvider {
                         it.lineBase = it.lineBase - textLayoutHeight
                         it.lineBottom = it.lineBottom - textLayoutHeight
                     }
-                    y - textLayoutHeight
+                    durY - textLayoutHeight
                 }
             }
 
             isTitle && textPages.size == 1 && textPages.last().lines.isEmpty() ->
-                y + titleTopSpacing
+                durY + titleTopSpacing
 
-            else -> y
+            else -> durY
         }
         for (lineIndex in 0 until layout.lineCount) {
             val textLine = TextLine(isTitle = isTitle)
