@@ -69,7 +69,7 @@ class BookSourceEditActivity :
         BookSourceEditAdapter(
             focusStateManager = viewModel.focusStateManager,
             scrollStateManager = viewModel.scrollStateManager,
-            binding.recyclerView
+            recyclerView = binding.recyclerView
         )
     }
     private val sourceEntities: ArrayList<EditEntity> = ArrayList()

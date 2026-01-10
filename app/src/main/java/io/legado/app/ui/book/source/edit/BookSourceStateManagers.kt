@@ -3,9 +3,9 @@ package io.legado.app.ui.book.source.edit
 import androidx.recyclerview.widget.RecyclerView
 
 class FocusStateManager {
-    // 只记录用户主动点击的 key，其他情况不记录
     private var userTouchedKey: String? = null
     private val selectionMap = mutableMapOf<String, Pair<Int, Int>>()
+    private var currentPosition: Int = -1
 
     fun setUserTouched(key: String) {
         userTouchedKey = key
@@ -22,6 +22,12 @@ class FocusStateManager {
     fun clearUserTouched() {
         userTouchedKey = null
     }
+
+    fun setCurrentPosition(position: Int) {
+        currentPosition = position
+    }
+
+    fun getCurrentPosition(): Int = currentPosition
 }
 
 class ScrollStateManager {
@@ -42,7 +48,6 @@ class ScrollStateManager {
 
     fun isScrolling(): Boolean = isScrolling
 
-    // 立即停止滑动的方法
     fun stopScrollImmediately() {
         recyclerView?.stopScroll()
         setScrolling(false)

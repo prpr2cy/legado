@@ -89,7 +89,7 @@ class BookSourceEditAdapter(
                             // 页面稳定时才标记为用户点击
                             currentKey?.let { key ->
                                 focusStateManager.setUserTouched(key)
-                                focusStateManager.saveCurrentPosition(position)
+                                focusStateManager.setCurrentPosition(position)
                             }
                         }
                     }
@@ -134,8 +134,10 @@ class BookSourceEditAdapter(
                 if (focusStateManager.isUserTouched(key)) {
                     // 用户点击：使用方案三的流畅体验
                     handler.post {
+                        // 获取保存的位置
+                        val savedPosition = focusStateManager.getCurrentPosition()
                         // 同时进行滚动和焦点请求
-                        recyclerView.smoothScrollToPosition(currentPosition)
+                        recyclerView.smoothScrollToPosition(savedPosition)
                         binding.editText.requestFocus()
 
                         // 短暂延迟后确保键盘弹出

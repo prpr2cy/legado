@@ -298,7 +298,9 @@ object ChapterProvider {
         var ratio = 1f
         val size = ImageProvider.getImageSize(book, src, ReadBook.bookSource)
         if (ReadBook.pageAnim() == 3 && !beforeLineIsImage) {
-            textPages.last().add(TextPage())
+            textPages.last().height = durY
+            textPages.add(TextPage())
+            durY = 0f
         }
 
         if (size.width > 0 && size.height > 0) {
@@ -338,7 +340,7 @@ object ChapterProvider {
                 Pair(0f, width.toFloat())
             }
 
-            val totalPages = if (!isScroll) ceil(height.toFloat() / visibleHeight).toInt() else 1
+            val totalPages = ceil(height.toFloat() / visibleHeight).toInt()
 
             for (page in 0 until totalPages) {
                 // 计算当前分段的高度
@@ -421,7 +423,9 @@ object ChapterProvider {
         var absStartX = x
         var durY = y
         if (ReadBook.pageAnim() == 3 && beforeLineIsImage) {
-            textPages.last().add(TextPage())
+            textPages.last().height = durY
+            textPages.add(TextPage())
+            durY = 0f
         }
         if (beforeLineIsImage) {
             durY += textHeight * lineSpacingExtra / 2f
