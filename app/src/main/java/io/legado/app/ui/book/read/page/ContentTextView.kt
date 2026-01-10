@@ -120,39 +120,23 @@ class ContentTextView(context: Context, attrs: AttributeSet?) : View(context, at
      */
     private fun drawPage(canvas: Canvas) {
         var relativeOffset = relativeOffset(0)
-        var isPreviousLineImage = false // 记录上一行是否为图片行
-        textPage.lines.forEachIndexed { index, textLine ->
-            val lineOffset = if (isPreviousLineImage && !textLine.isImage) {
-                ChapterProvider.paragraphSpacing.toFloat()
-            } else 0f
-            drawLine(canvas, textPage, textLine, relativeOffset + lineOffset)
-            isPreviousLineImage = textLine.isImage
-            relativeOffset += (textLine.lineBottom - textLine.lineTop) + lineOffset
+        textPage.lines.forEach { textLine ->
+            drawLine(canvas, textPage, textLine, relativeOffset)
         }
         if (!callBack.isScroll) return
         //滚动翻页
         if (!pageFactory.hasNext()) return
         val textPage1 = relativePage(1)
         relativeOffset = relativeOffset(1)
-        textPage1.lines.forEachIndexed { index, textLine ->
-            val lineOffset = if (isPreviousLineImage && !textLine.isImage) {
-                ChapterProvider.paragraphSpacing.toFloat()
-            } else 0f
-            drawLine(canvas, textPage1, textLine, relativeOffset + lineOffset)
-            isPreviousLineImage = textLine.isImage
-            relativeOffset += (textLine.lineBottom - textLine.lineTop) + lineOffset
+        textPage1.lines.forEach { textLine ->
+            drawLine(canvas, textPage1, textLine, relativeOffset)
         }
         if (!pageFactory.hasNextPlus()) return
         relativeOffset = relativeOffset(2)
         if (relativeOffset < ChapterProvider.visibleHeight) {
             val textPage2 = relativePage(2)
-            textPage2.lines.forEachIndexed { index, textLine ->
-                val lineOffset = if (isPreviousLineImage && !textLine.isImage) {
-                    ChapterProvider.paragraphSpacing.toFloat()
-                } else 0f
-                drawLine(canvas, textPage2, textLine, relativeOffset + lineOffset)
-                isPreviousLineImage = textLine.isImage
-                relativeOffset += (textLine.lineBottom - textLine.lineTop) + lineOffset
+            textPage2.lines.forEach { textLine ->
+                drawLine(canvas, textPage2, textLine, relativeOffset)
             }
         }
     }

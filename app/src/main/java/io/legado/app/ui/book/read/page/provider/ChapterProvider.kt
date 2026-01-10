@@ -39,10 +39,13 @@ import kotlin.collections.ArrayList
 @Suppress("DEPRECATION")
 object ChapterProvider {
     //用于图片字的替换
-    private const val srcReplaceChar = "▩"
+    const val srcReplaceChar = "▩"
 
     //用于评论按钮的替换
-    private const val reviewChar = "▨"
+    const val reviewChar = "▨"
+
+    @JvmStatic
+    private var beforeLineIsImage = false
 
     @JvmStatic
     var viewWidth = 0
@@ -89,25 +92,31 @@ object ChapterProvider {
         private set
 
     @JvmStatic
-    private var paragraphSpacing = 0
+    var paragraphSpacing = 0
+        private set
 
     @JvmStatic
-    private var titleTopSpacing = 0
+    var titleTopSpacing = 0
+        private set
 
     @JvmStatic
-    private var titleBottomSpacing = 0
+    var titleBottomSpacing = 0
+        private set
 
     @JvmStatic
-    private var indentCharWidth = 0f
+    var indentCharWidth = 0f
+        private set
 
     @JvmStatic
-    private var titlePaintTextHeight = 0f
+    var titlePaintTextHeight = 0f
+        private set
 
     @JvmStatic
     var contentPaintTextHeight = 0f
+        private set
 
     @JvmStatic
-    private var titlePaintFontMetrics = FontMetrics()
+    var titlePaintFontMetrics = FontMetrics()
 
     @JvmStatic
     var contentPaintFontMetrics = FontMetrics()
@@ -384,7 +393,8 @@ object ChapterProvider {
                 textPages.last().addLine(textLine)
             }
         }
-        return absStartX to doubleY + durY + paragraphSpacing.toFloat() / 10f
+        beforeLineIsImage = true
+        return absStartX to doubleY + durY
     }
 
     /**
@@ -406,6 +416,10 @@ object ChapterProvider {
         srcList: LinkedList<String>? = null
     ): Pair<Int, Float> {
         var absStartX = x
+        if (beforeLineIsImage) {
+            y += textHeight * (lineSpacingExtra + paragraphSpacing.toFloat() / 10f)
+            beforeLineIsImage = false
+        }
         val widthsArray = FloatArray(text.length)
         val layout = if (ReadBookConfig.useZhLayout) {
             ZhLayout(text, textPaint, visibleWidth, widthsArray)
