@@ -345,10 +345,10 @@ object ChapterProvider {
                 if (durY + segmentHeight > visibleHeight) {
                     val textPage = textPages.last()
 
-                    if (doublePage && absStartX < visibleWidth) {
+                    if (doublePage && absStartX < viewWidth / 2) {
                         //当前页面左列结束
                         textPage.leftLineSize = textPage.lineSize
-                        absStartX = x + viewWidth
+                        absStartX = paddingLeft + viewWidth / 2
                     } else {
                         //当前页面结束
                         if (textPage.leftLineSize == 0) {
@@ -360,7 +360,7 @@ object ChapterProvider {
                         if (textPage.height < durY) {
                             textPage.height = durY
                         }
-                        absStartX = x
+                        absStartX = paddingLeft
                         durY = 0f
                     }
                 }
