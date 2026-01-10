@@ -36,6 +36,13 @@ class BookSourceEditAdapter(
 
     private val handler = Handler(Looper.getMainLooper())
 
+    // 定义标签常量
+    companion object {
+        private const val TAG_TOUCH_LISTENER = 1001
+        private const val TAG_FOCUS_LISTENER = 1002
+        private const val TAG_TEXT_WATCHER = 1003
+    }
+
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MyViewHolder {
         val binding = ItemSourceEditBinding.inflate(LayoutInflater.from(parent.context), parent, false)
         binding.editText.addLegadoPattern()
@@ -67,7 +74,7 @@ class BookSourceEditAdapter(
             editText.isCursorVisible = false
 
             // 设置触摸监听（防滑动误触的核心）
-            if (editText.getTag(R.id.tag_touch_listener) == null) {
+            if (editText.getTag(TAG_TOUCH_LISTENER) == null) {
                 editText.setOnTouchListener { _, event ->
                     if (event.action == MotionEvent.ACTION_DOWN) {
                         // 关键：如果正在滑动，停止滑动并消费事件
@@ -77,16 +84,18 @@ class BookSourceEditAdapter(
                             return@setOnTouchListener true // 消费事件，阻止焦点
                         } else {
                             // 页面稳定时才标记为用户点击
-                            currentKey?.let { focusStateManager.setUserTouched(it) }
+                            currentKey?.let { key ->
+                                focusStateManager.setUserTouched(key)
+                            }
                         }
                     }
                     false // 不消费，让 EditText 正常处理后续事件
                 }
-                editText.setTag(R.id.tag_touch_listener, true)
+                editText.setTag(TAG_TOUCH_LISTENER, true)
             }
 
             // 焦点变化监听
-            if (editText.getTag(R.id.tag_focus_listener) == null) {
+            if (editText.getTag(TAG_FOCUS_LISTENER) == null) {
                 editText.setOnFocusChangeListener { _, hasFocus ->
                     if (hasFocus) {
                         onGainFocus()
@@ -94,7 +103,7 @@ class BookSourceEditAdapter(
                         onLoseFocus()
                     }
                 }
-                editText.setTag(R.id.tag_focus_listener, true)
+                editText.setTag(TAG_FOCUS_LISTENER, true)
             }
 
             // 文本和初始状态设置
@@ -102,31 +111,35 @@ class BookSourceEditAdapter(
             textInputLayout.hint = editEntity.hint
 
             // 恢复焦点状态
-            if (focusStateManager.isUserTouched(currentKey)) {
-                handler.post { editText.requestFocus() }
+            currentKey?.let { key ->
+                if (focusStateManager.isUserTouched(key)) {
+                    handler.post { editText.requestFocus() }
+                }
             }
         }
 
         private fun onGainFocus() {
             binding.editText.isCursorVisible = true
 
-            if (focusStateManager.isUserTouched(currentKey)) {
-                // 用户点击：弹出键盘
-                showSoftInput(binding.editText)
-            } else {
-                // 程序恢复：只恢复光标位置，不弹键盘
-                val (start, end) = focusStateManager.getLastSelection(currentKey)
-                val safeStart = start.coerceAtMost(binding.editText.text.length)
-                val safeEnd = end.coerceAtMost(binding.editText.text.length)
-                binding.editText.setSelection(safeStart, safeEnd)
+            currentKey?.let { key ->
+                if (focusStateManager.isUserTouched(key)) {
+                    // 用户点击：弹出键盘
+                    showSoftInput(binding.editText)
+                } else {
+                    // 程序恢复：只恢复光标位置，不弹键盘
+                    val (start, end) = focusStateManager.getLastSelection(key)
+                    val safeStart = start.coerceAtMost(binding.editText.text.length)
+                    val safeEnd = end.coerceAtMost(binding.editText.text.length)
+                    binding.editText.setSelection(safeStart, safeEnd)
+                }
             }
         }
 
         private fun onLoseFocus() {
             binding.editText.isCursorVisible = false
-            currentKey?.let {
+            currentKey?.let { key ->
                 focusStateManager.saveSelection(
-                    it,
+                    key,
                     binding.editText.selectionStart,
                     binding.editText.selectionEnd
                 )
@@ -135,7 +148,7 @@ class BookSourceEditAdapter(
         }
 
         private fun setupTextAndState(editEntity: EditEntity) {
-            binding.editText.getTag(R.id.tag_text_watcher)?.let {
+            binding.editText.getTag(TAG_TEXT_WATCHER)?.let {
                 if (it is TextWatcher) {
                     binding.editText.removeTextChangedListener(it)
                 }
@@ -152,7 +165,7 @@ class BookSourceEditAdapter(
             }
 
             binding.editText.addTextChangedListener(textWatcher)
-            binding.editText.setTag(R.id.tag_text_watcher, textWatcher)
+            binding.editText.setTag(TAG_TEXT_WATCHER, textWatcher)
 
             // 设置文本
             val currentText = binding.editText.text?.toString().orEmpty()

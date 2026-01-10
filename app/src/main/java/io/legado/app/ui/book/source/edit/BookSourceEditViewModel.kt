@@ -2,6 +2,7 @@ package io.legado.app.ui.book.source.edit
 
 import android.app.Application
 import android.content.Intent
+import androidx.recyclerview.widget.RecyclerView
 import io.legado.app.R
 import io.legado.app.base.BaseViewModel
 import io.legado.app.data.appDb
@@ -186,5 +187,27 @@ class ScrollStateManager {
 
     fun removeScrollListener(listener: (Boolean) -> Unit) {
         scrollListeners.remove(listener)
+    }
+}
+
+class FocusStateManager {
+    // 只记录用户主动点击的 key，其他情况不记录
+    private var userTouchedKey: String? = null
+    private val selectionMap = mutableMapOf<String, Pair<Int, Int>>()
+
+    fun setUserTouched(key: String) {
+        userTouchedKey = key
+    }
+
+    fun isUserTouched(key: String): Boolean = userTouchedKey == key
+
+    fun saveSelection(key: String, start: Int, end: Int) {
+        selectionMap[key] = Pair(start, end)
+    }
+
+    fun getLastSelection(key: String): Pair<Int, Int> = selectionMap[key] ?: Pair(0, 0)
+
+    fun clearUserTouched() {
+        userTouchedKey = null
     }
 }
