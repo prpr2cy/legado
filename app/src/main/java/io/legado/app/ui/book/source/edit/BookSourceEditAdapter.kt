@@ -36,12 +36,10 @@ class BookSourceEditAdapter(
 
     private val handler = Handler(Looper.getMainLooper())
 
-    // 定义标签常量
-    companion object {
-        private const val TAG_TOUCH_LISTENER = 1001
-        private const val TAG_FOCUS_LISTENER = 1002
-        private const val TAG_TEXT_WATCHER = 1003
-    }
+    // 使用对象引用作为标签，避免使用整数值
+    private object TouchListenerTag
+    private object FocusListenerTag
+    private object TextWatcherTag
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MyViewHolder {
         val binding = ItemSourceEditBinding.inflate(LayoutInflater.from(parent.context), parent, false)
@@ -74,7 +72,7 @@ class BookSourceEditAdapter(
             editText.isCursorVisible = false
 
             // 设置触摸监听（防滑动误触的核心）
-            if (editText.getTag(TAG_TOUCH_LISTENER) == null) {
+            if (editText.getTag(R.id.tag_touch_listener) == null) {
                 editText.setOnTouchListener { _, event ->
                     if (event.action == MotionEvent.ACTION_DOWN) {
                         // 关键：如果正在滑动，停止滑动并消费事件
@@ -91,11 +89,11 @@ class BookSourceEditAdapter(
                     }
                     false // 不消费，让 EditText 正常处理后续事件
                 }
-                editText.setTag(TAG_TOUCH_LISTENER, true)
+                editText.setTag(R.id.tag_touch_listener, TouchListenerTag)
             }
 
             // 焦点变化监听
-            if (editText.getTag(TAG_FOCUS_LISTENER) == null) {
+            if (editText.getTag(R.id.tag_focus_listener) == null) {
                 editText.setOnFocusChangeListener { _, hasFocus ->
                     if (hasFocus) {
                         onGainFocus()
@@ -103,7 +101,7 @@ class BookSourceEditAdapter(
                         onLoseFocus()
                     }
                 }
-                editText.setTag(TAG_FOCUS_LISTENER, true)
+                editText.setTag(R.id.tag_focus_listener, FocusListenerTag)
             }
 
             // 文本和初始状态设置
@@ -148,7 +146,7 @@ class BookSourceEditAdapter(
         }
 
         private fun setupTextAndState(editEntity: EditEntity) {
-            binding.editText.getTag(TAG_TEXT_WATCHER)?.let {
+            binding.editText.getTag(R.id.tag_text_watcher)?.let {
                 if (it is TextWatcher) {
                     binding.editText.removeTextChangedListener(it)
                 }
@@ -165,7 +163,7 @@ class BookSourceEditAdapter(
             }
 
             binding.editText.addTextChangedListener(textWatcher)
-            binding.editText.setTag(TAG_TEXT_WATCHER, textWatcher)
+            binding.editText.setTag(R.id.tag_text_watcher, textWatcher)
 
             // 设置文本
             val currentText = binding.editText.text?.toString().orEmpty()
