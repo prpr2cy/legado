@@ -29,7 +29,7 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
             notifyDataSetChanged()
         }
 
-    // 全局焦点管理器 - 只基于key，不依赖position
+    // 全局焦点管理器
     private val focusManager = FocusManager()
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MyViewHolder {
@@ -38,7 +38,7 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
         binding.editText.addLegadoPattern()
         binding.editText.addJsonPattern()
         binding.editText.addJsPattern()
-        return MyViewHolder(binding, focusManager)
+        return MyViewHolder(binding)
     }
 
     override fun onBindViewHolder(holder: MyViewHolder, position: Int) {
@@ -49,10 +49,8 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
         return editEntities.size
     }
 
-    inner class MyViewHolder(
-        val binding: ItemSourceEditBinding,
-        private val focusManager: FocusManager
-    ) : RecyclerView.ViewHolder(binding.root) {
+    inner class MyViewHolder(val binding: ItemSourceEditBinding) :
+        RecyclerView.ViewHolder(binding.root) {
 
         private val mainHandler = Handler(Looper.getMainLooper())
         private var currentKey: String? = null
@@ -186,14 +184,14 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
     /**
      * 焦点管理器 - 基于key的焦点管理，避免position复用冲突
      */
-    private class FocusManager {
+    private inner class FocusManager {
         // 当前获得焦点的key
         private var currentFocusKey: String? = null
 
         // 待定焦点信息，key -> 触摸坐标
         private val pendingFocusMap = mutableMapOf<String, TouchInfo>()
 
-        data class TouchInfo(val touchX: Float, val touchY: Float)
+        private data class TouchInfo(val touchX: Float, val touchY: Float)
 
         fun setPendingFocus(key: String?, x: Float, y: Float) {
             if (key != null) {
