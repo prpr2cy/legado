@@ -78,7 +78,7 @@ object EncodingDetect {
         val result = ByteArray(8000)
         val buffer = ByteArray(8192)
         var pos = 0
-        var bytesRead: Int
+        var bytesRead = 0
         try {
             file.inputStream().buffered().use { input ->
                 while (pos < result.size && input.read(buffer).also { bytesRead = it } != -1) {
