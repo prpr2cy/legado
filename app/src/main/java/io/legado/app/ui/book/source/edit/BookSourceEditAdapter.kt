@@ -56,12 +56,64 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
             }
         }
 
+        // 跟踪当前绑定的实体，防止焦点错乱
+        private var currentEditEntity: EditEntity? = null
+
         fun bind(editEntity: EditEntity) = binding.run {
-            // 重置焦点状态，防止快速滑动时焦点错乱
-            editText.clearFocus()
+            currentEditEntity = editEntity
 
             editText.setTag(R.id.tag, editEntity.key)
             editText.maxLines = editEntityMaxLine
+
+            // 只在第一次绑定时添加附加监听器
+            if (editText.getTag(R.id.tag1) == null) {
+                val attachListener = object : View.OnAttachStateChangeListener {
+                    override fun onViewAttachedToWindow(v: View) {
+                        // 简化设置，避免与输入法冲突
+                        editText.isFocusable = true
+                        editText.isFocusableInTouchMode = true
+                    }
+
+                    override fun onViewDetachedFromWindow(v: View) {
+                        // 清理工作
+                        editText.clearFocus()
+                        cancelScroll()
+                        mainHandler.removeCallbacks(ensureCursorRunnable)
+                    }
+                }
+                editText.addOnAttachStateChangeListener(attachListener)
+                editText.setTag(R.id.tag1, attachListener)
+
+                // 点击处理 - 确保点击正确的项目（只设置一次）
+                editText.setOnClickListener {
+                    // 验证点击的是当前绑定的项目
+                    if (currentEditEntity?.key == editText.getTag(R.id.tag)) {
+                        editText.requestFocus()
+                    }
+                }
+
+                // 焦点变化监听 - 更好的管理光标显示（只设置一次）
+                editText.setOnFocusChangeListener { _, hasFocus ->
+                    if (hasFocus) {
+                        // 验证焦点的是当前绑定的项目
+                        if (currentEditEntity?.key == editText.getTag(R.id.tag)) {
+                            // 延迟设置光标可见，避免与输入法冲突
+                            mainHandler.post {
+                                if (editText.hasFocus()) {
+                                    editText.isCursorVisible = true
+                                }
+                            }
+                        } else {
+                            // 如果焦点错乱，立即清除焦点
+                            editText.clearFocus()
+                        }
+                    } else {
+                        editText.isCursorVisible = false
+                        // 失去焦点时清理防抖任务
+                        mainHandler.removeCallbacks(ensureCursorRunnable)
+                    }
+                }
+            }
 
             // 移除旧的文本监听器
             editText.getTag(R.id.tag2)?.let {
@@ -78,12 +130,14 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
                 val selStart = editText.selectionStart.coerceIn(0, oldText.length)
                 val selEnd = editText.selectionEnd.coerceIn(0, oldText.length)
 
+                // 只有在文本确实改变时才更新
                 editText.setText(newText)
 
                 // 只有在当前有焦点且选择范围有效时才恢复选择
                 if (hasFocus && selStart <= newText.length && selEnd <= newText.length) {
                     mainHandler.post {
-                        if (editText.hasFocus()) {
+                        // 再次验证焦点和绑定状态
+                        if (editText.hasFocus() && currentEditEntity?.key == editText.getTag(R.id.tag)) {
                             editText.setSelection(selStart, selEnd)
                         }
                     }
@@ -106,53 +160,22 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
                 }
 
                 override fun afterTextChanged(s: Editable?) {
-                    editEntity.value = s?.toString().orEmpty()
+                    // 验证当前绑定的实体
+                    if (currentEditEntity?.key == editText.getTag(R.id.tag)) {
+                        editEntity.value = s?.toString().orEmpty()
 
-                    // 使用防抖机制，避免频繁滚动
-                    mainHandler.removeCallbacks(ensureCursorRunnable)
-                    mainHandler.postDelayed(ensureCursorRunnable, 100)
+                        // 使用防抖机制，避免频繁滚动
+                        mainHandler.removeCallbacks(ensureCursorRunnable)
+                        mainHandler.postDelayed(ensureCursorRunnable, 150) // 增加延迟时间
+                    }
                 }
             }
             editText.addTextChangedListener(textWatcher)
             editText.setTag(R.id.tag2, textWatcher)
 
-            // 点击处理 - 确保点击正确的项目
-            editText.setOnClickListener {
-                editText.requestFocus()
-            }
-
-            // 焦点变化监听 - 更好的管理光标显示
-            editText.setOnFocusChangeListener { _, hasFocus ->
-                if (hasFocus) {
-                    // 延迟设置光标可见，避免与输入法冲突
-                    mainHandler.post {
-                        editText.isCursorVisible = true
-                    }
-                } else {
-                    editText.isCursorVisible = false
-                    // 失去焦点时清理防抖任务
-                    mainHandler.removeCallbacks(ensureCursorRunnable)
-                }
-            }
-
-            // 只在第一次绑定时添加附加监听器
-            if (editText.getTag(R.id.tag1) == null) {
-                val attachListener = object : View.OnAttachStateChangeListener {
-                    override fun onViewAttachedToWindow(v: View) {
-                        // 简化设置，避免与输入法冲突
-                        editText.isFocusable = true
-                        editText.isFocusableInTouchMode = true
-                    }
-
-                    override fun onViewDetachedFromWindow(v: View) {
-                        // 清理工作
-                        editText.clearFocus()
-                        cancelScroll()
-                        mainHandler.removeCallbacks(ensureCursorRunnable)
-                    }
-                }
-                editText.addOnAttachStateChangeListener(attachListener)
-                editText.setTag(R.id.tag1, attachListener)
+            // 重要：如果当前没有焦点，确保光标不可见
+            if (!editText.hasFocus()) {
+                editText.isCursorVisible = false
             }
         }
 
@@ -160,13 +183,20 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
          * 确保光标在可见范围内
          */
         private fun ensureCursorVisible() {
+            // 验证当前状态
+            if (!binding.editText.hasFocus() || currentEditEntity?.key != binding.editText.getTag(R.id.tag)) {
+                return
+            }
+
             cancelScroll()
             scrollRunnable = Runnable {
                 (binding.root.parent as? RecyclerView)?.let { recyclerView ->
-                    // 使用当前的位置，确保滚动到正确的位置
-                    val currentPosition = adapterPosition
-                    if (currentPosition != RecyclerView.NO_POSITION) {
-                        recyclerView.smoothScrollToPosition(currentPosition)
+                    // 再次验证状态
+                    if (binding.editText.hasFocus() && currentEditEntity?.key == binding.editText.getTag(R.id.tag)) {
+                        val currentPosition = adapterPosition
+                        if (currentPosition != RecyclerView.NO_POSITION) {
+                            recyclerView.smoothScrollToPosition(currentPosition)
+                        }
                     }
                 }
             }

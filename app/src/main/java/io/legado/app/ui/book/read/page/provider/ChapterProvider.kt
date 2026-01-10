@@ -206,10 +206,6 @@ object ChapterProvider {
                 while (matcher.find()) {
                     val text = content.substring(start, matcher.start())
                     if (text.isNotBlank()) {
-                        if (start > 0) {
-                            durY += (paragraphSpacing.toFloat() + lineSpacingExtra) * 10f
-                            AppLog.put("1@paragraphSpacing=${paragraphSpacing}, lineSpacingExtra={lineSpacingExtra}")
-                        }
                         setTypeText(
                             book,
                             absStartX,
@@ -237,10 +233,6 @@ object ChapterProvider {
                 if (start < content.length) {
                     val text = content.substring(start, content.length)
                     if (text.isNotBlank()) {
-                        if (start > 0) {
-                            durY += (paragraphSpacing.toFloat() + lineSpacingExtra) * 10f
-                            AppLog.put("1@paragraphSpacing=${paragraphSpacing}, lineSpacingExtra={lineSpacingExtra}")
-                        }
                         setTypeText(
                             book, absStartX, durY,
                             if (AppConfig.enableReview) text + reviewChar else text,
@@ -293,6 +285,7 @@ object ChapterProvider {
     ): Pair<Int, Float> {
         var absStartX = x
         var durY = y
+        var doubleY = 0f
         var ratio = 1f
         val size = ImageProvider.getImageSize(book, src, ReadBook.bookSource)
 
@@ -349,6 +342,8 @@ object ChapterProvider {
                         //当前页面左列结束
                         textPage.leftLineSize = textPage.lineSize
                         absStartX = paddingLeft + viewWidth / 2
+                        doubleY = durY
+                        durY = 0f
                     } else {
                         //当前页面结束
                         if (textPage.leftLineSize == 0) {
@@ -357,10 +352,12 @@ object ChapterProvider {
                         textPage.text = stringBuilder.toString().ifEmpty { "本页无文字内容" }
                         stringBuilder.clear()
                         textPages.add(TextPage())
-                        if (textPage.height < durY) {
-                            textPage.height = durY
+                        doubleY += durY
+                        if (textPage.height < doubleY) {
+                            textPage.height = doubleY
                         }
                         absStartX = paddingLeft
+                        doubleY = 0f
                         durY = 0f
                     }
                 }
@@ -389,7 +386,7 @@ object ChapterProvider {
                 textPages.last().addLine(textLine)
             }
         }
-        return absStartX to durY + paragraphSpacing.toFloat() / 10f
+        return absStartX to doubleY + durY + paragraphSpacing.toFloat() / 10f
     }
 
     /**
