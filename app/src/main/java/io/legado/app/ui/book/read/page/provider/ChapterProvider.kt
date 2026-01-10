@@ -418,7 +418,7 @@ object ChapterProvider {
         var absStartX = x
         var durY = y
         if (beforeLineIsImage) {
-            durY += textHeight * paragraphSpacing.toFloat() / 10f
+            durY += textHeight * lineSpacingExtra + textHeight * paragraphSpacing.toFloat() / 10f
             beforeLineIsImage = false
         }
         val widthsArray = FloatArray(text.length)
