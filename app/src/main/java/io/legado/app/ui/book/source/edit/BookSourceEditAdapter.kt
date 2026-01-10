@@ -164,7 +164,7 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
             scrollRunnable = Runnable {
                 (binding.root.parent as? RecyclerView)?.let { recyclerView ->
                     // 使用当前的位置，确保滚动到正确的位置
-                    val currentPosition = bindingAdapterPosition
+                    val currentPosition = adapterPosition
                     if (currentPosition != RecyclerView.NO_POSITION) {
                         recyclerView.smoothScrollToPosition(currentPosition)
                     }
