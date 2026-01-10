@@ -429,7 +429,7 @@ object ChapterProvider {
             StaticLayout(text, textPaint, visibleWidth, Layout.Alignment.ALIGN_NORMAL, 0f, 0f, true)
         }
         val widthsList = widthsArray.asList()
-        var durY = when {
+        durY = when {
             //标题y轴居中
             emptyContent && textPages.size == 1 -> {
                 val textPage = textPages.last()
@@ -456,6 +456,7 @@ object ChapterProvider {
 
             else -> durY
         }
+
         for (lineIndex in 0 until layout.lineCount) {
             val textLine = TextLine(isTitle = isTitle)
             if (durY + textHeight > visibleHeight) {
