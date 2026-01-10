@@ -35,9 +35,26 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
     // 关联RecyclerView来处理滑动状态
     private var recyclerView: RecyclerView? = null
 
+    // 应用状态跟踪
+    private var isAppInForeground = true
+
     override fun onAttachedToRecyclerView(recyclerView: RecyclerView) {
         super.onAttachedToRecyclerView(recyclerView)
         this.recyclerView = recyclerView
+
+        // 监听RecyclerView的窗口焦点变化
+        recyclerView.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
+            override fun onViewAttachedToWindow(v: View) {
+                isAppInForeground = true
+                // 恢复焦点状态
+                notifyDataSetChanged()
+            }
+
+            override fun onViewDetachedFromWindow(v: View) {
+                isAppInForeground = false
+                focusManager.clearAllFocus()
+            }
+        })
     }
 
     override fun onDetachedFromRecyclerView(recyclerView: RecyclerView) {
@@ -86,6 +103,16 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
                     override fun onViewAttachedToWindow(v: View) {
                         editText.isFocusable = true
                         editText.isFocusableInTouchMode = true
+
+                        // 如果应用在前台且这是焦点项，恢复焦点
+                        if (isAppInForeground && focusManager.isCurrentFocus(currentKey)) {
+                            mainHandler.post {
+                                if (focusManager.isCurrentFocus(currentKey)) {
+                                    editText.requestFocus()
+                                    editText.isCursorVisible = true
+                                }
+                            }
+                        }
                     }
 
                     override fun onViewDetachedFromWindow(v: View) {
@@ -156,19 +183,6 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
                         editText.isCursorVisible = false
                         // 失去焦点时清理待定状态，但保留当前焦点key
                         focusManager.clearPendingTouch(currentKey)
-                    }
-                }
-
-                // 处理应用状态变化 - 使用明确的Boolean参数类型
-                editText.setOnWindowFocusChangeListener { hasWindowFocus: Boolean ->
-                    if (hasWindowFocus && focusManager.isCurrentFocus(currentKey)) {
-                        // 应用回到前台，重新请求焦点
-                        mainHandler.post {
-                            if (focusManager.isCurrentFocus(currentKey)) {
-                                editText.requestFocus()
-                                editText.isCursorVisible = true
-                            }
-                        }
                     }
                 }
             }
