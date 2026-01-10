@@ -297,6 +297,7 @@ object ChapterProvider {
         var doubleY = 0f
         var ratio = 1f
         val size = ImageProvider.getImageSize(book, src, ReadBook.bookSource)
+        val isScroll = ReadBook.pageAnim() == 3
 
         if (size.width > 0 && size.height > 0) {
             var height = size.height
@@ -347,7 +348,7 @@ object ChapterProvider {
                 if (durY + segmentHeight > visibleHeight) {
                     val textPage = textPages.last()
 
-                    if (doublePage && absStartX < viewWidth / 2) {
+                    if (doublePage && !isScroll && absStartX < viewWidth / 2) {
                         //当前页面左列结束
                         textPage.leftLineSize = textPage.lineSize
                         absStartX = paddingLeft + viewWidth / 2
@@ -418,8 +419,7 @@ object ChapterProvider {
         var absStartX = x
         var durY = y
         if (beforeLineIsImage) {
-            durY += textHeight * paragraphSpacing.toFloat() / 5f
-            AppLog.put("图片行：${textHeight * paragraphSpacing.toFloat() / 5f}")
+            durY += textHeight * (lineSpacingExtra / 2f + paragraphSpacing.toFloat() / 5f)
             beforeLineIsImage = false
         }
         val widthsArray = FloatArray(text.length)
@@ -545,7 +545,6 @@ object ChapterProvider {
             durY += textHeight * lineSpacingExtra
             textPages.last().height = durY
         }
-        AppLog.put("文本行：${textHeight * lineSpacingExtra + textHeight * paragraphSpacing.toFloat() / 10f}")
         durY += textHeight * paragraphSpacing.toFloat() / 10f
         return Pair(absStartX, durY)
     }
