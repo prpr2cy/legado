@@ -279,7 +279,6 @@ class ContentTextView(context: Context, attrs: AttributeSet?) : View(context, at
             // 以宽度为基准保持图片的原始比例叠加，当div为负数时，允许高度比字符更高
             val h = (column.end - column.start) * pageH / bitmap.width
             val div = (lineBottom - lineTop - h) / 2
-            AppLog.put("绘制坐标：${column.start}-${lineTop + div}-${column.end}-${lineBottom - div}")
             RectF(column.start, lineTop + div, column.end, lineBottom - div)
         }
 

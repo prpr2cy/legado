@@ -207,7 +207,8 @@ object ChapterProvider {
                     val text = content.substring(start, matcher.start())
                     if (text.isNotBlank()) {
                         if (start > 0) {
-                            durY += paragraphSpacing.toFloat() + lineSpacingExtra * 10f
+                            durY += (paragraphSpacing.toFloat() + lineSpacingExtra) * 10f
+                            AppLog.put("1@paragraphSpacing=${paragraphSpacing}, lineSpacingExtra={lineSpacingExtra}")
                         }
                         setTypeText(
                             book,
@@ -237,7 +238,8 @@ object ChapterProvider {
                     val text = content.substring(start, content.length)
                     if (text.isNotBlank()) {
                         if (start > 0) {
-                            durY += paragraphSpacing.toFloat() + lineSpacingExtra * 10f
+                            durY += (paragraphSpacing.toFloat() + lineSpacingExtra) * 10f
+                            AppLog.put("1@paragraphSpacing=${paragraphSpacing}, lineSpacingExtra={lineSpacingExtra}")
                         }
                         setTypeText(
                             book, absStartX, durY,
@@ -332,7 +334,6 @@ object ChapterProvider {
             }
 
             val totalPages = ceil(height.toFloat() / visibleHeight).toInt()
-            AppLog.put("屏幕宽度：${viewWidth}，可视宽度：${viewWidth}")
 
             for (page in 0 until totalPages) {
                 // 计算当前分段的高度
@@ -348,7 +349,6 @@ object ChapterProvider {
                         //当前页面左列结束
                         textPage.leftLineSize = textPage.lineSize
                         absStartX = x + viewWidth
-                        AppLog.put("右页：${absStartX}")
                     } else {
                         //当前页面结束
                         if (textPage.leftLineSize == 0) {
@@ -361,7 +361,6 @@ object ChapterProvider {
                             textPage.height = durY
                         }
                         absStartX = x
-                        AppLog.put("左页：${absStartX}")
                         durY = 0f
                     }
                 }
@@ -383,11 +382,7 @@ object ChapterProvider {
                         originalHeight = size.height
                     )
                 )
-                
-                // 记录最终图片显示区域的中心坐标
-                val finalCenterX = absStartX + (start + end) / 2
-                val finalCenterY = (textLine.lineTop + textLine.lineBottom) / 2
-                AppLog.put("图片最终中心坐标: page=$page, centerX=$finalCenterX, centerY=$finalCenterY, lineTop=${textLine.lineTop}, lineBottom=${textLine.lineBottom}")                
+                AppLog.put("src=${src}, page=${page}, absStartX=${absStartX}, start=${bsStartX + start}, end=${bsStartX + end}, lineTop=${textLine.lineTop}, lineBottom=${textLine.lineBottom}, paddingLeft${paddingLeft}, paddingRight=${paddingRight}, viewWidth=${viewWidth}, viewHeight=${viewHeight}, visibleWidth=${visibleWidth}, visibleHeight=${visibleHeight}, paddingTop=${paddingTop}, paddingBottom=${paddingBottom}")                
                 
                 calcTextLinePosition(textPages, textLine, stringBuilder.length)
                 stringBuilder.append(" ") // 确保翻页时索引计算正确
