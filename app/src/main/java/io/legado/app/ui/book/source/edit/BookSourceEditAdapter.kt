@@ -159,8 +159,8 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
                     }
                 }
 
-                // 处理应用状态变化
-                editText.setOnWindowFocusChangeListener { hasWindowFocus ->
+                // 处理应用状态变化 - 使用明确的Boolean参数类型
+                editText.setOnWindowFocusChangeListener { hasWindowFocus: Boolean ->
                     if (hasWindowFocus && focusManager.isCurrentFocus(currentKey)) {
                         // 应用回到前台，重新请求焦点
                         mainHandler.post {
