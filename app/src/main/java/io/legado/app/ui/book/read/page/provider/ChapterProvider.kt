@@ -292,6 +292,9 @@ object ChapterProvider {
         stringBuilder: StringBuilder,
         imageStyle: String?,
     ): Pair<Int, Float> {
+        if (textPages.last().height < y) {
+            textPages.last().height = y
+        }
         var absStartX = x
         var durY = y
         var doubleY = 0f
@@ -354,7 +357,7 @@ object ChapterProvider {
                     if (doublePage && !isScroll && absStartX < viewWidth / 2) {
                         //当前页面左列结束
                         textPage.leftLineSize = textPage.lineSize
-                        absStartX = paddingLeft + viewWidth / 2
+                        absStartX = viewWidth / 2 + paddingLeft
                         doubleY = durY
                         durY = 0f
                     } else {
@@ -367,7 +370,7 @@ object ChapterProvider {
                         textPages.add(TextPage())
                         doubleY += durY
                         if (textPage.height < doubleY) {
-                            textPage.height = if (doublePage && isScroll) doubleY * 2 else doubleY
+                            textPage.height = doubleY
                         }
                         absStartX = paddingLeft
                         doubleY = 0f
@@ -419,6 +422,9 @@ object ChapterProvider {
         isVolumeTitle: Boolean = false,
         srcList: LinkedList<String>? = null
     ): Pair<Int, Float> {
+        if (textPages.last().height < y) {
+            textPages.last().height = y
+        }
         var absStartX = x
         var durY = y
         if (beforeLineIsImage) {

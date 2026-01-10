@@ -63,7 +63,13 @@ class BookSourceEditActivity :
     override val binding by viewBinding(ActivityBookSourceEditBinding::inflate)
     override val viewModel by viewModels<BookSourceEditViewModel>()
 
-    private val adapter by lazy { BookSourceEditAdapter() }
+    // 修改这里：使用带状态管理器的适配器
+    private val adapter by lazy {
+        BookSourceEditAdapter(
+            focusStateManager = viewModel.focusStateManager,
+            scrollStateManager = viewModel.scrollStateManager
+        )
+    }
     private val sourceEntities: ArrayList<EditEntity> = ArrayList()
     private val searchEntities: ArrayList<EditEntity> = ArrayList()
     private val exploreEntities: ArrayList<EditEntity> = ArrayList()
@@ -183,6 +189,18 @@ class BookSourceEditActivity :
         binding.recyclerView.setEdgeEffectColor(primaryColor)
         binding.recyclerView.layoutManager = LinearLayoutManager(this)
         binding.recyclerView.adapter = adapter
+
+        // 关键：将 RecyclerView 附加到滑动状态管理器
+        viewModel.scrollStateManager.attachRecyclerView(binding.recyclerView)
+
+        // 关键：监听 RecyclerView 的滑动状态
+        binding.recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
+                val isScrolling = newState != RecyclerView.SCROLL_STATE_IDLE
+                viewModel.scrollStateManager.setScrolling(isScrolling)
+            }
+        })
+
         binding.tabLayout.setBackgroundColor(backgroundColor)
         binding.tabLayout.setSelectedTabIndicatorColor(accentColor)
         binding.tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
