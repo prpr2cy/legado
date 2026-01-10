@@ -70,8 +70,9 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
 
         private val mainHandler = Handler(Looper.getMainLooper())
         private var currentKey: String? = null
-        private var isHandlingTouch = false
-        private var lastScrollState = RecyclerView.SCROLL_STATE_IDLE
+        private var isUserTouch = false
+        private var lastSelectionStart = 0
+        private var lastSelectionEnd = 0
 
         fun bind(editEntity: EditEntity) = binding.run {
             currentKey = editEntity.key
@@ -82,71 +83,54 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
             // 重置状态
             editText.clearFocus()
             editText.isCursorVisible = false
-            isHandlingTouch = false
+            isUserTouch = false
 
             if (editText.getTag(R.id.tag1) == null) {
                 val listener = object : View.OnAttachStateChangeListener {
                     override fun onViewAttachedToWindow(v: View) {
                         editText.isFocusable = true
                         editText.isFocusableInTouchMode = true
-
-                        // 如果这是焦点项，只恢复焦点状态，不弹出键盘
-                        if (focusManager.isCurrentFocus(currentKey)) {
-                            mainHandler.post {
-                                if (focusManager.isCurrentFocus(currentKey) && !editText.hasFocus()) {
-                                    editText.requestFocus()
-                                    editText.isCursorVisible = true
-                                    // 不自动弹出键盘，等用户点击时再弹出
-                                }
-                            }
-                        }
                     }
 
                     override fun onViewDetachedFromWindow(v: View) {
-                        // 清理焦点状态
-                        if (focusManager.isCurrentFocus(currentKey)) {
-                            focusManager.clearPendingTouch(currentKey)
+                        // 保存当前选择位置
+                        if (editText.hasFocus()) {
+                            lastSelectionStart = editText.selectionStart
+                            lastSelectionEnd = editText.selectionEnd
                         }
+                        // 清理焦点状态
+                        focusManager.clearPendingTouch(currentKey)
                         editText.clearFocus()
-                        isHandlingTouch = false
+                        isUserTouch = false
                     }
                 }
                 editText.addOnAttachStateChangeListener(listener)
                 editText.setTag(R.id.tag1, listener)
 
-                // 监听RecyclerView滚动状态
-                recyclerView?.addOnScrollListener(object : RecyclerView.OnScrollListener() {
-                    override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
-                        lastScrollState = newState
-                        // 如果从滚动变为空闲，检查是否有待处理的焦点
-                        if (newState == RecyclerView.SCROLL_STATE_IDLE &&
-                            focusManager.hasPendingFocusWithoutTouch()) {
-                            focusManager.clearAllFocus()
-                        }
-                    }
-                })
-
-                // 触摸监听 - 只在页面稳定时处理点击
+                // 触摸监听 - 记录用户触摸
                 editText.setOnTouchListener { v, event ->
                     when (event.action) {
                         MotionEvent.ACTION_DOWN -> {
+                            // 标记为用户触摸
+                            isUserTouch = true
+
                             // 检查是否在滑动中
-                            val isScrolling = lastScrollState != RecyclerView.SCROLL_STATE_IDLE
+                            val isScrolling = recyclerView?.scrollState != RecyclerView.SCROLL_STATE_IDLE
 
                             if (isScrolling) {
-                                // 如果在滑动中，渐进停止滑动，但不设置焦点和光标
+                                // 如果在滑动中，停止滑动并延迟处理点击
                                 recyclerView?.stopScroll()
-                                // 不处理焦点，让用户等页面稳定后再点击
-                                return@setOnTouchListener true
+                                mainHandler.postDelayed({
+                                    handleTouchEvent(event)
+                                }, 150) // 等待滑动完全停止
                             } else {
-                                // 页面稳定，正常处理点击
-                                handleTouchEvent(event.x, event.y)
-                                return@setOnTouchListener true // 消费事件
+                                // 直接处理点击
+                                handleTouchEvent(event)
                             }
+                            return@setOnTouchListener true // 消费事件
                         }
                         MotionEvent.ACTION_UP -> {
-                            // 标记触摸处理完成
-                            isHandlingTouch = false
+                            isUserTouch = false
                         }
                     }
                     false
@@ -155,36 +139,36 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
                 // 焦点监听
                 editText.setOnFocusChangeListener { _, hasFocus ->
                     if (hasFocus) {
-                        // 验证焦点合法性
-                        if (focusManager.isPendingFocus(currentKey) || focusManager.isCurrentFocus(currentKey)) {
-                            if (focusManager.isPendingFocus(currentKey)) {
-                                focusManager.confirmFocus(currentKey)
-                            }
-                            mainHandler.post {
-                                if (editText.hasFocus() && focusManager.isCurrentFocus(currentKey)) {
-                                    editText.isCursorVisible = true
-                                    // 延迟设置光标位置，确保视图稳定
-                                    mainHandler.postDelayed({
-                                        if (editText.hasFocus() && focusManager.isCurrentFocus(currentKey)) {
-                                            focusManager.applyPendingCursorPosition(editText, currentKey)
-                                        }
-                                    }, 50)
-                                    // 只在用户主动点击时弹出键盘
-                                    if (focusManager.isUserInitiatedFocus(currentKey)) {
-                                        showSoftInput(editText)
-                                    }
+                        if (isUserTouch) {
+                            // 用户触摸：显示光标、弹键盘、设置触摸位置
+                            editText.isCursorVisible = true
+                            showSoftInput(editText)
+
+                            // 延迟设置触摸位置的光标
+                            mainHandler.postDelayed({
+                                if (editText.hasFocus()) {
+                                    focusManager.applyPendingCursorPosition(editText, currentKey)
                                 }
-                            }
+                            }, 50)
                         } else {
-                            // 非法焦点，清除
+                            // 程序设置焦点：恢复之前的光标位置，但不弹键盘
+                            editText.isCursorVisible = true
+                            // 恢复之前的选择位置
                             mainHandler.post {
-                                editText.clearFocus()
+                                if (editText.hasFocus()) {
+                                    val safeStart = lastSelectionStart.coerceAtMost(editText.text.length)
+                                    val safeEnd = lastSelectionEnd.coerceAtMost(editText.text.length)
+                                    editText.setSelection(safeStart, safeEnd)
+                                }
                             }
                         }
                     } else {
+                        // 失去焦点时保存选择位置
+                        lastSelectionStart = editText.selectionStart
+                        lastSelectionEnd = editText.selectionEnd
                         editText.isCursorVisible = false
-                        // 失去焦点时清理待定状态
                         focusManager.clearPendingTouch(currentKey)
+                        isUserTouch = false
                     }
                 }
             }
@@ -212,7 +196,7 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
 
             if (currentText != newText) {
                 // 保存当前选择状态
-                val hadFocus = editText.hasFocus() && focusManager.isCurrentFocus(currentKey)
+                val hadFocus = editText.hasFocus()
                 val selStart = editText.selectionStart
                 val selEnd = editText.selectionEnd
 
@@ -223,10 +207,14 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
                     selStart <= newText.length && selEnd <= newText.length
                 ) {
                     mainHandler.post {
-                        if (editText.hasFocus() && focusManager.isCurrentFocus(currentKey)) {
+                        if (editText.hasFocus()) {
                             editText.setSelection(selStart, selEnd)
                         }
                     }
+                } else if (hadFocus) {
+                    // 如果选择无效，保存为最后位置用于恢复
+                    lastSelectionStart = selStart.coerceAtMost(newText.length)
+                    lastSelectionEnd = selEnd.coerceAtMost(newText.length)
                 }
             }
 
@@ -234,13 +222,14 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
             editText.setTag(R.id.tag2, textWatcher)
             textInputLayout.hint = editEntity.hint
 
-            // 如果是当前焦点项，只恢复焦点状态，不弹出键盘
+            // 如果是当前焦点项，恢复焦点但不弹键盘
             if (focusManager.isCurrentFocus(currentKey)) {
                 mainHandler.post {
                     if (focusManager.isCurrentFocus(currentKey) && !editText.hasFocus()) {
+                        // 程序设置焦点，不标记为用户触摸
+                        isUserTouch = false
                         editText.requestFocus()
-                        editText.isCursorVisible = true
-                        // 不自动弹出键盘
+                        // 光标会在焦点监听器中显示并恢复位置
                     }
                 }
             }
@@ -249,12 +238,19 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
         /**
          * 处理触摸事件
          */
-        private fun handleTouchEvent(x: Float, y: Float) {
-            if (isHandlingTouch) return // 防止重复处理
+        private fun handleTouchEvent(event: MotionEvent) {
+            // 记录触摸位置
+            focusManager.setPendingFocus(currentKey, event.x, event.y)
 
-            isHandlingTouch = true
-            focusManager.setPendingFocus(currentKey, x, y, true) // 标记为用户发起的焦点
+            // 直接请求焦点
             binding.editText.requestFocus()
+
+            // 如果焦点请求失败，重试一次
+            mainHandler.postDelayed({
+                if (!binding.editText.hasFocus()) {
+                    binding.editText.requestFocus()
+                }
+            }, 50)
         }
 
         /**
@@ -262,37 +258,34 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
          */
         private fun showSoftInput(editText: android.widget.EditText) {
             mainHandler.post {
-                val inputMethodManager = editText.context.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
-                inputMethodManager?.showSoftInput(editText, InputMethodManager.SHOW_IMPLICIT)
+                try {
+                    val inputMethodManager = editText.context.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+                    if (inputMethodManager != null && editText.hasFocus()) {
+                        inputMethodManager.showSoftInput(editText, InputMethodManager.SHOW_IMPLICIT)
+                    }
+                } catch (e: Exception) {
+                    // 忽略异常
+                }
             }
         }
     }
 
     /**
-     * 焦点管理器 - 基于key的焦点管理
+     * 简化焦点管理器
      */
     private class FocusManager {
         // 当前获得焦点的key
         private var currentFocusKey: String? = null
 
-        // 待定焦点信息，key -> 触摸坐标和用户发起标志
+        // 待定焦点信息，key -> 触摸坐标
         private val pendingFocusMap = mutableMapOf<String, TouchInfo>()
 
-        private data class TouchInfo(
-            val touchX: Float,
-            val touchY: Float,
-            val isUserInitiated: Boolean = false // 标记是否是用户主动点击发起的焦点
-        )
+        private data class TouchInfo(val touchX: Float, val touchY: Float)
 
-        fun setPendingFocus(key: String?, x: Float, y: Float, isUserInitiated: Boolean = false) {
+        fun setPendingFocus(key: String?, x: Float, y: Float) {
             if (key != null) {
-                pendingFocusMap[key] = TouchInfo(x, y, isUserInitiated)
-            }
-        }
-
-        fun confirmFocus(key: String?) {
-            if (key != null && pendingFocusMap.containsKey(key)) {
-                currentFocusKey = key
+                pendingFocusMap[key] = TouchInfo(x, y)
+                currentFocusKey = key // 直接设置为当前焦点
             }
         }
 
@@ -307,26 +300,8 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
             pendingFocusMap.clear()
         }
 
-        fun isPendingFocus(key: String?): Boolean {
-            return key != null && pendingFocusMap.containsKey(key)
-        }
-
         fun isCurrentFocus(key: String?): Boolean {
             return currentFocusKey == key
-        }
-
-        /**
-         * 检查焦点是否是用户主动点击发起的
-         */
-        fun isUserInitiatedFocus(key: String?): Boolean {
-            return key != null && pendingFocusMap[key]?.isUserInitiated == true
-        }
-
-        /**
-         * 检查是否有待处理的焦点但没有触摸信息（用于滑动中点击的情况）
-         */
-        fun hasPendingFocusWithoutTouch(): Boolean {
-            return pendingFocusMap.isNotEmpty() && currentFocusKey == null
         }
 
         fun applyPendingCursorPosition(editText: android.widget.EditText, key: String?) {
@@ -338,12 +313,14 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
                         if (offset != -1) {
                             editText.setSelection(offset)
                         }
+                        // 如果有触摸位置但计算失败，不设置任何位置
                     } catch (e: Exception) {
-                        // 忽略异常
+                        // 忽略异常，不设置任何位置
                     }
-                    // 光标设置完成后清理待定信息
+                    // 清理待定信息
                     pendingFocusMap.remove(key)
                 }
+                // 如果没有触摸信息，不设置任何位置
             }
         }
     }

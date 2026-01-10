@@ -367,7 +367,7 @@ object ChapterProvider {
                         textPages.add(TextPage())
                         doubleY += durY
                         if (textPage.height < doubleY) {
-                            textPage.height = doubleY
+                            textPage.height = if (doublePage && isScroll) doubleY * 2 else doubleY
                         }
                         absStartX = paddingLeft
                         doubleY = 0f
