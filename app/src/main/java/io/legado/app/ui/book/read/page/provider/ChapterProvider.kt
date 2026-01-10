@@ -292,9 +292,6 @@ object ChapterProvider {
         stringBuilder: StringBuilder,
         imageStyle: String?,
     ): Pair<Int, Float> {
-        if (textPage.height < y) {
-            textPage.height = y
-        }
         var absStartX = x
         var durY = y
         var doubleY = 0f
