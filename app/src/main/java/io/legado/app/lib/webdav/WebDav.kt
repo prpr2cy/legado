@@ -169,7 +169,7 @@ open class WebDav(
             method("PROPFIND", requestBody)
         }.apply {
             checkResult(this)
-        }.body.text()
+        }.body?.text()
     }
 
     /**
@@ -401,7 +401,7 @@ open class WebDav(
             url(url)
         }.apply {
             checkResult(this)
-        }.body.byteStream()
+        }.body?.byteStream() ?: throw WebDavException("响应体为空")
         return byteStream
     }
 
@@ -429,7 +429,7 @@ open class WebDav(
      */
     private fun checkResult(response: Response) {
         if (!response.isSuccessful) {
-            val body = response.body.string()
+            val body = response.body?.text() ?: ""
             if (response.code == 401) {
                 val headers = response.headers("WWW-Authenticate")
                 val supportBasicAuth = headers.any {

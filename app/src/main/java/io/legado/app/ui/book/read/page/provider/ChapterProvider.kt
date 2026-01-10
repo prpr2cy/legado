@@ -382,7 +382,7 @@ object ChapterProvider {
                         originalHeight = size.height
                     )
                 )
-                AppLog.put("src=${src}, page=${page}, absStartX=${absStartX}, start=${bsStartX + start}, end=${bsStartX + end}, lineTop=${textLine.lineTop}, lineBottom=${textLine.lineBottom}, paddingLeft${paddingLeft}, paddingRight=${paddingRight}, viewWidth=${viewWidth}, viewHeight=${viewHeight}, visibleWidth=${visibleWidth}, visibleHeight=${visibleHeight}, paddingTop=${paddingTop}, paddingBottom=${paddingBottom}")                
+                AppLog.put("src=${src}, page=${page}, absStartX=${absStartX}, start=${absStartX + start}, end=${absStartX + end}, lineTop=${textLine.lineTop}, lineBottom=${textLine.lineBottom}, paddingLeft${paddingLeft}, paddingRight=${paddingRight}, viewWidth=${viewWidth}, viewHeight=${viewHeight}, visibleWidth=${visibleWidth}, visibleHeight=${visibleHeight}, paddingTop=${paddingTop}, paddingBottom=${paddingBottom}")                
                 
                 calcTextLinePosition(textPages, textLine, stringBuilder.length)
                 stringBuilder.append(" ") // 确保翻页时索引计算正确

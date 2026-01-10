@@ -1,6 +1,5 @@
 package io.legado.app.utils
 
-import android.text.TextUtils
 import io.legado.app.lib.icu4j.CharsetDetector
 import org.jsoup.Jsoup
 import java.io.File
@@ -15,40 +14,40 @@ object EncodingDetect {
     private val headOpenBytes = "<head>".toByteArray()
     private val headCloseBytes = "</head>".toByteArray()
 
+    private fun ByteArray.indexOfSubArray(first: ByteArray, startIndex: Int = 0): Int {
+        if (first.isEmpty()) return 0
+        val end = this.size - first.size
+        if (end < startIndex) return -1
+        for (i in startIndex..end) {
+            var j = 0
+            while (j < first.size && this[i + j] == first[j]) j++
+            if (j == first.size) return i
+        }
+        return -1
+    }
+
+
     fun getHtmlEncode(bytes: ByteArray): String {
         try {
             var head: String? = null
-            val startIndex = bytes.indexOf(headOpenBytes)
+            val startIndex = bytes.indexOfSubArray(headOpenBytes)
             if (startIndex > -1) {
-                val endIndex = bytes.indexOf(headCloseBytes, startIndex)
+                val endIndex = bytes.indexOfSubArray(headCloseBytes, startIndex)
                 if (endIndex > -1) {
-                    head = String(bytes.copyOfRange(startIndex, endIndex + headCloseBytes.size))
+                    head = String(bytes.copyOfRange(startIndex, endIndex + headCloseBytes.size), Charsets.ISO_8859_1)
                 }
             }
-            val doc = Jsoup.parseBodyFragment(head ?: headTagRegex.find(String(bytes))!!.value)
-            val metaTags = doc.getElementsByTag("meta")
-            var charsetStr: String
-            for (metaTag in metaTags) {
-                charsetStr = metaTag.attr("charset")
-                if (!TextUtils.isEmpty(charsetStr)) {
-                    return charsetStr
-                }
-                val httpEquiv = metaTag.attr("http-equiv")
-                if (httpEquiv.equals("content-type", true)) {
-                    val content = metaTag.attr("content")
-                    val idx = content.indexOf("charset=", ignoreCase = true)
-                    charsetStr = if (idx > -1) {
-                        content.substring(idx + "charset=".length)
-                    } else {
-                        content.substringAfter(";")
-                    }
-                    if (!TextUtils.isEmpty(charsetStr)) {
-                        return charsetStr
-                    }
-                }
-            }
-        } catch (ignored: Exception) {
-        }
+            val doc = Jsoup.parseBodyFragment(head ?: headTagRegex.find(String(bytes, Charsets.ISO_8859_1))!!.value)
+             doc.getElementsByTag("meta").forEach { meta ->
+                 meta.attr("charset").takeIf { it.isNotBlank() }?.let { return it }
+                 if (meta.attr("http-equiv").equals("content-type", true)) {
+                     val content = meta.attr("content")
+                     val idx = content.indexOf("charset=", ignoreCase = true)
+                     val cs = if (idx != -1) content.substring(idx + 8) else content.substringAfter(";")
+                     if (cs.isNotBlank()) return cs
+                 }
+             }
+        } catch (ignored: Exception) {}
         return getEncode(bytes)
     }
 
@@ -76,23 +75,24 @@ object EncodingDetect {
     }
 
     private fun getFileBytes(file: File): ByteArray {
-        val byteArray = ByteArray(8000)
+        val result = ByteArray(8000)
+        val buffer = ByteArray(8192)
         var pos = 0
+        var bytesRead: Int
         try {
-            file.inputStream().buffered().use {
-                while (pos < byteArray.size) {
-                    val n = it.read(byteArray, pos, 1)
-                    if (n == -1) {
-                        break
-                    }
-                    if (byteArray[pos] < 0) {
-                        pos++
+            file.inputStream().buffered().use { input ->
+                while (pos < result.size && input.read(buffer).also { bytesRead = it } != -1) {
+                    for (i in 0 until bytesRead) {
+                        if (pos >= result.size) break
+                        if (buffer[i] < 0) {  // 只保留非ASCII字符
+                            result[pos++] = buffer[i]
+                        }
                     }
                 }
             }
         } catch (e: Exception) {
             System.err.println("Error: $e")
         }
-        return byteArray.copyOf(pos)
+        return result.copyOf(pos)
     }
 }
