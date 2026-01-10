@@ -1,6 +1,7 @@
 package io.legado.app.ui.book.source.edit
 
 import android.annotation.SuppressLint
+import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import android.text.Editable
@@ -9,6 +10,7 @@ import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
+import android.view.inputmethod.InputMethodManager
 import androidx.recyclerview.widget.RecyclerView
 import io.legado.app.R
 import io.legado.app.databinding.ItemSourceEditBinding
@@ -35,26 +37,9 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
     // 关联RecyclerView来处理滑动状态
     private var recyclerView: RecyclerView? = null
 
-    // 应用状态跟踪
-    private var isAppInForeground = true
-
     override fun onAttachedToRecyclerView(recyclerView: RecyclerView) {
         super.onAttachedToRecyclerView(recyclerView)
         this.recyclerView = recyclerView
-
-        // 监听RecyclerView的窗口焦点变化
-        recyclerView.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
-            override fun onViewAttachedToWindow(v: View) {
-                isAppInForeground = true
-                // 恢复焦点状态
-                notifyDataSetChanged()
-            }
-
-            override fun onViewDetachedFromWindow(v: View) {
-                isAppInForeground = false
-                focusManager.clearAllFocus()
-            }
-        })
     }
 
     override fun onDetachedFromRecyclerView(recyclerView: RecyclerView) {
@@ -86,6 +71,7 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
         private val mainHandler = Handler(Looper.getMainLooper())
         private var currentKey: String? = null
         private var isHandlingTouch = false
+        private var lastScrollState = RecyclerView.SCROLL_STATE_IDLE
 
         fun bind(editEntity: EditEntity) = binding.run {
             currentKey = editEntity.key
@@ -104,12 +90,13 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
                         editText.isFocusable = true
                         editText.isFocusableInTouchMode = true
 
-                        // 如果应用在前台且这是焦点项，恢复焦点
-                        if (isAppInForeground && focusManager.isCurrentFocus(currentKey)) {
+                        // 如果这是焦点项，只恢复焦点状态，不弹出键盘
+                        if (focusManager.isCurrentFocus(currentKey)) {
                             mainHandler.post {
-                                if (focusManager.isCurrentFocus(currentKey)) {
+                                if (focusManager.isCurrentFocus(currentKey) && !editText.hasFocus()) {
                                     editText.requestFocus()
                                     editText.isCursorVisible = true
+                                    // 不自动弹出键盘，等用户点击时再弹出
                                 }
                             }
                         }
@@ -127,24 +114,35 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
                 editText.addOnAttachStateChangeListener(listener)
                 editText.setTag(R.id.tag1, listener)
 
-                // 触摸监听 - 处理滑动中的点击
+                // 监听RecyclerView滚动状态
+                recyclerView?.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+                    override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
+                        lastScrollState = newState
+                        // 如果从滚动变为空闲，检查是否有待处理的焦点
+                        if (newState == RecyclerView.SCROLL_STATE_IDLE &&
+                            focusManager.hasPendingFocusWithoutTouch()) {
+                            focusManager.clearAllFocus()
+                        }
+                    }
+                })
+
+                // 触摸监听 - 只在页面稳定时处理点击
                 editText.setOnTouchListener { v, event ->
                     when (event.action) {
                         MotionEvent.ACTION_DOWN -> {
                             // 检查是否在滑动中
-                            val isScrolling = recyclerView?.scrollState != RecyclerView.SCROLL_STATE_IDLE
+                            val isScrolling = lastScrollState != RecyclerView.SCROLL_STATE_IDLE
 
                             if (isScrolling) {
-                                // 如果在滑动中，停止滑动并延迟处理点击
+                                // 如果在滑动中，渐进停止滑动，但不设置焦点和光标
                                 recyclerView?.stopScroll()
-                                mainHandler.postDelayed({
-                                    handleTouchEvent(event.x, event.y)
-                                }, 100) // 等待滑动完全停止
+                                // 不处理焦点，让用户等页面稳定后再点击
+                                return@setOnTouchListener true
                             } else {
-                                // 直接处理点击
+                                // 页面稳定，正常处理点击
                                 handleTouchEvent(event.x, event.y)
+                                return@setOnTouchListener true // 消费事件
                             }
-                            return@setOnTouchListener true // 消费事件
                         }
                         MotionEvent.ACTION_UP -> {
                             // 标记触摸处理完成
@@ -170,7 +168,11 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
                                         if (editText.hasFocus() && focusManager.isCurrentFocus(currentKey)) {
                                             focusManager.applyPendingCursorPosition(editText, currentKey)
                                         }
-                                    }, 80) // 稍微延长等待时间
+                                    }, 50)
+                                    // 只在用户主动点击时弹出键盘
+                                    if (focusManager.isUserInitiatedFocus(currentKey)) {
+                                        showSoftInput(editText)
+                                    }
                                 }
                             }
                         } else {
@@ -181,7 +183,7 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
                         }
                     } else {
                         editText.isCursorVisible = false
-                        // 失去焦点时清理待定状态，但保留当前焦点key
+                        // 失去焦点时清理待定状态
                         focusManager.clearPendingTouch(currentKey)
                     }
                 }
@@ -232,12 +234,13 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
             editText.setTag(R.id.tag2, textWatcher)
             textInputLayout.hint = editEntity.hint
 
-            // 如果是当前焦点项，恢复焦点
+            // 如果是当前焦点项，只恢复焦点状态，不弹出键盘
             if (focusManager.isCurrentFocus(currentKey)) {
                 mainHandler.post {
                     if (focusManager.isCurrentFocus(currentKey) && !editText.hasFocus()) {
                         editText.requestFocus()
                         editText.isCursorVisible = true
+                        // 不自动弹出键盘
                     }
                 }
             }
@@ -250,8 +253,18 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
             if (isHandlingTouch) return // 防止重复处理
 
             isHandlingTouch = true
-            focusManager.setPendingFocus(currentKey, x, y)
+            focusManager.setPendingFocus(currentKey, x, y, true) // 标记为用户发起的焦点
             binding.editText.requestFocus()
+        }
+
+        /**
+         * 显示软键盘
+         */
+        private fun showSoftInput(editText: android.widget.EditText) {
+            mainHandler.post {
+                val inputMethodManager = editText.context.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+                inputMethodManager?.showSoftInput(editText, InputMethodManager.SHOW_IMPLICIT)
+            }
         }
     }
 
@@ -262,14 +275,18 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
         // 当前获得焦点的key
         private var currentFocusKey: String? = null
 
-        // 待定焦点信息，key -> 触摸坐标
+        // 待定焦点信息，key -> 触摸坐标和用户发起标志
         private val pendingFocusMap = mutableMapOf<String, TouchInfo>()
 
-        private data class TouchInfo(val touchX: Float, val touchY: Float)
+        private data class TouchInfo(
+            val touchX: Float,
+            val touchY: Float,
+            val isUserInitiated: Boolean = false // 标记是否是用户主动点击发起的焦点
+        )
 
-        fun setPendingFocus(key: String?, x: Float, y: Float) {
+        fun setPendingFocus(key: String?, x: Float, y: Float, isUserInitiated: Boolean = false) {
             if (key != null) {
-                pendingFocusMap[key] = TouchInfo(x, y)
+                pendingFocusMap[key] = TouchInfo(x, y, isUserInitiated)
             }
         }
 
@@ -296,6 +313,20 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
 
         fun isCurrentFocus(key: String?): Boolean {
             return currentFocusKey == key
+        }
+
+        /**
+         * 检查焦点是否是用户主动点击发起的
+         */
+        fun isUserInitiatedFocus(key: String?): Boolean {
+            return key != null && pendingFocusMap[key]?.isUserInitiated == true
+        }
+
+        /**
+         * 检查是否有待处理的焦点但没有触摸信息（用于滑动中点击的情况）
+         */
+        fun hasPendingFocusWithoutTouch(): Boolean {
+            return pendingFocusMap.isNotEmpty() && currentFocusKey == null
         }
 
         fun applyPendingCursorPosition(editText: android.widget.EditText, key: String?) {

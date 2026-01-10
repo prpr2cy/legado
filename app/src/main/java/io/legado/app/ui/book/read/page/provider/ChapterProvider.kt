@@ -298,27 +298,30 @@ object ChapterProvider {
         var ratio = 1f
         val size = ImageProvider.getImageSize(book, src, ReadBook.bookSource)
         val isScroll = ReadBook.pageAnim() == 3
+        val visibleWidth2 = if (doublePage && isScroll) {
+            viewWidth - paddingLeft - paddingRight
+        } else viewWidth
 
         if (size.width > 0 && size.height > 0) {
             var height = size.height
             var width = size.width
             when (imageStyle?.toUpperCase(Locale.ROOT)) {
                 Book.imgStyleFull -> {
-                    width = visibleWidth
+                    width = visibleWidth2
                     height = width * size.height / size.width
                     if (height > visibleHeight && height.toFloat() < visibleHeight.toFloat() * 1.2f) {
                         height = visibleHeight
                         width = height * size.width / size.height
                     }
-                    if (height > visibleHeight && size.width < visibleWidth) {
+                    if (height > visibleHeight && size.width < visibleWidth2) {
                         // 原图宽度小于visibleWidth时，分页裁剪高度要按比例缩小
-                        ratio = size.width.toFloat() / visibleWidth
+                        ratio = size.width.toFloat() / visibleWidth2
                     }
                 }
 
                 else -> {
                     if (size.width > visibleWidth) {
-                        width = visibleWidth
+                        width = visibleWidth2
                         height = width * size.height / size.width
                     }
                     if (height > visibleHeight && height.toFloat() < visibleHeight.toFloat() * 1.2f) {
@@ -329,8 +332,8 @@ object ChapterProvider {
             }
 
             // 计算水平居中位置
-            val (start, end) = if (visibleWidth > width) {
-                val adjustWidth = (visibleWidth.toFloat() - width.toFloat()) / 2f
+            val (start, end) = if (visibleWidth2 > width) {
+                val adjustWidth = (visibleWidth2.toFloat() - width.toFloat()) / 2f
                 Pair(adjustWidth, adjustWidth + width.toFloat())
             } else {
                 Pair(0f, width.toFloat())
@@ -395,7 +398,7 @@ object ChapterProvider {
             }
         }
         beforeLineIsImage = true
-        return Pair(absStartX, doubleY + durY)
+        return absStartX to doubleY + durY + paragraphSpacing.toFloat() / 10f
     }
 
     /**
@@ -419,7 +422,7 @@ object ChapterProvider {
         var absStartX = x
         var durY = y
         if (beforeLineIsImage) {
-            durY += textHeight * (lineSpacingExtra + paragraphSpacing.toFloat() / 10f) / 2f
+            durY += textHeight * lineSpacingExtra / 2f
             beforeLineIsImage = false
         }
         val widthsArray = FloatArray(text.length)
