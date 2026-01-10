@@ -318,7 +318,7 @@ object ChapterProvider {
                 }
             }
 
-            // 计算水平居中显示位置
+            // 计算水平居中位置
             val (start, end) = if (visibleWidth > width) {
                 val adjustWidth = (visibleWidth.toFloat() - width.toFloat()) / 2f
                 Pair(adjustWidth, adjustWidth + width.toFloat())
@@ -379,8 +379,6 @@ object ChapterProvider {
                         originalHeight = size.height
                     )
                 )
-                AppLog.put("src=${src}, page=${page}, absStartX=${absStartX}, start=${absStartX + start}, end=${absStartX + end}, lineTop=${textLine.lineTop}, lineBottom=${textLine.lineBottom}, paddingLeft${paddingLeft}, paddingRight=${paddingRight}, viewWidth=${viewWidth}, viewHeight=${viewHeight}, visibleWidth=${visibleWidth}, visibleHeight=${visibleHeight}, paddingTop=${paddingTop}, paddingBottom=${paddingBottom}")                
-                
                 calcTextLinePosition(textPages, textLine, stringBuilder.length)
                 stringBuilder.append(" ") // 确保翻页时索引计算正确
                 textPages.last().addLine(textLine)
