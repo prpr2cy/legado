@@ -550,7 +550,7 @@ object ChapterProvider {
             textPages.last().height = durY
         }
         if (beforeLineIsImage) {
-            durY += textHeight * lineSpacingExtra() / 2f
+            durY += textHeight * lineSpacingExtra / 2f
             beforeLineIsImage = false
         }
         durY += textHeight * paragraphSpacing.toFloat() / 10f
