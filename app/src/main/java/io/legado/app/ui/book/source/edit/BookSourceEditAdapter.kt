@@ -11,7 +11,7 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.InputMethodManager
-import androidx.core.view.isVisible
+import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import io.legado.app.R
 import io.legado.app.databinding.ItemSourceEditBinding
@@ -185,32 +185,36 @@ class BookSourceEditAdapter(
         }
 
         private fun smoothScrollToPositionWithOffset(position: Int) {
-            val layoutManager = recyclerView.layoutManager as? LinearLayoutManager ?: return
+            val layoutManager = recyclerView.layoutManager
+            if (layoutManager is LinearLayoutManager) {
+                // 获取当前可见项的范围
+                val firstVisible = layoutManager.findFirstVisibleItemPosition()
+                val lastVisible = layoutManager.findLastVisibleItemPosition()
 
-            // 获取当前可见项的范围
-            val firstVisible = layoutManager.findFirstVisibleItemPosition()
-            val lastVisible = layoutManager.findLastVisibleItemPosition()
+                // 如果目标项已经在可见范围内，只需要微调位置
+                if (position in firstVisible..lastVisible) {
+                    val view = layoutManager.findViewByPosition(position)
+                    view?.let { itemView ->
+                        // 计算需要滚动的距离，确保不被键盘遮挡
+                        val top = itemView.top
+                        val bottom = itemView.bottom
+                        val recyclerViewHeight = recyclerView.height
 
-            // 如果目标项已经在可见范围内，只需要微调位置
-            if (position in firstVisible..lastVisible) {
-                val view = layoutManager.findViewByPosition(position)
-                view?.let {
-                    // 计算需要滚动的距离，确保不被键盘遮挡
-                    val top = it.top
-                    val bottom = it.bottom
-                    val recyclerViewHeight = recyclerView.height
+                        // 估计键盘高度（通常为屏幕高度的1/3到1/2）
+                        val estimatedKeyboardHeight = recyclerViewHeight / 3
+                        val targetScrollY = bottom - (recyclerViewHeight - estimatedKeyboardHeight) + 100
 
-                    // 估计键盘高度（通常为屏幕高度的1/3到1/2）
-                    val estimatedKeyboardHeight = recyclerViewHeight / 3
-                    val targetScrollY = bottom - (recyclerViewHeight - estimatedKeyboardHeight) + 100
-
-                    if (targetScrollY > 0) {
-                        recyclerView.smoothScrollBy(0, targetScrollY)
+                        if (targetScrollY > 0) {
+                            recyclerView.smoothScrollBy(0, targetScrollY)
+                        }
                     }
+                } else {
+                    // 目标项不在可见范围内，滚动到该位置
+                    layoutManager.scrollToPositionWithOffset(position, 100) // 偏移100像素确保不被顶部栏遮挡
                 }
             } else {
-                // 目标项不在可见范围内，滚动到该位置
-                layoutManager.scrollToPositionWithOffset(position, 100) // 偏移100像素确保不被顶部栏遮挡
+                // 如果不是LinearLayoutManager，使用简单滚动
+                recyclerView.smoothScrollToPosition(position)
             }
         }
 

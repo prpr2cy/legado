@@ -305,7 +305,7 @@ object ChapterProvider {
             textPages.add(TextPage())
             durY = 0f
         }
-        visibleWidthFull = if (doublePage && isScroll && viewWidth < viewHeight) {
+        val visibleWidthFull = if (doublePage && isScroll && viewWidth < viewHeight) {
             viewWidth - paddingLeft - paddingRight
         } else visibleWidth
 
