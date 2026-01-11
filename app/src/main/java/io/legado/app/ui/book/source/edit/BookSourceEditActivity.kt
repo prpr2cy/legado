@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
 import android.view.MotionEvent
+import android.view.View
 import android.widget.EditText
 import androidx.activity.viewModels
 import androidx.lifecycle.lifecycleScope
@@ -73,6 +74,10 @@ class BookSourceEditActivity :
     private val tocEntities: ArrayList<EditEntity> = ArrayList()
     private val contentEntities: ArrayList<EditEntity> = ArrayList()
     private val reviewEntities: ArrayList<EditEntity> = ArrayList()
+
+    // 缓存所有EditText引用，key为entity的key
+    private val editTextCache = mutableMapOf<String, EditText>()
+
     private val qrCodeResult = registerForActivityResult(QrCodeResult()) {
         it ?: return@registerForActivityResult
         viewModel.importSource(it) { source ->
@@ -93,7 +98,15 @@ class BookSourceEditActivity :
         KeyboardToolPop(this, lifecycleScope, binding.root, this)
     }
 
+    // 用于记录当前焦点位置
+    private var lastFocusedKey: String? = null
+    private var isScrolling = false
+    private var lastTouchY = 0f
+
     override fun onActivityCreated(savedInstanceState: Bundle?) {
+        // 启用窗口自动调整，防止键盘遮挡
+        window.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
+
         softKeyboardTool.attachToWindow(window)
         initView()
         viewModel.initData(intent) {
@@ -182,30 +195,74 @@ class BookSourceEditActivity :
         binding.tabLayout.addTab(binding.tabLayout.newTab().apply {
             setText(R.string.source_tab_content)
         })
+
         binding.recyclerView.setEdgeEffectColor(primaryColor)
         binding.recyclerView.layoutManager = LinearLayoutManager(this)
         binding.recyclerView.adapter = adapter
 
-        // 添加滑动监听 - 焦点管理修复
+        // 设置子视图附加监听器来缓存EditText引用
+        binding.recyclerView.addOnChildAttachStateChangeListener(object : RecyclerView.OnChildAttachStateChangeListener {
+            override fun onChildViewAttachedToWindow(view: View) {
+                // 为每个EditText添加焦点监听并缓存引用
+                view.findViewById<EditText?>(R.id.edit_text)?.let { editText ->
+                    val key = editText.getTag(R.id.tag) as? String
+                    key?.let {
+                        editTextCache[it] = editText
+                        editText.setOnFocusChangeListener { v, hasFocus ->
+                            if (hasFocus) {
+                                lastFocusedKey = key
+                            }
+                        }
+                    }
+                }
+            }
+
+            override fun onChildViewDetachedFromWindow(view: View) {
+                // 清理缓存和焦点监听
+                view.findViewById<EditText?>(R.id.edit_text)?.let { editText ->
+                    val key = editText.getTag(R.id.tag) as? String
+                    key?.let {
+                        editTextCache.remove(it)
+                        editText.setOnFocusChangeListener(null)
+                    }
+                }
+            }
+        })
+
+        // 简化滑动监听
         binding.recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
                 super.onScrollStateChanged(recyclerView, newState)
                 when (newState) {
                     RecyclerView.SCROLL_STATE_DRAGGING,
                     RecyclerView.SCROLL_STATE_SETTLING -> {
-                        // 滑动时清除所有焦点
+                        isScrolling = true
+                        // 滑动时清除焦点，但保留key
                         recyclerView.clearFocus()
+                    }
+                    RecyclerView.SCROLL_STATE_IDLE -> {
+                        isScrolling = false
                     }
                 }
             }
         })
 
-        // 设置触摸监听处理快速滑动时的点击
+        // 处理触摸事件 - 核心修复
         binding.recyclerView.setOnTouchListener { _, event ->
-            if (event.action == MotionEvent.ACTION_DOWN) {
-                // 如果正在惯性滑动，立即停止
-                if (binding.recyclerView.scrollState == RecyclerView.SCROLL_STATE_SETTLING) {
-                    binding.recyclerView.stopScroll()
+            when (event.action) {
+                MotionEvent.ACTION_DOWN -> {
+                    lastTouchY = event.y
+                    // 如果正在惯性滑动，立即停止
+                    if (binding.recyclerView.scrollState == RecyclerView.SCROLL_STATE_SETTLING) {
+                        binding.recyclerView.stopScroll()
+                        isScrolling = false
+                    }
+                }
+                MotionEvent.ACTION_UP -> {
+                    // 如果是点击（不是滑动），处理焦点
+                    if (!isScrolling && Math.abs(event.y - lastTouchY) < 10) {
+                        handleClickAtPosition(event.y)
+                    }
                 }
             }
             false
@@ -215,11 +272,12 @@ class BookSourceEditActivity :
         binding.tabLayout.setSelectedTabIndicatorColor(accentColor)
         binding.tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
             override fun onTabReselected(tab: TabLayout.Tab?) {
-
+                // 点击当前tab时滚动到顶部
+                binding.recyclerView.smoothScrollToPosition(0)
             }
 
             override fun onTabUnselected(tab: TabLayout.Tab?) {
-                // 切换tab时清除焦点
+                // 切换tab时清除焦点但记录key
                 binding.recyclerView.clearFocus()
             }
 
@@ -227,6 +285,56 @@ class BookSourceEditActivity :
                 setEditEntities(tab?.position)
             }
         })
+    }
+
+    private fun handleClickAtPosition(y: Float) {
+        // 找到点击位置对应的item view
+        val layoutManager = binding.recyclerView.layoutManager as? LinearLayoutManager
+        layoutManager?.let { lm ->
+            // 计算点击的position
+            val firstVisiblePosition = lm.findFirstVisibleItemPosition()
+            val lastVisiblePosition = lm.findLastVisibleItemPosition()
+
+            for (i in firstVisiblePosition..lastVisiblePosition) {
+                val childView = lm.findViewByPosition(i)
+                childView?.let { view ->
+                    val viewTop = view.top
+                    val viewBottom = view.bottom
+
+                    // 检查是否点击在这个view范围内
+                    if (y >= viewTop && y <= viewBottom) {
+                        // 找到这个view中的EditText
+                        view.findViewById<EditText?>(R.id.edit_text)?.let { editText ->
+                            // 计算EditText在屏幕中的位置
+                            val editTextTop = editText.top + viewTop
+                            val editTextBottom = editText.bottom + viewTop
+
+                            // 检查是否点击在EditText上
+                            if (y >= editTextTop && y <= editTextBottom) {
+                                // 立即请求焦点并显示光标
+                                editText.requestFocus()
+                                // 计算点击位置在EditText中的位置
+                                val relativeY = y - editTextTop
+                                val lineHeight = editText.lineHeight
+                                val lineIndex = (relativeY / lineHeight).toInt()
+                                val layout = editText.layout
+                                if (layout != null && lineIndex < layout.lineCount) {
+                                    val lineStart = layout.getLineStart(lineIndex)
+                                    val lineEnd = layout.getLineEnd(lineIndex)
+                                    val lineWidth = layout.getLineWidth(lineIndex)
+                                    val relativeX = event.x - (editText.left + view.left)
+                                    val charIndex = if (relativeX <= 0) lineStart else
+                                        if (relativeX >= lineWidth) lineEnd else
+                                        layout.getOffsetForHorizontal(lineIndex, relativeX)
+                                    editText.setSelection(charIndex)
+                                }
+                                return
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     override fun finish() {
@@ -247,10 +355,11 @@ class BookSourceEditActivity :
     override fun onDestroy() {
         super.onDestroy()
         softKeyboardTool.dismiss()
+        editTextCache.clear()
     }
 
     private fun setEditEntities(tabPosition: Int?) {
-        // 切换tab前清除焦点
+        // 切换tab前清除焦点但记录key
         binding.recyclerView.clearFocus()
 
         when (tabPosition) {
@@ -262,6 +371,13 @@ class BookSourceEditActivity :
             else -> adapter.editEntities = sourceEntities
         }
         binding.recyclerView.scrollToPosition(0)
+
+        // 切换tab后恢复焦点
+        binding.recyclerView.post {
+            lastFocusedKey?.let { key ->
+                editTextCache[key]?.requestFocus()
+            }
+        }
     }
 
     private fun upSourceView(bookSource: BookSource?) {
@@ -279,6 +395,9 @@ class BookSourceEditActivity :
                 }
             )
         }
+        // 清空缓存，因为要重新创建视图
+        editTextCache.clear()
+
         // 基本信息
         sourceEntities.clear()
         sourceEntities.apply {
@@ -372,7 +491,7 @@ class BookSourceEditActivity :
             add(EditEntity("imageDecode", cr.imageDecode, R.string.rule_image_decode))
             add(EditEntity("payAction", cr.payAction, R.string.rule_pay_action))
         }
-        // 段评
+        // 段评（数据保留，但没有对应的tab）
         val rr = bs.getReviewRule()
         reviewEntities.clear()
         reviewEntities.apply {
