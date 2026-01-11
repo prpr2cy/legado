@@ -40,7 +40,7 @@ fun String?.isAbsUrl() =
 
 fun String?.isDataUrl() =
     this?.let {
-        dataUriRegex.containsMatchIn(it)
+        dataUriRegex.matches(it)
     } ?: false
 
 fun String?.isJson(): Boolean =

@@ -300,24 +300,11 @@ object ChapterProvider {
     ): Pair<Int, Float> {
         var absStartX = x
         var durY = y
-        if (doublePage && isScroll && !beforeLineIsImage) {
-            val textPage = textPages.last()
-            if (textPage.leftLineSize == 0) {
-                textPage.leftLineSize = textPage.lineSize
-            }
-            if (textPage.height < durY) {
-                textPage.height = durY
-            }
-            textPages.add(TextPage())
-            durY = 0f
-        }
         var doubleY = 0f
         var ratio = 1f
         val size = ImageProvider.getImageSize(book, src, ReadBook.bookSource)
-        val disPlayWidth = if (isScroll && !appCtx.isPad) {
-            if (viewWidth < viewHeight) {
-                viewWidth - paddingLeft - paddingRight
-            } else viewWidth / 2
+        val disPlayWidth = if (isScroll && viewWidth > viewHeight && !appCtx.isPad) {
+            max(viewWidth / 2, visibleHeight)
         } else visibleWidth
 
         if (size.width > 0 && size.height > 0) {
@@ -369,7 +356,7 @@ object ChapterProvider {
                 if (durY + segmentHeight > visibleHeight) {
                     val textPage = textPages.last()
 
-                    if (doublePage && !isScroll && absStartX < viewWidth / 2) {
+                    if (doublePage && absStartX < viewWidth / 2) {
                         //当前页面左列结束
                         textPage.leftLineSize = textPage.lineSize
                         absStartX = viewWidth / 2 + paddingLeft
@@ -410,7 +397,6 @@ object ChapterProvider {
                         originalHeight = size.height
                     )
                 )
-                AppLog.put("src=${src}, page=${page}, durY=${durY}, absStartX=${absStartX}, doublePage=${doublePage}, isScroll=${isScroll}, disPlayWidth=${disPlayWidth}")
                 calcTextLinePosition(textPages, textLine, stringBuilder.length)
                 stringBuilder.append(" ") // 确保翻页时索引计算正确
                 textPages.last().addLine(textLine)
@@ -440,17 +426,6 @@ object ChapterProvider {
     ): Pair<Int, Float> {
         var absStartX = x
         var durY = y
-        if (doublePage && isScroll && beforeLineIsImage) {
-            val textPage = textPages.last()
-            if (textPage.leftLineSize == 0) {
-                textPage.leftLineSize = textPage.lineSize
-            }
-            if (textPage.height < durY) {
-                textPage.height = durY
-            }
-            textPages.add(TextPage())
-            durY = 0f
-        }
         if (beforeLineIsImage) {
             durY += textHeight * lineSpacingExtra / 2f
             beforeLineIsImage = false
@@ -938,7 +913,9 @@ object ChapterProvider {
     fun upLayout() {
         when (AppConfig.doublePageHorizontal) {
             "0" -> doublePage = false
-            "1" -> doublePage = true
+            "1" -> {
+                doublePage = true && !isScroll
+            }
             "2" -> {
                 doublePage = (viewWidth > viewHeight) && !isScroll
             }
