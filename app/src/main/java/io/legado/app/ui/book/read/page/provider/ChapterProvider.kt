@@ -426,6 +426,10 @@ object ChapterProvider {
     ): Pair<Int, Float> {
         var absStartX = x
         var durY = y
+        var imageSpacing = if (beforeLineIsImage) {
+            durY += textHeight * paragraphSpacing.toFloat() / 5f
+            beforeLineIsImage = false
+        }
         val widthsArray = FloatArray(text.length)
         val layout = if (ReadBookConfig.useZhLayout) {
             ZhLayout(text, textPaint, visibleWidth, widthsArray)
@@ -467,6 +471,7 @@ object ChapterProvider {
             if (durY + textHeight > visibleHeight) {
                 val textPage = textPages.last()
                 if (doublePage && absStartX < viewWidth / 2) {
+                    //当前页面左列结束
                     textPage.leftLineSize = textPage.lineSize
                     absStartX = viewWidth / 2 + paddingLeft
                 } else {
@@ -480,6 +485,9 @@ object ChapterProvider {
                     textPages.add(TextPage())
                     stringBuilder.clear()
                     absStartX = paddingLeft
+                }
+                if (textPage.height < durY) {
+                    textPage.height = durY
                 }
                 durY = 0f
             }
@@ -544,14 +552,13 @@ object ChapterProvider {
                 stringBuilder.append("\n")
             }
             calcTextLinePosition(textPages, textLine, stringBuilder.length)
-            textPages.last().addLine(textLine)
             textLine.upTopBottom(durY, textHeight, fontMetrics)
+            val textPage = textPages.last()
+            textPage.addLine(textLine)
             durY += textHeight * lineSpacingExtra
-            textPages.last().height = durY
-        }
-        if (beforeLineIsImage) {
-            durY += textHeight * lineSpacingExtra / 2f
-            beforeLineIsImage = false
+            if (textPage.height < durY) {
+                textPage.height = durY
+            }
         }
         durY += textHeight * paragraphSpacing.toFloat() / 10f
         return Pair(absStartX, durY)
