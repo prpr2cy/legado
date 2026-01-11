@@ -26,17 +26,19 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
             notifyDataSetChanged()
         }
 
+    private var recyclerView: RecyclerView? = null
+
     // 提供外部调用的焦点请求方法
     fun requestFocusAt(position: Int) {
         // 使用post确保在布局完成后执行
-        (getRecyclerView()?.post {
-            val viewHolder = getRecyclerView()?.findViewHolderForAdapterPosition(position)
+        recyclerView?.post {
+            val viewHolder = recyclerView?.findViewHolderForAdapterPosition(position)
             (viewHolder as? MyViewHolder)?.binding?.editText?.requestFocus()
-        })
+        }
     }
 
-    private fun getRecyclerView(): RecyclerView? {
-        return null // 实际使用时需要获取RecyclerView实例
+    fun setRecyclerView(recyclerView: RecyclerView) {
+        this.recyclerView = recyclerView
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MyViewHolder {

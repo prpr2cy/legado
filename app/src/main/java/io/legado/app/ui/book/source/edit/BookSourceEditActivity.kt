@@ -181,31 +181,54 @@ class BookSourceEditActivity :
             setText(R.string.source_tab_content)
         })
         binding.recyclerView.setEdgeEffectColor(primaryColor)
-
-        // 关键修改：配置RecyclerView禁用预取
+    
+        // 修正：使用兼容的布局管理器配置
         val layoutManager = LinearLayoutManager(this)
-        layoutManager.itemPrefetchEnabled = false // 禁用预取，减少闪烁
+        // 移除不支持的itemPrefetchEnabled，使用其他优化方式
         binding.recyclerView.layoutManager = layoutManager
-
-        // 关键修改：传递RecyclerView给Adapter
+    
+        // 修正：传递RecyclerView给Adapter
         adapter.setRecyclerView(binding.recyclerView)
         binding.recyclerView.adapter = adapter
-
+    
         binding.tabLayout.setBackgroundColor(backgroundColor)
         binding.tabLayout.setSelectedTabIndicatorColor(accentColor)
         binding.tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
             override fun onTabReselected(tab: TabLayout.Tab?) {
-
+    
             }
-
+    
             override fun onTabUnselected(tab: TabLayout.Tab?) {
-
+    
             }
-
+    
             override fun onTabSelected(tab: TabLayout.Tab?) {
                 setEditEntities(tab?.position)
             }
         })
+    }
+    
+    // 修正：添加KeyboardToolPop.CallBack接口方法
+    override fun onKeyboardToolPrevious() {
+        // 处理上一个编辑框
+        val currentFocus = window.decorView.findFocus()
+        if (currentFocus != null && currentFocus.tag is Int) {
+            val currentPosition = currentFocus.tag as Int
+            if (currentPosition > 0) {
+                adapter.requestFocusAt(currentPosition - 1)
+            }
+        }
+    }
+    
+    override fun onKeyboardToolNext() {
+        // 处理下一个编辑框
+        val currentFocus = window.decorView.findFocus()
+        if (currentFocus != null && currentFocus.tag is Int) {
+            val currentPosition = currentFocus.tag as Int
+            if (currentPosition < adapter.itemCount - 1) {
+                adapter.requestFocusAt(currentPosition + 1)
+            }
+        }
     }
 
     override fun finish() {
