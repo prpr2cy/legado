@@ -90,7 +90,7 @@ object ImageProvider {
     fun resize(size: Int) {
         val newSize = if (size + maxSize > 2048 * M || size + maxSize > cacheSize * 5) {
             bitmapLruCache.evictAll()
-            AppLog.put("图片缓存超过最大容量或5倍设置容量，已自动重置缓存")
+            AppLog.put("图片缓存超过最大容量或10倍设置容量，已自动重置")
             max(size + 50 * M, cacheSize)
         } else {
             size + 50 * M
