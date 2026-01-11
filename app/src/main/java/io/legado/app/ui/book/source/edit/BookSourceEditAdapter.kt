@@ -6,6 +6,7 @@ import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.ViewTreeObserver
 import androidx.recyclerview.widget.RecyclerView
 import io.legado.app.R
 import io.legado.app.databinding.ItemSourceEditBinding
@@ -26,21 +27,6 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
             notifyDataSetChanged()
         }
 
-    private var recyclerView: RecyclerView? = null
-
-    // 提供外部调用的焦点请求方法
-    fun requestFocusAt(position: Int) {
-        // 使用post确保在布局完成后执行
-        recyclerView?.post {
-            val viewHolder = recyclerView?.findViewHolderForAdapterPosition(position)
-            (viewHolder as? MyViewHolder)?.binding?.editText?.requestFocus()
-        }
-    }
-
-    fun setRecyclerView(recyclerView: RecyclerView) {
-        this.recyclerView = recyclerView
-    }
-
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MyViewHolder {
         val binding = ItemSourceEditBinding
             .inflate(LayoutInflater.from(parent.context), parent, false)
@@ -51,7 +37,7 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
     }
 
     override fun onBindViewHolder(holder: MyViewHolder, position: Int) {
-        holder.bind(editEntities[position], position)
+        holder.bind(editEntities[position])
     }
 
     override fun getItemCount(): Int {
@@ -61,70 +47,54 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
     inner class MyViewHolder(val binding: ItemSourceEditBinding) :
         RecyclerView.ViewHolder(binding.root) {
 
-        fun bind(editEntity: EditEntity, position: Int) = binding.run {
-            // 核心1: 设置位置标签
-            editText.tag = position
-
-            // 设置文本和提示
-            textInputLayout.hint = editEntity.hint
+        fun bind(editEntity: EditEntity) = binding.run {
+            editText.setTag(R.id.tag, editEntity.key)
             editText.maxLines = editEntityMaxLine
 
-            // 移除旧的TextWatcher
+            editText.apply {
+                viewTreeObserver.addOnGlobalLayoutListener(object : ViewTreeObserver.OnGlobalLayoutListener {
+                    override fun onGlobalLayout() {
+                        viewTreeObserver.removeOnGlobalLayoutListener(this)
+                        isCursorVisible = false
+                        post {
+                            isCursorVisible = true
+                        }
+                    }
+                })
+
+                isFocusable = true
+                isFocusableInTouchMode = true
+            }
+
             editText.getTag(R.id.tag2)?.let {
                 if (it is TextWatcher) {
                     editText.removeTextChangedListener(it)
                 }
             }
 
-            // 核心2: 设置文本并恢复光标位置
-            val currentText = editText.text?.toString().orEmpty()
-            val newText = editEntity.value.orEmpty()
-            if (currentText != newText) {
-                editText.setText(newText)
-            }
+            editText.setText(editEntity.value)
+            textInputLayout.hint = editEntity.hint
 
-            // 恢复光标位置
-            val safeCursor = editEntity.cursor.coerceAtMost(newText.length)
-            editText.setSelection(safeCursor)
-
-            // 核心3: 文本变化时实时保存数据和光标位置
             val textWatcher = object : TextWatcher {
-                override fun beforeTextChanged(s: CharSequence, start: Int, count: Int, after: Int) {
+                override fun beforeTextChanged(
+                    s: CharSequence,
+                    start: Int,
+                    count: Int,
+                    after: Int
+                ) {
+
                 }
 
                 override fun onTextChanged(s: CharSequence, start: Int, before: Int, count: Int) {
+
                 }
 
                 override fun afterTextChanged(s: Editable?) {
-                    s?.let {
-                        editEntity.value = it.toString()
-                        editEntity.cursor = editText.selectionEnd
-                    }
+                    editEntity.value = (s?.toString())
                 }
             }
             editText.addTextChangedListener(textWatcher)
             editText.setTag(R.id.tag2, textWatcher)
-
-            // 简化焦点处理 - 只在用户点击时请求焦点
-            editText.setOnClickListener {
-                editText.requestFocus()
-            }
-
-            // 简化附件状态监听
-            if (editText.getTag(R.id.tag1) == null) {
-                val listener = object : View.OnAttachStateChangeListener {
-                    override fun onViewAttachedToWindow(v: View) {
-                        // 保持简单，不需要特殊处理
-                    }
-
-                    override fun onViewDetachedFromWindow(v: View) {
-                        // 保存最终的光标位置
-                        editEntity.cursor = editText.selectionEnd
-                    }
-                }
-                editText.addOnAttachStateChangeListener(listener)
-                editText.setTag(R.id.tag1, listener)
-            }
         }
     }
 }
