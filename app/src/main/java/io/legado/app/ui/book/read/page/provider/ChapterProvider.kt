@@ -48,6 +48,9 @@ object ChapterProvider {
     private var beforeLineIsImage = false
 
     @JvmStatic
+    private var isScroll = false
+
+    @JvmStatic
     var viewWidth = 0
         private set
 
@@ -297,32 +300,35 @@ object ChapterProvider {
         var doubleY = 0f
         var ratio = 1f
         val size = ImageProvider.getImageSize(book, src, ReadBook.bookSource)
-        if (ReadBook.pageAnim() == 3 && !beforeLineIsImage) {
+        if (doublePage && !beforeLineIsImage) {
             textPages.last().height = durY
             textPages.add(TextPage())
             durY = 0f
         }
+        visibleWidthFull = if (doublePage && isScroll && viewWidth < viewHeight) {
+            viewWidth - paddingLeft - paddingRight
+        } else visibleWidth
 
         if (size.width > 0 && size.height > 0) {
             var height = size.height
             var width = size.width
             when (imageStyle?.toUpperCase(Locale.ROOT)) {
                 Book.imgStyleFull -> {
-                    width = visibleWidth
+                    width = visibleWidthFull
                     height = width * size.height / size.width
                     if (height > visibleHeight && height.toFloat() < visibleHeight.toFloat() * 1.2f) {
                         height = visibleHeight
                         width = height * size.width / size.height
                     }
-                    if (height > visibleHeight && size.width < visibleWidth) {
+                    if (height > visibleHeight && size.width < visibleWidthFull) {
                         // 原图宽度小于visibleWidth时，分页裁剪高度要按比例缩小
-                        ratio = size.width.toFloat() / visibleWidth
+                        ratio = size.width.toFloat() / visibleWidthFull
                     }
                 }
 
                 else -> {
-                    if (size.width > visibleWidth) {
-                        width = visibleWidth
+                    if (size.width > visibleWidthFull) {
+                        width = visibleWidthFull
                         height = width * size.height / size.width
                     }
                     if (height > visibleHeight && height.toFloat() < visibleHeight.toFloat() * 1.2f) {
@@ -333,8 +339,8 @@ object ChapterProvider {
             }
 
             // 计算水平居中位置
-            val (start, end) = if (visibleWidth > width) {
-                val adjustWidth = (visibleWidth.toFloat() - width.toFloat()) / 2f
+            val (start, end) = if (visibleWidthFull > width) {
+                val adjustWidth = (visibleWidthFull.toFloat() - width.toFloat()) / 2f
                 Pair(adjustWidth, adjustWidth + width.toFloat())
             } else {
                 Pair(0f, width.toFloat())
@@ -352,7 +358,7 @@ object ChapterProvider {
                 if (durY + segmentHeight > visibleHeight) {
                     val textPage = textPages.last()
 
-                    if (doublePage && absStartX < viewWidth / 2) {
+                    if (doublePage && !isScroll && absStartX < viewWidth / 2) {
                         //当前页面左列结束
                         textPage.leftLineSize = textPage.lineSize
                         absStartX = viewWidth / 2 + paddingLeft
@@ -422,11 +428,6 @@ object ChapterProvider {
     ): Pair<Int, Float> {
         var absStartX = x
         var durY = y
-        if (ReadBook.pageAnim() == 3 && beforeLineIsImage) {
-            textPages.last().height = durY
-            textPages.add(TextPage())
-            durY = 0f
-        }
         if (beforeLineIsImage) {
             durY += textHeight * lineSpacingExtra / 2f
             beforeLineIsImage = false
@@ -912,17 +913,17 @@ object ChapterProvider {
      * 更新绘制尺寸
      */
     fun upLayout() {
+        isScroll = if (ReadBook.pageAnim() == 3) true else false
+
         when (AppConfig.doublePageHorizontal) {
             "0" -> doublePage = false
             "1" -> doublePage = true
             "2" -> {
-                doublePage = (viewWidth > viewHeight)
-                    && ReadBook.pageAnim() != 3
+                doublePage = (viewWidth > viewHeight) && !isScroll
             }
 
             "3" -> {
-                doublePage = (viewWidth > viewHeight || appCtx.isPad)
-                    && ReadBook.pageAnim() != 3
+                doublePage = (viewWidth > viewHeight || appCtx.isPad) && !isScroll
             }
         }
 

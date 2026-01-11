@@ -28,12 +28,20 @@ class FocusStateManager {
     }
 
     fun getCurrentPosition(): Int = currentPosition
+
+    // 新增：清除所有状态
+    fun clearAll() {
+        userTouchedKey = null
+        selectionMap.clear()
+        currentPosition = -1
+    }
 }
 
 class ScrollStateManager {
     private var isScrolling = false
     private val scrollListeners = mutableListOf<(Boolean) -> Unit>()
     private var recyclerView: RecyclerView? = null
+    private var lastScrollTime: Long = 0
 
     fun attachRecyclerView(recyclerView: RecyclerView) {
         this.recyclerView = recyclerView
@@ -42,11 +50,19 @@ class ScrollStateManager {
     fun setScrolling(scrolling: Boolean) {
         if (isScrolling != scrolling) {
             isScrolling = scrolling
+            if (scrolling) {
+                lastScrollTime = System.currentTimeMillis()
+            }
             scrollListeners.forEach { it(scrolling) }
         }
     }
 
     fun isScrolling(): Boolean = isScrolling
+
+    // 新增：检查是否刚刚停止滚动
+    fun isJustStoppedScrolling(): Boolean {
+        return !isScrolling && System.currentTimeMillis() - lastScrollTime < 200
+    }
 
     fun stopScrollImmediately() {
         recyclerView?.stopScroll()

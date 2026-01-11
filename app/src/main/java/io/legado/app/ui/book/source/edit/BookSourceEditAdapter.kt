@@ -11,6 +11,7 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.InputMethodManager
+import androidx.core.view.isVisible
 import androidx.recyclerview.widget.RecyclerView
 import io.legado.app.R
 import io.legado.app.databinding.ItemSourceEditBinding
@@ -61,10 +62,13 @@ class BookSourceEditAdapter(
 
         private var currentKey: String? = null
         private var currentPosition: Int = -1
+        private var isBinding: Boolean = false
 
+        @SuppressLint("ClickableViewAccessibility")
         fun bind(editEntity: EditEntity, position: Int) = binding.run {
             currentKey = editEntity.key
             currentPosition = position
+            isBinding = true
 
             // 使用资源ID设置标签
             editText.setTag(R.id.edit_entity_key, editEntity.key)
@@ -79,17 +83,20 @@ class BookSourceEditAdapter(
             // 设置触摸监听（防滑动误触的核心）
             if (editText.getTag(R.id.tag_touch_listener) == null) {
                 editText.setOnTouchListener { _, event ->
-                    if (event.action == MotionEvent.ACTION_DOWN) {
-                        // 关键：如果正在滑动，停止滑动并消费事件
-                        if (scrollStateManager.isScrolling()) {
-                            // 立即停止滑动
-                            scrollStateManager.stopScrollImmediately()
-                            return@setOnTouchListener true // 消费事件，阻止焦点
-                        } else {
-                            // 页面稳定时才标记为用户点击
-                            currentKey?.let { key ->
-                                focusStateManager.setUserTouched(key)
-                                focusStateManager.setCurrentPosition(position)
+                    when (event.action) {
+                        MotionEvent.ACTION_DOWN -> {
+                            // 关键：如果正在滑动，停止滑动并消费事件
+                            if (scrollStateManager.isScrolling()) {
+                                // 立即停止滑动
+                                scrollStateManager.stopScrollImmediately()
+                                // 延迟一小段时间再处理点击，确保滚动完全停止
+                                handler.postDelayed({
+                                    handleTouchAction()
+                                }, 50)
+                                return@setOnTouchListener true // 消费事件，阻止焦点
+                            } else {
+                                // 页面稳定时才标记为用户点击
+                                handleTouchAction()
                             }
                         }
                     }
@@ -116,7 +123,7 @@ class BookSourceEditAdapter(
 
             // 恢复焦点状态 - 只在用户主动点击过的情况下恢复焦点
             currentKey?.let { key ->
-                if (focusStateManager.isUserTouched(key)) {
+                if (focusStateManager.isUserTouched(key) && !isBinding) {
                     handler.post {
                         // 确保不会意外触发多次焦点请求
                         if (!editText.hasFocus()) {
@@ -125,6 +132,17 @@ class BookSourceEditAdapter(
                     }
                 }
             }
+
+            isBinding = false
+        }
+
+        private fun handleTouchAction() {
+            currentKey?.let { key ->
+                focusStateManager.setUserTouched(key)
+                focusStateManager.setCurrentPosition(currentPosition)
+                // 立即请求焦点
+                binding.editText.requestFocus()
+            }
         }
 
         private fun onGainFocus() {
@@ -132,18 +150,15 @@ class BookSourceEditAdapter(
 
             currentKey?.let { key ->
                 if (focusStateManager.isUserTouched(key)) {
-                    // 用户点击：使用方案三的流畅体验
+                    // 用户点击：滚动到可见位置并确保不被键盘遮挡
                     handler.post {
-                        // 获取保存的位置
-                        val savedPosition = focusStateManager.getCurrentPosition()
-                        // 同时进行滚动和焦点请求
-                        recyclerView.smoothScrollToPosition(savedPosition)
-                        binding.editText.requestFocus()
+                        // 使用更智能的滚动方式，确保EditText完全可见
+                        smoothScrollToPositionWithOffset(currentPosition)
 
-                        // 短暂延迟后确保键盘弹出
+                        // 短暂延迟后显示键盘
                         handler.postDelayed({
                             showSoftInput(binding.editText)
-                        }, 50)
+                        }, 100)
                     }
                 } else {
                     // 程序恢复：只恢复光标位置，不弹键盘
@@ -167,7 +182,36 @@ class BookSourceEditAdapter(
                     binding.editText.selectionEnd
                 )
             }
-            // 不清除 userTouched 状态，保持状态直到下次绑定
+        }
+
+        private fun smoothScrollToPositionWithOffset(position: Int) {
+            val layoutManager = recyclerView.layoutManager as? LinearLayoutManager ?: return
+
+            // 获取当前可见项的范围
+            val firstVisible = layoutManager.findFirstVisibleItemPosition()
+            val lastVisible = layoutManager.findLastVisibleItemPosition()
+
+            // 如果目标项已经在可见范围内，只需要微调位置
+            if (position in firstVisible..lastVisible) {
+                val view = layoutManager.findViewByPosition(position)
+                view?.let {
+                    // 计算需要滚动的距离，确保不被键盘遮挡
+                    val top = it.top
+                    val bottom = it.bottom
+                    val recyclerViewHeight = recyclerView.height
+
+                    // 估计键盘高度（通常为屏幕高度的1/3到1/2）
+                    val estimatedKeyboardHeight = recyclerViewHeight / 3
+                    val targetScrollY = bottom - (recyclerViewHeight - estimatedKeyboardHeight) + 100
+
+                    if (targetScrollY > 0) {
+                        recyclerView.smoothScrollBy(0, targetScrollY)
+                    }
+                }
+            } else {
+                // 目标项不在可见范围内，滚动到该位置
+                layoutManager.scrollToPositionWithOffset(position, 100) // 偏移100像素确保不被顶部栏遮挡
+            }
         }
 
         private fun setupTextAndState(editEntity: EditEntity) {
