@@ -299,13 +299,14 @@ object ChapterProvider {
         var absStartX = x
         var durY = y
         if (doublePage && isScroll && !beforeLineIsImage) {
-            textPages.last().height = max(durY, viewHeight.toFloat() * 2f)
+            textPages.last().height = max(durY, viewHeight.toFloat())
+            textPages.add(TextPage())
             durY = 0f
         }
         var doubleY = 0f
         var ratio = 1f
         val size = ImageProvider.getImageSize(book, src, ReadBook.bookSource)
-        val disPlayWidth = if (isScroll && viewWidth > viewHeight
+        val disPlayWidth = if (isScroll && viewWidth < viewHeight
             && !appCtx.isPad) viewWidth / 2 else visibleWidth
 
         if (size.width > 0 && size.height > 0) {
@@ -430,7 +431,8 @@ object ChapterProvider {
         var absStartX = x
         var durY = y
         if (doublePage && isScroll && beforeLineIsImage) {
-            textPages.last().height = max(durY, viewHeight.toFloat() * 2f)
+            textPages.last().height = max(durY, viewHeight.toFloat())
+            textPages.add(TextPage())
             durY = 0f
         }
         if (beforeLineIsImage) {
