@@ -26,21 +26,23 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
             notifyDataSetChanged()
         }
 
-    // 存储每个输入框的焦点和选择状态
-    private val focusStates = mutableMapOf<String, FocusState>()
-
-    data class FocusState(
-        val hasFocus: Boolean = false,
-        val selectionStart: Int = 0,
-        val selectionEnd: Int = 0
-    )
-
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MyViewHolder {
         val binding = ItemSourceEditBinding
             .inflate(LayoutInflater.from(parent.context), parent, false)
         binding.editText.addLegadoPattern()
         binding.editText.addJsonPattern()
         binding.editText.addJsPattern()
+
+        // 设置文本选择监听
+        binding.editText.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus) {
+                // 确保文本选择可用
+                binding.editText.isCursorVisible = true
+                binding.editText.isFocusable = true
+                binding.editText.isFocusableInTouchMode = true
+            }
+        }
+
         return MyViewHolder(binding)
     }
 
@@ -52,174 +54,96 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
         return editEntities.size
     }
 
-    // 保存状态并清理资源
-    override fun onViewRecycled(holder: MyViewHolder) {
-        holder.saveFocusState()
-        holder.cleanup()
-        super.onViewRecycled(holder)
-    }
-
     inner class MyViewHolder(val binding: ItemSourceEditBinding) :
         RecyclerView.ViewHolder(binding.root) {
 
-        private var currentTextWatcher: TextWatcher? = null
-        private var currentEntityKey: String? = null
-        private var selectionWatcher: TextWatcher? = null
-
-        init {
-            setupFocusListeners()
-        }
-
-        private fun setupFocusListeners() {
-            binding.editText.setOnFocusChangeListener { _, hasFocus ->
-                currentEntityKey?.let { key ->
-                    if (hasFocus) {
-                        // 保存焦点状态和选择位置
-                        val selectionStart = binding.editText.selectionStart
-                        val selectionEnd = binding.editText.selectionEnd
-                        focusStates[key] = FocusState(
-                            hasFocus = true,
-                            selectionStart = selectionStart,
-                            selectionEnd = selectionEnd
-                        )
-                    } else {
-                        focusStates[key] = FocusState(
-                            hasFocus = false,
-                            selectionStart = binding.editText.selectionStart,
-                            selectionEnd = binding.editText.selectionEnd
-                        )
-                    }
-                }
-            }
-        }
+        private var currentEditEntity: EditEntity? = null
+        private var textWatcher: TextWatcher? = null
 
         fun bind(editEntity: EditEntity) = binding.run {
-            // 保存当前实体key
-            currentEntityKey = editEntity.key
+            // 移除旧的文本监听器
+            textWatcher?.let {
+                editText.removeTextChangedListener(it)
+                textWatcher = null
+            }
 
+            // 保存当前编辑实体引用
+            currentEditEntity = editEntity
+
+            // 设置标签和属性
             editText.setTag(R.id.tag, editEntity.key)
             editText.maxLines = editEntityMaxLine
 
-            // 移除旧的TextWatcher
-            currentTextWatcher?.let { editText.removeTextChangedListener(it) }
-            selectionWatcher?.let { editText.removeTextChangedListener(it) }
-
-            // 设置选择状态监听器
-            selectionWatcher = object : TextWatcher {
-                override fun beforeTextChanged(s: CharSequence, start: Int, count: Int, after: Int) {}
-                override fun onTextChanged(s: CharSequence, start: Int, before: Int, count: Int) {}
-                override fun afterTextChanged(s: Editable?) {
-                    // 实时保存选择状态
-                    currentEntityKey?.let { key ->
-                        if (editText.hasFocus()) {
-                            focusStates[key] = FocusState(
-                                hasFocus = true,
-                                selectionStart = editText.selectionStart,
-                                selectionEnd = editText.selectionEnd
-                            )
-                        }
-                    }
-                }
+            // 设置文本内容
+            val currentText = editText.text?.toString()
+            if (currentText != editEntity.value) {
+                editText.setText(editEntity.value)
             }
-            editText.addTextChangedListener(selectionWatcher)
 
-            // 设置文本
-            editText.setText(editEntity.value)
             textInputLayout.hint = editEntity.hint
 
-            // 恢复焦点状态和选择位置
-            val state = focusStates[editEntity.key]
-            editText.post {
-                if (state != null && state.hasFocus) {
-                    // 恢复选择状态
-                    if (state.selectionStart >= 0 && state.selectionEnd >= 0 &&
-                        state.selectionStart <= editText.length() &&
-                        state.selectionEnd <= editText.length()) {
-                        try {
-                            editText.setSelection(state.selectionStart, state.selectionEnd)
-                        } catch (e: Exception) {
-                            // 防止选择范围越界
-                            editText.setSelection(state.selectionStart.coerceAtMost(editText.length()))
-                        }
-                    }
-                }
-            }
-
-            // 光标修复
-            editText.apply {
-                // 移除旧的attach监听器
-                editText.getTag(R.id.tag1)?.let {
-                    if (it is View.OnAttachStateChangeListener) {
-                        editText.removeOnAttachStateChangeListener(it)
-                    }
-                }
-
-                val attachListener = object : View.OnAttachStateChangeListener {
-                    override fun onViewAttachedToWindow(v: View) {
-                        post {
-                            isCursorVisible = false
-                            post {
-                                isCursorVisible = true
-                            }
-                        }
-                        isFocusable = true
-                        isFocusableInTouchMode = true
-                    }
-
-                    override fun onViewDetachedFromWindow(v: View) {
-                        // 保存状态
-                        saveFocusState()
-                    }
-                }
-                editText.addOnAttachStateChangeListener(attachListener)
-                editText.setTag(R.id.tag1, attachListener)
-            }
-
-            // 创建新的TextWatcher
-            val textWatcher = object : TextWatcher {
+            // 创建新的文本监听器
+            textWatcher = object : TextWatcher {
                 override fun beforeTextChanged(
                     s: CharSequence,
                     start: Int,
                     count: Int,
                     after: Int
-                ) {}
+                ) {
+                    // 空实现
+                }
 
-                override fun onTextChanged(s: CharSequence, start: Int, before: Int, count: Int) {}
+                override fun onTextChanged(
+                    s: CharSequence,
+                    start: Int,
+                    before: Int,
+                    count: Int
+                ) {
+                    // 空实现
+                }
 
                 override fun afterTextChanged(s: Editable?) {
-                    editEntity.value = (s?.toString())
+                    currentEditEntity?.value = s?.toString()
                 }
             }
 
-            editText.addTextChangedListener(textWatcher)
-            currentTextWatcher = textWatcher
-        }
+            // 添加文本监听器
+            textWatcher?.let { editText.addTextChangedListener(it) }
 
-        fun saveFocusState() {
-            currentEntityKey?.let { key ->
-                val hasFocus = binding.editText.hasFocus()
-                val selectionStart = binding.editText.selectionStart
-                val selectionEnd = binding.editText.selectionEnd
+            // 设置焦点变化监听
+            editText.setOnFocusChangeListener { _, hasFocus ->
+                if (hasFocus) {
+                    // 确保光标可见和文本选择可用
+                    editText.isCursorVisible = true
+                    editText.isFocusable = true
+                    editText.isFocusableInTouchMode = true
 
-                focusStates[key] = FocusState(
-                    hasFocus = hasFocus,
-                    selectionStart = selectionStart,
-                    selectionEnd = selectionEnd
-                )
+                    // 延迟设置选择位置，避免与系统选择冲突
+                    editText.post {
+                        if (editText.hasFocus()) {
+                            val textLength = editText.text?.length ?: 0
+                            if (textLength > 0) {
+                                // 确保选择范围有效
+                                val selectionStart = editText.selectionStart.coerceAtLeast(0)
+                                val selectionEnd = editText.selectionEnd.coerceAtMost(textLength)
+                                if (selectionStart != selectionEnd) {
+                                    editText.setSelection(selectionStart, selectionEnd)
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
 
-        fun cleanup() {
-            saveFocusState()
-            currentTextWatcher?.let {
+        override fun onViewRecycled() {
+            super.onViewRecycled()
+            // 清理资源
+            textWatcher?.let {
                 binding.editText.removeTextChangedListener(it)
-                currentTextWatcher = null
+                textWatcher = null
             }
-            selectionWatcher?.let {
-                binding.editText.removeTextChangedListener(it)
-                selectionWatcher = null
-            }
-            currentEntityKey = null
+            currentEditEntity = null
         }
     }
 }

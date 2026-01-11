@@ -1,8 +1,6 @@
 package io.legado.app.ui.rss.source.edit
 
 import android.annotation.SuppressLint
-import android.os.Handler
-import android.os.Looper
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.LayoutInflater
@@ -48,6 +46,16 @@ class RssSourceEditAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
                 binding.editText.addLegadoPattern()
                 binding.editText.addJsonPattern()
                 binding.editText.addJsPattern()
+
+                // 设置焦点监听
+                binding.editText.setOnFocusChangeListener { _, hasFocus ->
+                    if (hasFocus) {
+                        binding.editText.isCursorVisible = true
+                        binding.editText.isFocusable = true
+                        binding.editText.isFocusableInTouchMode = true
+                    }
+                }
+
                 EditTextViewHolder(binding)
             }
         }
@@ -67,139 +75,92 @@ class RssSourceEditAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
     inner class EditTextViewHolder(val binding: ItemSourceEditBinding) :
         RecyclerView.ViewHolder(binding.root) {
 
-        private val mainHandler = Handler(Looper.getMainLooper())
-        private var scrollRunnable: Runnable? = null
-        private val ensureCursorRunnable = Runnable {
-            if (binding.editText.hasFocus()) {
-                ensureCursorVisible()
-            }
-        }
+        private var currentEditEntity: EditEntity? = null
+        private var textWatcher: TextWatcher? = null
 
         fun bind(editEntity: EditEntity) = binding.run {
-            // 重置焦点状态，防止快速滑动时焦点错乱
-            editText.clearFocus()
+            // 移除旧的文本监听器
+            textWatcher?.let {
+                editText.removeTextChangedListener(it)
+                textWatcher = null
+            }
 
-            editText.setTag(R.id.tag, editEntity.key)
+            // 保存当前编辑实体引用
+            currentEditEntity = editEntity
+
+            // 设置属性
             editText.maxLines = editEntityMaxLine
 
-            // 只在第一次绑定时添加附加监听器
-            if (editText.getTag(R.id.tag1) == null) {
-                val attachListener = object : View.OnAttachStateChangeListener {
-                    override fun onViewAttachedToWindow(v: View) {
-                        // 简化设置，避免与输入法冲突
-                        editText.isFocusable = true
-                        editText.isFocusableInTouchMode = true
-                    }
-
-                    override fun onViewDetachedFromWindow(v: View) {
-                        // 清理工作
-                        editText.clearFocus()
-                        cancelScroll()
-                        mainHandler.removeCallbacks(ensureCursorRunnable)
-                    }
-                }
-                editText.addOnAttachStateChangeListener(attachListener)
-                editText.setTag(R.id.tag1, attachListener)
-
-                // 点击处理 - 确保点击正确的项目（只设置一次）
-                editText.setOnClickListener {
-                    editText.requestFocus()
-                }
-
-                // 焦点变化监听 - 更好的管理光标显示（只设置一次）
-                editText.setOnFocusChangeListener { _, hasFocus ->
-                    if (hasFocus) {
-                        // 延迟设置光标可见，避免与输入法冲突
-                        mainHandler.post {
-                            editText.isCursorVisible = true
-                        }
-                    } else {
-                        editText.isCursorVisible = false
-                        // 失去焦点时清理防抖任务
-                        mainHandler.removeCallbacks(ensureCursorRunnable)
-                    }
-                }
-            }
-
-            // 移除旧的文本监听器
-            editText.getTag(R.id.tag2)?.let {
-                if (it is TextWatcher) {
-                    editText.removeTextChangedListener(it)
-                }
-            }
-
-            // 智能文本更新 - 避免不必要的文本设置导致光标跳动
-            val oldText = editText.text?.toString().orEmpty()
-            val newText = editEntity.value.orEmpty()
-            if (oldText != newText) {
-                val hasFocus = editText.hasFocus()
-                val selStart = editText.selectionStart.coerceIn(0, oldText.length)
-                val selEnd = editText.selectionEnd.coerceIn(0, oldText.length)
-
-                editText.setText(newText)
-
-                // 只有在当前有焦点且选择范围有效时才恢复选择
-                if (hasFocus && selStart <= newText.length && selEnd <= newText.length) {
-                    mainHandler.post {
-                        if (editText.hasFocus()) {
-                            editText.setSelection(selStart, selEnd)
-                        }
-                    }
-                }
+            // 设置文本内容
+            val currentText = editText.text?.toString()
+            if (currentText != editEntity.value) {
+                editText.setText(editEntity.value)
             }
 
             textInputLayout.hint = editEntity.hint
 
-            // 新的文本变化监听器
-            val textWatcher = object : TextWatcher {
+            // 创建新的文本监听器
+            textWatcher = object : TextWatcher {
                 override fun beforeTextChanged(
                     s: CharSequence,
                     start: Int,
                     count: Int,
                     after: Int
                 ) {
+                    // 空实现
                 }
 
-                override fun onTextChanged(s: CharSequence, start: Int, before: Int, count: Int) {
+                override fun onTextChanged(
+                    s: CharSequence,
+                    start: Int,
+                    before: Int,
+                    count: Int
+                ) {
+                    // 空实现
                 }
 
                 override fun afterTextChanged(s: Editable?) {
-                    editEntity.value = s?.toString().orEmpty()
-
-                    // 使用防抖机制，避免频繁滚动
-                    mainHandler.removeCallbacks(ensureCursorRunnable)
-                    mainHandler.postDelayed(ensureCursorRunnable, 100)
+                    currentEditEntity?.value = s?.toString()
                 }
             }
-            editText.addTextChangedListener(textWatcher)
-            editText.setTag(R.id.tag2, textWatcher)
-        }
 
-        /**
-         * 确保光标在可见范围内
-         */
-        private fun ensureCursorVisible() {
-            cancelScroll()
-            scrollRunnable = Runnable {
-                (binding.root.parent as? RecyclerView)?.let { recyclerView ->
-                    // 使用当前的位置，确保滚动到正确的位置
-                    val currentPosition = adapterPosition
-                    if (currentPosition != RecyclerView.NO_POSITION) {
-                        recyclerView.smoothScrollToPosition(currentPosition)
+            // 添加文本监听器
+            textWatcher?.let { editText.addTextChangedListener(it) }
+
+            // 设置焦点变化监听
+            editText.setOnFocusChangeListener { _, hasFocus ->
+                if (hasFocus) {
+                    // 确保光标可见和文本选择可用
+                    editText.isCursorVisible = true
+                    editText.isFocusable = true
+                    editText.isFocusableInTouchMode = true
+
+                    // 延迟设置选择位置，避免与系统选择冲突
+                    editText.post {
+                        if (editText.hasFocus()) {
+                            val textLength = editText.text?.length ?: 0
+                            if (textLength > 0) {
+                                // 确保选择范围有效
+                                val selectionStart = editText.selectionStart.coerceAtLeast(0)
+                                val selectionEnd = editText.selectionEnd.coerceAtMost(textLength)
+                                if (selectionStart != selectionEnd) {
+                                    editText.setSelection(selectionStart, selectionEnd)
+                                }
+                            }
+                        }
                     }
                 }
             }
-            mainHandler.post(scrollRunnable!!)
         }
 
-        /**
-         * 取消待处理的滚动
-         */
-        private fun cancelScroll() {
-            scrollRunnable?.let {
-                mainHandler.removeCallbacks(it)
-                scrollRunnable = null
+        override fun onViewRecycled() {
+            super.onViewRecycled()
+            // 清理资源
+            textWatcher?.let {
+                binding.editText.removeTextChangedListener(it)
+                textWatcher = null
             }
+            currentEditEntity = null
         }
     }
 
@@ -207,17 +168,9 @@ class RssSourceEditAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
         RecyclerView.ViewHolder(binding.root) {
 
         fun bind(editEntity: EditEntity) = binding.run {
-            // 先移除旧的监听器避免重复触发
             checkBox.setOnCheckedChangeListener(null)
-
             checkBox.text = editEntity.hint
-
-            // 只有当值确实改变时才更新复选框状态
-            val currentValue = editEntity.value.isTrue()
-            if (checkBox.isChecked != currentValue) {
-                checkBox.isChecked = currentValue
-            }
-
+            checkBox.isChecked = editEntity.value.isTrue()
             checkBox.setOnCheckedChangeListener { _, isChecked ->
                 editEntity.value = isChecked.toString()
             }
