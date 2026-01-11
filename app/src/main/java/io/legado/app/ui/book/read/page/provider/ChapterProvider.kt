@@ -428,7 +428,7 @@ object ChapterProvider {
         srcList: LinkedList<String>? = null
     ): Pair<Int, Float> {
         var absStartX = x
-        var durY = yy
+        var durY = y
         if (doublePage && isScroll && beforeLineIsImage) {
             textPages.last().height = durY
             textPages.add(TextPage())
