@@ -182,15 +182,11 @@ class BookSourceEditActivity :
         binding.tabLayout.addTab(binding.tabLayout.newTab().apply {
             setText(R.string.source_tab_content)
         })
-        binding.tabLayout.addTab(binding.tabLayout.newTab().apply {
-            setText(R.string.source_tab_review)
-        })
-        
         binding.recyclerView.setEdgeEffectColor(primaryColor)
         binding.recyclerView.layoutManager = LinearLayoutManager(this)
         binding.recyclerView.adapter = adapter
-        
-        // 添加滑动监听 - 核心修复
+
+        // 添加滑动监听 - 焦点管理修复
         binding.recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
                 super.onScrollStateChanged(recyclerView, newState)
@@ -202,13 +198,8 @@ class BookSourceEditActivity :
                     }
                 }
             }
-            
-            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
-                super.onScrolled(recyclerView, dx, dy)
-                // 可选：处理滚动时的其他逻辑
-            }
         })
-        
+
         // 设置触摸监听处理快速滑动时的点击
         binding.recyclerView.setOnTouchListener { _, event ->
             if (event.action == MotionEvent.ACTION_DOWN) {
@@ -219,11 +210,12 @@ class BookSourceEditActivity :
             }
             false
         }
-        
+
         binding.tabLayout.setBackgroundColor(backgroundColor)
         binding.tabLayout.setSelectedTabIndicatorColor(accentColor)
         binding.tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
             override fun onTabReselected(tab: TabLayout.Tab?) {
+
             }
 
             override fun onTabUnselected(tab: TabLayout.Tab?) {
@@ -260,14 +252,13 @@ class BookSourceEditActivity :
     private fun setEditEntities(tabPosition: Int?) {
         // 切换tab前清除焦点
         binding.recyclerView.clearFocus()
-        
+
         when (tabPosition) {
             1 -> adapter.editEntities = searchEntities
             2 -> adapter.editEntities = exploreEntities
             3 -> adapter.editEntities = infoEntities
             4 -> adapter.editEntities = tocEntities
             5 -> adapter.editEntities = contentEntities
-            6 -> adapter.editEntities = reviewEntities
             else -> adapter.editEntities = sourceEntities
         }
         binding.recyclerView.scrollToPosition(0)
