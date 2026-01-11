@@ -54,6 +54,11 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
         return editEntities.size
     }
 
+    override fun onViewRecycled(holder: MyViewHolder) {
+        super.onViewRecycled(holder)
+        holder.cleanup()
+    }
+
     inner class MyViewHolder(val binding: ItemSourceEditBinding) :
         RecyclerView.ViewHolder(binding.root) {
 
@@ -62,10 +67,7 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
 
         fun bind(editEntity: EditEntity) = binding.run {
             // 移除旧的文本监听器
-            textWatcher?.let {
-                editText.removeTextChangedListener(it)
-                textWatcher = null
-            }
+            cleanup()
 
             // 保存当前编辑实体引用
             currentEditEntity = editEntity
@@ -136,8 +138,7 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
             }
         }
 
-        override fun onViewRecycled() {
-            super.onViewRecycled()
+        fun cleanup() {
             // 清理资源
             textWatcher?.let {
                 binding.editText.removeTextChangedListener(it)

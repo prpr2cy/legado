@@ -72,6 +72,13 @@ class RssSourceEditAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
         return editEntities.size
     }
 
+    override fun onViewRecycled(holder: RecyclerView.ViewHolder) {
+        super.onViewRecycled(holder)
+        when (holder) {
+            is EditTextViewHolder -> holder.cleanup()
+        }
+    }
+
     inner class EditTextViewHolder(val binding: ItemSourceEditBinding) :
         RecyclerView.ViewHolder(binding.root) {
 
@@ -80,10 +87,7 @@ class RssSourceEditAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
         fun bind(editEntity: EditEntity) = binding.run {
             // 移除旧的文本监听器
-            textWatcher?.let {
-                editText.removeTextChangedListener(it)
-                textWatcher = null
-            }
+            cleanup()
 
             // 保存当前编辑实体引用
             currentEditEntity = editEntity
@@ -153,8 +157,7 @@ class RssSourceEditAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
             }
         }
 
-        override fun onViewRecycled() {
-            super.onViewRecycled()
+        fun cleanup() {
             // 清理资源
             textWatcher?.let {
                 binding.editText.removeTextChangedListener(it)
