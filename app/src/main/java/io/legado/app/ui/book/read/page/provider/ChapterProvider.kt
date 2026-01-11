@@ -337,8 +337,8 @@ object ChapterProvider {
             }
 
             // 计算水平居中位置
-            val (start, end) = if (disPlayWidth > width) {
-                val adjustWidth = (disPlayWidth.toFloat() - width.toFloat()) / 2f
+            val (start, end) = if (visibleWidth > width) {
+                val adjustWidth = (visibleWidth.toFloat() - width.toFloat()) / 2f
                 Pair(adjustWidth, adjustWidth + width.toFloat())
             } else {
                 Pair(0f, width.toFloat())
