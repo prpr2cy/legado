@@ -14,10 +14,4 @@
 
     <item name="bettermovementmethod_highlight_background_span" type="id" />
 
-    <!-- 添加书源编辑相关的标签 ID -->
-    <item name="edit_entity_key" type="id" />
-    <item name="tag_touch_listener" type="id" />
-    <item name="tag_focus_listener" type="id" />
-    <item name="tag_text_watcher" type="id" />
-
 </resources>

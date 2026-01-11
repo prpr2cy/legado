@@ -16,13 +16,10 @@ import io.legado.app.help.storage.ImportOldData
 import io.legado.app.utils.*
 import kotlinx.coroutines.Dispatchers
 
+
 class BookSourceEditViewModel(application: Application) : BaseViewModel(application) {
     var autoComplete = false
     var bookSource: BookSource? = null
-
-    // 添加焦点和滑动状态管理器
-    val focusStateManager = FocusStateManager()
-    val scrollStateManager = ScrollStateManager()
 
     fun initData(intent: Intent, onFinally: () -> Unit) {
         execute {
@@ -130,4 +127,5 @@ class BookSourceEditViewModel(application: Application) : BaseViewModel(applicat
         }
         return rule
     }
+
 }

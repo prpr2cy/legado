@@ -297,38 +297,37 @@ object ChapterProvider {
     ): Pair<Int, Float> {
         var absStartX = x
         var durY = y
-        var doubleY = 0f
-        var ratio = 1f
-        val size = ImageProvider.getImageSize(book, src, ReadBook.bookSource)
-        if (doublePage && !beforeLineIsImage) {
+        if (doublePage && isScroll && !beforeLineIsImage) {
             textPages.last().height = durY
             textPages.add(TextPage())
             durY = 0f
         }
-        val visibleWidthFull = if (doublePage && isScroll && viewWidth < viewHeight) {
-            viewWidth - paddingLeft - paddingRight
-        } else visibleWidth
+        var doubleY = 0f
+        var ratio = 1f
+        val size = ImageProvider.getImageSize(book, src, ReadBook.bookSource)
+        val disPlayWidth = if (isScroll && !appCtx.isPad && viewWidth > viewHeight
+            && size.height > size.with) visibleWidth / 2 else visibleWidth
 
         if (size.width > 0 && size.height > 0) {
             var height = size.height
             var width = size.width
             when (imageStyle?.toUpperCase(Locale.ROOT)) {
                 Book.imgStyleFull -> {
-                    width = visibleWidthFull
+                    width = disPlayWidth
                     height = width * size.height / size.width
                     if (height > visibleHeight && height.toFloat() < visibleHeight.toFloat() * 1.2f) {
                         height = visibleHeight
                         width = height * size.width / size.height
                     }
-                    if (height > visibleHeight && size.width < visibleWidthFull) {
+                    if (height > visibleHeight && size.width < disPlayWidth) {
                         // 原图宽度小于visibleWidth时，分页裁剪高度要按比例缩小
-                        ratio = size.width.toFloat() / visibleWidthFull
+                        ratio = size.width.toFloat() / disPlayWidth
                     }
                 }
 
                 else -> {
-                    if (size.width > visibleWidthFull) {
-                        width = visibleWidthFull
+                    if (size.width > disPlayWidth) {
+                        width = disPlayWidth
                         height = width * size.height / size.width
                     }
                     if (height > visibleHeight && height.toFloat() < visibleHeight.toFloat() * 1.2f) {
@@ -339,14 +338,14 @@ object ChapterProvider {
             }
 
             // 计算水平居中位置
-            val (start, end) = if (visibleWidthFull > width) {
-                val adjustWidth = (visibleWidthFull.toFloat() - width.toFloat()) / 2f
+            val (start, end) = if (disPlayWidth > width) {
+                val adjustWidth = (disPlayWidth.toFloat() - width.toFloat()) / 2f
                 Pair(adjustWidth, adjustWidth + width.toFloat())
             } else {
                 Pair(0f, width.toFloat())
             }
 
-            val totalPages = ceil(height.toFloat() / visibleHeight).toInt()
+            val totalPages = if (!isScroll) ceil(height.toFloat() / visibleHeight).toInt() else 1
 
             for (page in 0 until totalPages) {
                 // 计算当前分段的高度

@@ -8,7 +8,6 @@ import android.view.MenuItem
 import android.widget.EditText
 import androidx.activity.viewModels
 import androidx.lifecycle.lifecycleScope
-import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.tabs.TabLayout
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel
@@ -64,14 +63,7 @@ class BookSourceEditActivity :
     override val binding by viewBinding(ActivityBookSourceEditBinding::inflate)
     override val viewModel by viewModels<BookSourceEditViewModel>()
 
-    // 使用带状态管理器的适配器
-    private val adapter by lazy {
-        BookSourceEditAdapter(
-            focusStateManager = viewModel.focusStateManager,
-            scrollStateManager = viewModel.scrollStateManager,
-            recyclerView = binding.recyclerView
-        )
-    }
+    private val adapter by lazy { BookSourceEditAdapter() }
     private val sourceEntities: ArrayList<EditEntity> = ArrayList()
     private val searchEntities: ArrayList<EditEntity> = ArrayList()
     private val exploreEntities: ArrayList<EditEntity> = ArrayList()
@@ -189,19 +181,15 @@ class BookSourceEditActivity :
             setText(R.string.source_tab_content)
         })
         binding.recyclerView.setEdgeEffectColor(primaryColor)
-        binding.recyclerView.layoutManager = LinearLayoutManager(this)
+
+        // 关键修改：配置RecyclerView禁用预取
+        val layoutManager = LinearLayoutManager(this)
+        layoutManager.itemPrefetchEnabled = false // 禁用预取，减少闪烁
+        binding.recyclerView.layoutManager = layoutManager
+
+        // 关键修改：传递RecyclerView给Adapter
+        adapter.setRecyclerView(binding.recyclerView)
         binding.recyclerView.adapter = adapter
-
-        // 关键：将 RecyclerView 附加到滑动状态管理器
-        viewModel.scrollStateManager.attachRecyclerView(binding.recyclerView)
-
-        // 关键：监听 RecyclerView 的滑动状态
-        binding.recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
-            override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
-                val isScrolling = newState != RecyclerView.SCROLL_STATE_IDLE
-                viewModel.scrollStateManager.setScrolling(isScrolling)
-            }
-        })
 
         binding.tabLayout.setBackgroundColor(backgroundColor)
         binding.tabLayout.setSelectedTabIndicatorColor(accentColor)
@@ -670,4 +658,29 @@ class BookSourceEditActivity :
         viewModel.bookSource?.setVariable(variable)
     }
 
+    // 关键修改：软键盘工具条导航时调用适配器的焦点方法
+    override fun onKeyboardToolAction(action: Int) {
+        when (action) {
+            KeyboardToolPop.ACTION_PREVIOUS -> {
+                // 处理上一个编辑框
+                val currentFocus = window.decorView.findFocus()
+                if (currentFocus != null && currentFocus.tag is Int) {
+                    val currentPosition = currentFocus.tag as Int
+                    if (currentPosition > 0) {
+                        adapter.requestFocusAt(currentPosition - 1)
+                    }
+                }
+            }
+            KeyboardToolPop.ACTION_NEXT -> {
+                // 处理下一个编辑框
+                val currentFocus = window.decorView.findFocus()
+                if (currentFocus != null && currentFocus.tag is Int) {
+                    val currentPosition = currentFocus.tag as Int
+                    if (currentPosition < adapter.itemCount - 1) {
+                        adapter.requestFocusAt(currentPosition + 1)
+                    }
+                }
+            }
+        }
+    }
 }
