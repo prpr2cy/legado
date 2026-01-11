@@ -306,8 +306,7 @@ object ChapterProvider {
         var ratio = 1f
         val size = ImageProvider.getImageSize(book, src, ReadBook.bookSource)
         val disPlayWidth = if (isScroll && !appCtx.isPad
-            && viewWidth > viewHeight) visibleWidth / 2
-        else visibleWidth
+            && viewWidth > viewHeight) viewWidth / 2 else visibleWidth
 
         if (size.width > 0 && size.height > 0) {
             var height = size.height
@@ -351,7 +350,9 @@ object ChapterProvider {
             for (page in 0 until totalPages) {
                 // 计算当前分段的高度
                 val cropStartY = page * visibleHeight
-                val cropEndY = min(cropStartY + visibleHeight, height)
+                val cropEndY = if (totalPages == 1) height
+                else min(cropStartY + visibleHeight, height)
+
                 val segmentHeight = cropEndY - cropStartY
 
                 // 检查当前页是否有足够空间
@@ -427,7 +428,12 @@ object ChapterProvider {
         srcList: LinkedList<String>? = null
     ): Pair<Int, Float> {
         var absStartX = x
-        var durY = y
+        var durY = yy
+        if (doublePage && isScroll && beforeLineIsImage) {
+            textPages.last().height = durY
+            textPages.add(TextPage())
+            durY = 0f
+        }
         if (beforeLineIsImage) {
             durY += textHeight * lineSpacingExtra / 2f
             beforeLineIsImage = false
