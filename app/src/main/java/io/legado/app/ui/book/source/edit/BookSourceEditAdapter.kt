@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
@@ -15,7 +16,9 @@ import io.legado.app.ui.widget.code.addJsonPattern
 import io.legado.app.ui.widget.code.addLegadoPattern
 import io.legado.app.ui.widget.text.EditEntity
 
-class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewHolder>() {
+class BookSourceEditAdapter(
+    private val recyclerView: RecyclerView
+) : RecyclerView.Adapter<BookSourceEditAdapter.MyViewHolder>() {
 
     val editEntityMaxLine = AppConfig.sourceEditMaxLine
 
@@ -57,24 +60,39 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
             editText.setTag(R.id.tag, editEntity.key)
             editText.maxLines = editEntityMaxLine
 
-            // 移除旧的文本监听器
+            // 移除旧的监听器
             cleanup()
 
-            if (editText.getTag(R.id.tag1) == null) {
-                val listener = object : View.OnAttachStateChangeListener {
-                    override fun onViewAttachedToWindow(v: View) {
-                        editText.isCursorVisible = false
+            // 设置触摸监听器 - 核心修复
+            editText.setOnTouchListener { _, event ->
+                if (event.action == MotionEvent.ACTION_DOWN) {
+                    // 停止滚动并清除所有焦点
+                    recyclerView.stopScroll()
+                    recyclerView.clearFocus()
+                    // 延迟请求焦点，确保触摸位置正确
+                    editText.post {
+                        editText.requestFocus()
+                        // 确保选择功能正常
                         editText.isCursorVisible = true
                         editText.isFocusable = true
                         editText.isFocusableInTouchMode = true
-                    }
-
-                    override fun onViewDetachedFromWindow(v: View) {
-
+                        editText.isLongClickable = true
+                        editText.setTextIsSelectable(true)
                     }
                 }
-                editText.addOnAttachStateChangeListener(listener)
-                editText.setTag(R.id.tag1, listener)
+                false // 不消费事件，让EditText继续处理
+            }
+
+            // 设置焦点变化监听
+            editText.setOnFocusChangeListener { _, hasFocus ->
+                if (hasFocus) {
+                    // 确保选择功能正常
+                    editText.isCursorVisible = true
+                    editText.isFocusable = true
+                    editText.isFocusableInTouchMode = true
+                    editText.isLongClickable = true
+                    editText.setTextIsSelectable(true)
+                }
             }
 
             editText.setText(editEntity.value)
@@ -88,11 +106,14 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
                     count: Int,
                     after: Int
                 ) {
-
                 }
 
-                override fun onTextChanged(s: CharSequence, start: Int, before: Int, count: Int) {
-
+                override fun onTextChanged(
+                    s: CharSequence,
+                    start: Int,
+                    before: Int,
+                    count: Int
+                ) {
                 }
 
                 override fun afterTextChanged(s: Editable?) {
@@ -108,6 +129,9 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
                 binding.editText.removeTextChangedListener(it)
                 textWatcher = null
             }
+            // 清理触摸监听器
+            binding.editText.setOnTouchListener(null)
+            binding.editText.setOnFocusChangeListener(null)
         }
     }
 }

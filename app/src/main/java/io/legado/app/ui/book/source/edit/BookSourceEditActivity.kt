@@ -5,6 +5,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
+import android.view.MotionEvent
 import android.widget.EditText
 import androidx.activity.viewModels
 import androidx.lifecycle.lifecycleScope
@@ -63,7 +64,7 @@ class BookSourceEditActivity :
     override val binding by viewBinding(ActivityBookSourceEditBinding::inflate)
     override val viewModel by viewModels<BookSourceEditViewModel>()
 
-    private val adapter by lazy { BookSourceEditAdapter() }
+    private val adapter by lazy { BookSourceEditAdapter(binding.recyclerView) }
     private val sourceEntities: ArrayList<EditEntity> = ArrayList()
     private val searchEntities: ArrayList<EditEntity> = ArrayList()
     private val exploreEntities: ArrayList<EditEntity> = ArrayList()
@@ -183,15 +184,41 @@ class BookSourceEditActivity :
         binding.recyclerView.setEdgeEffectColor(primaryColor)
         binding.recyclerView.layoutManager = LinearLayoutManager(this)
         binding.recyclerView.adapter = adapter
+        
+        // 添加滑动监听 - 核心修复
+        binding.recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
+                super.onScrollStateChanged(recyclerView, newState)
+                when (newState) {
+                    RecyclerView.SCROLL_STATE_DRAGGING,
+                    RecyclerView.SCROLL_STATE_SETTLING -> {
+                        // 滑动时清除所有焦点
+                        recyclerView.clearFocus()
+                    }
+                }
+            }
+        })
+        
+        // 设置触摸监听处理快速滑动时的点击
+        binding.recyclerView.setOnTouchListener { _, event ->
+            if (event.action == MotionEvent.ACTION_DOWN) {
+                // 如果正在惯性滑动，立即停止
+                if (binding.recyclerView.scrollState == RecyclerView.SCROLL_STATE_SETTLING) {
+                    binding.recyclerView.stopScroll()
+                }
+            }
+            false
+        }
+        
         binding.tabLayout.setBackgroundColor(backgroundColor)
         binding.tabLayout.setSelectedTabIndicatorColor(accentColor)
         binding.tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
             override fun onTabReselected(tab: TabLayout.Tab?) {
-
             }
 
             override fun onTabUnselected(tab: TabLayout.Tab?) {
-
+                // 切换tab时清除焦点
+                binding.recyclerView.clearFocus()
             }
 
             override fun onTabSelected(tab: TabLayout.Tab?) {
@@ -221,6 +248,9 @@ class BookSourceEditActivity :
     }
 
     private fun setEditEntities(tabPosition: Int?) {
+        // 切换tab前清除焦点
+        binding.recyclerView.clearFocus()
+        
         when (tabPosition) {
             1 -> adapter.editEntities = searchEntities
             2 -> adapter.editEntities = exploreEntities
