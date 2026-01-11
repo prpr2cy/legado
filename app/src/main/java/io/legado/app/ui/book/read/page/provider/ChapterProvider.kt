@@ -299,7 +299,11 @@ object ChapterProvider {
         var absStartX = x
         var durY = y
         if (doublePage && isScroll && !beforeLineIsImage) {
-            textPages.last().height = max(durY, visibleHeight.toFloat())
+            val textPage = textPages.last()
+            if (textPage.leftLineSize == 0) {
+                textPage.leftLineSize = textPage.lineSize
+            }
+            textPage.height = max(durY, (visibleHeight + paddingBottom).toFloat())
             textPages.add(TextPage())
             durY = 0f
         }
@@ -433,6 +437,15 @@ object ChapterProvider {
     ): Pair<Int, Float> {
         var absStartX = x
         var durY = y
+        if (doublePage && isScroll && beforeLineIsImage) {
+            val textPage = textPages.last()
+            if (textPage.leftLineSize == 0) {
+                textPage.leftLineSize = textPage.lineSize
+            }
+            textPage.height = max(durY, (visibleHeight + paddingBottom).toFloat())
+            textPages.add(TextPage())
+            durY = 0f
+        }
         if (beforeLineIsImage) {
             durY += textHeight * lineSpacingExtra / 2f
             beforeLineIsImage = false
