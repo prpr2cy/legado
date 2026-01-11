@@ -304,7 +304,7 @@ object ChapterProvider {
         var ratio = 1f
         val size = ImageProvider.getImageSize(book, src, ReadBook.bookSource)
         val disPlayWidth = if (isScroll && viewWidth > viewHeight && !appCtx.isPad) {
-            max(viewWidth / 2, visibleHeight)
+            max(visibleWidth / 2, visibleHeight)
         } else visibleWidth
 
         if (size.width > 0 && size.height > 0) {
