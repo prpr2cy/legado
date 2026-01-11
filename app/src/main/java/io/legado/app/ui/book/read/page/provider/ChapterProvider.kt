@@ -426,10 +426,6 @@ object ChapterProvider {
     ): Pair<Int, Float> {
         var absStartX = x
         var durY = y
-        if (beforeLineIsImage) {
-            durY += textHeight * lineSpacingExtra / 2f
-            beforeLineIsImage = false
-        }
         val widthsArray = FloatArray(text.length)
         val layout = if (ReadBookConfig.useZhLayout) {
             ZhLayout(text, textPaint, visibleWidth, widthsArray)
@@ -552,6 +548,10 @@ object ChapterProvider {
             textLine.upTopBottom(durY, textHeight, fontMetrics)
             durY += textHeight * lineSpacingExtra
             textPages.last().height = durY
+        }
+        if (beforeLineIsImage) {
+            durY += textHeight * lineSpacingExtra() / 2f
+            beforeLineIsImage = false
         }
         durY += textHeight * paragraphSpacing.toFloat() / 10f
         return Pair(absStartX, durY)
