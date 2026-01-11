@@ -150,13 +150,13 @@ object UrlUtil {
 
     private val fileSuffixRegex = Regex("^[a-z\\d]+$", RegexOption.IGNORE_CASE)
 
-    private val fileBase64Regex = Regex("data:[^;]+;base64,", RegexOption.IGNORE_CASE)
+    private val dataUriSuffixRegex = Regex("data:[^;]+;base64,", RegexOption.IGNORE_CASE)
 
     /* 获取合法的文件后缀 */
     fun getSuffix(str: String, default: String? = null): String {
         val suffix = str.let { input ->
-            if (fileBase64Regex.containsMatchIn(input)) {
-                val mineType = fileBase64Regex.find(input)?.value ?: ""
+            if (dataUriSuffixRegex.containsMatchIn(input)) {
+                val mineType = dataUriSuffixRegex.find(input)?.value ?: ""
                 mineType.substringAfter("data:")
                     .substringBefore(";")
                     .substringAfterLast("/", "")

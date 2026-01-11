@@ -303,7 +303,9 @@ object ChapterProvider {
             if (textPage.leftLineSize == 0) {
                 textPage.leftLineSize = textPage.lineSize
             }
-            textPage.height = max(durY, (visibleHeight + paddingBottom).toFloat())
+            if (textPage.height < durY) {
+                textPage.height = durY
+            }
             textPages.add(TextPage())
             durY = 0f
         }
@@ -358,9 +360,7 @@ object ChapterProvider {
             for (page in 0 until totalPages) {
                 // 计算当前分段的高度
                 val cropStartY = page * visibleHeight
-                val cropEndY = if (totalPages == 1) height
-                else min(cropStartY + visibleHeight, height)
-
+                val cropEndY = min(cropStartY + visibleHeight, height)
                 val segmentHeight = cropEndY - cropStartY
 
                 // 检查当前页是否有足够空间
@@ -408,6 +408,7 @@ object ChapterProvider {
                         originalHeight = size.height
                     )
                 )
+                AppLog.put("src=${src}, page=${page}, durY=${durY}, absStartX=${absStartX}, doublePage${doublePage}, isScroll=${isScroll}, disPlayWidth=${disPlayWidth}")
                 calcTextLinePosition(textPages, textLine, stringBuilder.length)
                 stringBuilder.append(" ") // 确保翻页时索引计算正确
                 textPages.last().addLine(textLine)
@@ -442,7 +443,9 @@ object ChapterProvider {
             if (textPage.leftLineSize == 0) {
                 textPage.leftLineSize = textPage.lineSize
             }
-            textPage.height = max(durY, (visibleHeight + paddingBottom).toFloat())
+            if (textPage.height < durY) {
+                textPage.height = durY
+            }
             textPages.add(TextPage())
             durY = 0f
         }

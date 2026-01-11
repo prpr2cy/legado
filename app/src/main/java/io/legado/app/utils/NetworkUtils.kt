@@ -116,17 +116,14 @@ object NetworkUtils {
      * 获取绝对地址
      */
     fun getAbsoluteURL(baseURL: String?, relativePath: String): String {
-        val relativePathTrim = relativePath.trim()
-        if (baseURL.isNullOrEmpty()) return relativePathTrim
-        if (relativePathTrim.isDataUrl()) return relativePathTrim
-        if (relativePathTrim.isAbsUrl()) return relativePathTrim
+        if (baseURL.isNullOrEmpty()) return relativePath.trim()
         var absoluteUrl: URL? = null
         try {
             absoluteUrl = URL(baseURL.substringBefore(","))
         } catch (e: Exception) {
             e.printOnDebug()
         }
-        return getAbsoluteURL(absoluteUrl, relativePathTrim)
+        return getAbsoluteURL(absoluteUrl, relativePath)
     }
 
     /**
@@ -135,8 +132,8 @@ object NetworkUtils {
     fun getAbsoluteURL(baseURL: URL?, relativePath: String): String {
         val relativePathTrim = relativePath.trim()
         if (baseURL == null) return relativePathTrim
-        if (relativePathTrim.isDataUrl()) return relativePathTrim
         if (relativePathTrim.isAbsUrl()) return relativePathTrim
+        if (relativePathTrim.isDataUrl()) return relativePathTrim
         if (relativePathTrim.startsWith("javascript")) return ""
         var relativeUrl = relativePathTrim
         try {
