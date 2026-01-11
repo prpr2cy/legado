@@ -10,6 +10,7 @@ import android.widget.EditText
 import androidx.activity.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.tabs.TabLayout
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel
 import io.legado.app.R
@@ -181,6 +182,10 @@ class BookSourceEditActivity :
         binding.tabLayout.addTab(binding.tabLayout.newTab().apply {
             setText(R.string.source_tab_content)
         })
+        binding.tabLayout.addTab(binding.tabLayout.newTab().apply {
+            setText(R.string.source_tab_review)
+        })
+        
         binding.recyclerView.setEdgeEffectColor(primaryColor)
         binding.recyclerView.layoutManager = LinearLayoutManager(this)
         binding.recyclerView.adapter = adapter
@@ -196,6 +201,11 @@ class BookSourceEditActivity :
                         recyclerView.clearFocus()
                     }
                 }
+            }
+            
+            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+                super.onScrolled(recyclerView, dx, dy)
+                // 可选：处理滚动时的其他逻辑
             }
         })
         
