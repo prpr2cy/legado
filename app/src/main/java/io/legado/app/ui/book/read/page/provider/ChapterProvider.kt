@@ -29,6 +29,7 @@ import splitties.init.appCtx
 import java.util.LinkedList
 import java.util.Locale
 import kotlin.math.min
+import kotlin.math.max
 import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.collections.ArrayList
@@ -48,7 +49,7 @@ object ChapterProvider {
     private var beforeLineIsImage = false
 
     @JvmStatic
-    private var isScroll = false
+    private var isScroll = ReadBook.pageAnim() == 3
 
     @JvmStatic
     var viewWidth = 0
@@ -298,15 +299,14 @@ object ChapterProvider {
         var absStartX = x
         var durY = y
         if (doublePage && isScroll && !beforeLineIsImage) {
-            textPages.last().height = durY
-            textPages.add(TextPage())
+            textPages.last().height = max(durY, viewHeight.toFloat() * 2f)
             durY = 0f
         }
         var doubleY = 0f
         var ratio = 1f
         val size = ImageProvider.getImageSize(book, src, ReadBook.bookSource)
-        val disPlayWidth = if (isScroll && !appCtx.isPad
-            && viewWidth > viewHeight) viewWidth / 2 else visibleWidth
+        val disPlayWidth = if (isScroll && viewWidth > viewHeight
+            && !appCtx.isPad) viewWidth / 2 else visibleWidth
 
         if (size.width > 0 && size.height > 0) {
             var height = size.height
@@ -345,7 +345,7 @@ object ChapterProvider {
                 Pair(0f, width.toFloat())
             }
 
-            val totalPages = if (!isScroll) ceil(height.toFloat() / visibleHeight).toInt() else 1
+            val totalPages = ceil(height.toFloat() / visibleHeight).toInt()
 
             for (page in 0 until totalPages) {
                 // 计算当前分段的高度
@@ -430,8 +430,7 @@ object ChapterProvider {
         var absStartX = x
         var durY = y
         if (doublePage && isScroll && beforeLineIsImage) {
-            textPages.last().height = durY
-            textPages.add(TextPage())
+            textPages.last().height = max(durY, viewHeight.toFloat() * 2f)
             durY = 0f
         }
         if (beforeLineIsImage) {
@@ -919,7 +918,7 @@ object ChapterProvider {
      * 更新绘制尺寸
      */
     fun upLayout() {
-        isScroll = if (ReadBook.pageAnim() == 3) true else false
+        isScroll = ReadBook.pageAnim() == 3
 
         when (AppConfig.doublePageHorizontal) {
             "0" -> doublePage = false
