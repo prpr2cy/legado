@@ -426,7 +426,7 @@ object ChapterProvider {
     ): Pair<Int, Float> {
         var absStartX = x
         var durY = y
-        var imageSpacing = if (beforeLineIsImage) {
+        if (beforeLineIsImage) {
             durY += textHeight * paragraphSpacing.toFloat() / 5f
             beforeLineIsImage = false
         }
