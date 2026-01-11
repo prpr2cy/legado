@@ -251,7 +251,7 @@ dependencies {
     implementation(project(path: ":modules:book"))
 
     //JS rhino
-    implementation(project(path: ":modules:rhino1.7.14"))
+    implementation(project(path: ":modules:rhino1.7.3"))
 
     //网络
     implementation("com.squareup.okhttp3:okhttp:4.11.0")

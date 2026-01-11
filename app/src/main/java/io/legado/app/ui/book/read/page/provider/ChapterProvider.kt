@@ -45,11 +45,13 @@ object ChapterProvider {
     //用于评论按钮的替换
     const val reviewChar = "▨"
 
-    @JvmStatic
-    private var beforeLineIsImage = false
+    private val isScroll: Boolean
+        get() {
+            return ReadBook.pageAnim() == 3
+        }
 
     @JvmStatic
-    private var isScroll = ReadBook.pageAnim() == 3
+    private var beforeLineIsImage = false
 
     @JvmStatic
     var viewWidth = 0
@@ -408,7 +410,7 @@ object ChapterProvider {
                         originalHeight = size.height
                     )
                 )
-                AppLog.put("src=${src}, page=${page}, durY=${durY}, absStartX=${absStartX}, doublePage${doublePage}, isScroll=${isScroll}, disPlayWidth=${disPlayWidth}")
+                AppLog.put("src=${src}, page=${page}, durY=${durY}, absStartX=${absStartX}, doublePage=${doublePage}, isScroll=${isScroll}, disPlayWidth=${disPlayWidth}")
                 calcTextLinePosition(textPages, textLine, stringBuilder.length)
                 stringBuilder.append(" ") // 确保翻页时索引计算正确
                 textPages.last().addLine(textLine)
@@ -934,8 +936,6 @@ object ChapterProvider {
      * 更新绘制尺寸
      */
     fun upLayout() {
-        isScroll = ReadBook.pageAnim() == 3
-
         when (AppConfig.doublePageHorizontal) {
             "0" -> doublePage = false
             "1" -> doublePage = true
