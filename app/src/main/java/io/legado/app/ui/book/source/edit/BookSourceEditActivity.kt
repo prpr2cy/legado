@@ -242,7 +242,7 @@ class BookSourceEditActivity :
                 MotionEvent.ACTION_UP -> {
                     // 如果是点击（不是滑动），处理焦点
                     if (!isScrolling && Math.abs(event.y - lastTouchY) < 10) {
-                        handleClickAtPosition(event)
+                        handleSimpleClick(event)
                     }
                 }
             }
@@ -317,7 +317,7 @@ class BookSourceEditActivity :
         }
     }
 
-    private fun handleClickAtPosition(event: MotionEvent) {
+    private fun handleSimpleClick(event: MotionEvent) {
         val layoutManager = binding.recyclerView.layoutManager as? LinearLayoutManager
         layoutManager?.let { lm ->
             val firstVisiblePosition = lm.findFirstVisibleItemPosition()
@@ -334,50 +334,9 @@ class BookSourceEditActivity :
                         // 找到这个view中的EditText
                         val editText = findEditTextInView(view)
                         editText?.let { et ->
-                            // 计算EditText在RecyclerView中的位置
-                            val location = IntArray(2)
-                            et.getLocationOnScreen(location)
-                            val etTop = location[1]
-                            val etBottom = etTop + et.height
-
-                            // 计算点击在屏幕中的位置
-                            val screenY = event.rawY
-
-                            // 检查是否点击在EditText上
-                            if (screenY >= etTop && screenY <= etBottom) {
-                                // 立即请求焦点
-                                et.requestFocus()
-
-                                // 计算点击位置在EditText中的位置
-                                val relativeY = screenY - etTop
-                                val lineHeight = et.lineHeight
-                                val lineIndex = (relativeY / lineHeight).toInt()
-
-                                // 获取EditText的布局
-                                et.post {
-                                    val layout = et.layout
-                                    if (layout != null && lineIndex < layout.lineCount) {
-                                        val lineStart = layout.getLineStart(lineIndex)
-                                        val lineEnd = layout.getLineEnd(lineIndex)
-                                        val lineWidth = layout.getLineWidth(lineIndex)
-
-                                        // 计算点击在EditText中的X坐标
-                                        val etLocation = IntArray(2)
-                                        et.getLocationOnScreen(etLocation)
-                                        val relativeX = event.rawX - etLocation[0]
-
-                                        val charIndex = if (relativeX <= 0) lineStart else
-                                            if (relativeX >= lineWidth) lineEnd else
-                                            layout.getOffsetForHorizontal(lineIndex, relativeX)
-
-                                        et.setSelection(charIndex)
-                                    } else {
-                                        // 如果无法计算精确位置，至少设置焦点
-                                        et.requestFocus()
-                                    }
-                                }
-                                return
-                            }
+                            // 简化处理：直接请求焦点，不计算具体位置
+                            et.requestFocus()
+                            return
                         }
                     }
                 }
