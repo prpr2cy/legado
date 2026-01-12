@@ -29,20 +29,21 @@ fun Context.toastOnUi(message: CharSequence?, duration: Int = Toast.LENGTH_SHORT
     val appCtx = this.applicationContext
     runOnUI {
         kotlin.runCatching {
-            if (toast == null || BuildConfig.DEBUG || AppConfig.recordLog) {
-                toast?.cancel()
-                toast = Toast(this)
-                toast?.view = inflate(R.layout.view_toast)
+            val toastView = appCtx.inflate<R.layout.view_toast>().apply {
+                findViewById<CardView>(R.id.cv_content)
+                    .setCardBackgroundColor(appCtx.bottomBackground)
+                val isLight = ColorUtils.isColorLight(appCtx.bottomBackground)
+                findViewById<TextView>(R.id.tv_text).apply {
+                    setTextColor(appCtx.getPrimaryTextColor(isLight))
+                    text = message
+                }
             }
-            val toastView = toast?.view!!
-            val cardView = toastView.findViewById<CardView>(R.id.cv_content)
-            cardView.setCardBackgroundColor(bottomBackground)
-            val isLight = ColorUtils.isColorLight(bottomBackground)
-            val textView = toastView.findViewById<TextView>(R.id.tv_text)
-            textView.setTextColor(getPrimaryTextColor(isLight))
-            textView.text = message
-            toast?.duration = duration
-            toast?.show()
+
+            Toast(appCtx).apply {
+                view = toastView
+                this.duration = duration
+                show()
+            }
         }
     }
 }
