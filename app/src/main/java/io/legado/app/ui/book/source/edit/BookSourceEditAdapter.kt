@@ -31,14 +31,10 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
     // 滚动状态 - 由Activity实时更新
     private var isRecyclerViewScrolling = false
 
-    // 滑动中点击的时间记录
-    private var scrollClickDownTime = 0L
-    private val quickClickThreshold = 200L // 200ms内算快速点击
-    private val layoutStableDelay = 100L   // 等待布局稳定的延迟
-
     // Activity调用此方法更新滚动状态
     fun setScrolling(scrolling: Boolean) {
         isRecyclerViewScrolling = scrolling
+        // 不需要notifyDataSetChanged，因为ViewHolder会实时读取这个状态
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MyViewHolder {
@@ -67,23 +63,20 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
         RecyclerView.ViewHolder(binding.root) {
 
         private var textWatcher: TextWatcher? = null
-        private var clickDownTime = 0L // 每个ViewHolder自己的点击时间记录
 
         fun bind(editEntity: EditEntity) = binding.run {
             editText.setTag(R.id.tag, editEntity.key)
             editText.maxLines = editEntityMaxLine
 
+            // 移除旧的文本监听器
             cleanup()
 
             // 设置触摸监听器
             editText.setOnTouchListener { v, event ->
                 when (event.action) {
                     MotionEvent.ACTION_DOWN -> {
-                        // 如果正在滚动，阻止焦点获取
+                        // 如果正在滚动，消费事件，阻止焦点获取
                         if (isRecyclerViewScrolling) {
-                            // 记录滑动中点击的时间（用于滑动停止后的处理）
-                            scrollClickDownTime = System.currentTimeMillis()
-                            // 消费事件，阻止EditText获取焦点
                             return@setOnTouchListener true
                         }
                         false
@@ -92,22 +85,7 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
                     MotionEvent.ACTION_UP -> {
                         // 如果正在滚动，不处理抬起事件
                         if (isRecyclerViewScrolling) {
-                            // 记录滑动中点击的时间（用于滑动停止后的处理）
-                            scrollClickDownTime = System.currentTimeMillis()
-                            // 消费事件，阻止EditText获取焦点
                             return@setOnTouchListener true
-                        }
-
-                        if (System.currentTimeMillis() - scrollClickDownTime < quickClickThreshold) {
-                            // 非滚动状态：计算点击时长，如果是快速点击（<200ms），延迟处理等待布局稳定
-                            v.postDelayed({
-                                handleClickWithAccurateCursor(v as EditText, event)
-                                showKeyboard(v as EditText)
-                            }, layoutStableDelay)
-                        } else {
-                            // 正常点击，立即处理
-                            handleClickWithAccurateCursor(v as EditText, event)
-                            showKeyboard(v as EditText)
                         }
                         false
                     }
@@ -118,6 +96,7 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
             editText.setText(editEntity.value)
             textInputLayout.hint = editEntity.hint
 
+            // 创建新的文本监听器
             textWatcher = object : TextWatcher {
                 override fun beforeTextChanged(
                     s: CharSequence,
@@ -137,43 +116,12 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
             editText.addTextChangedListener(textWatcher)
         }
 
-        @SuppressLint("ClickableViewAccessibility")
-        private fun handleClickWithAccurateCursor(editText: EditText, event: MotionEvent) {
-            try {
-                val layout = editText.layout ?: return
-
-                // 计算相对于EditText内容的坐标
-                val x = event.x - editText.paddingLeft
-                val y = event.y - editText.paddingTop
-
-                // 获取点击位置对应的字符偏移
-                val line = layout.getLineForVertical(y.toInt())
-                val offset = layout.getOffsetForHorizontal(line, x)
-                    .coerceIn(0, editText.text?.length ?: 0)
-
-                // 设置焦点和光标位置
-                editText.requestFocus()
-                editText.setSelection(offset)
-
-            } catch (e: Exception) {
-                // 如果计算失败，使用默认行为
-            }
-        }
-
-        private fun showKeyboard(editText: EditText) {
-            editText.postDelayed({
-                val imm = editText.context.getSystemService(android.content.Context.INPUT_METHOD_SERVICE)
-                        as android.view.inputmethod.InputMethodManager
-                imm.showSoftInput(editText, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
-            }, 150)
-        }
-
         fun cleanup() {
+            // 清理文本监听器
             textWatcher?.let {
                 binding.editText.removeTextChangedListener(it)
                 textWatcher = null
             }
-            binding.editText.setOnTouchListener(null)
         }
     }
 }
