@@ -1,14 +1,16 @@
 package io.legado.app.ui.book.source.edit
 
 import android.annotation.SuppressLint
+import android.content.Context
 import android.text.Editable
 import android.text.TextWatcher
-import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.MotionEvent
+import android.view.LayoutInflater
 import android.view.ViewTreeObserver
 import android.view.inputmethod.InputMethodManager
-import android.widget.EditText
+import android.widget.EditText 
 import androidx.recyclerview.widget.RecyclerView
 import io.legado.app.R
 import io.legado.app.databinding.ItemSourceEditBinding
@@ -92,12 +94,12 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
             textInputLayout.hint = editEntity.hint
 
             /* 1. 让光标回到可见区域 */
-            editText.viewTreeObserver.addOnGlobalLayout(object : ViewTreeObserver.OnGlobalLayoutListener {
+            editText.viewTreeObserver.addOnGlobalLayoutListener(object : ViewTreeObserver.OnGlobalLayoutListener {
                 override fun onGlobalLayout() {
                     if (editText.selectionStart != editText.selectionEnd) return
                     editText.viewTreeObserver.removeOnGlobalLayoutListener(this)
                     if (editText.hasFocus()) {
-                        val imm = context.getSystemService(InputMethodManager::class.java)
+                        val imm = binding.root.context.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
                         imm?.showSoftInput(editText, InputMethodManager.SHOW_IMPLICIT)
                     }
                 }
