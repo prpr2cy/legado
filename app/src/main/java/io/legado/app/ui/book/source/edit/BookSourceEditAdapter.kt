@@ -28,30 +28,17 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
             notifyDataSetChanged()
         }
 
-    // 滚动状态
+    // 滚动状态 - 由Activity实时更新
     private var isRecyclerViewScrolling = false
 
-    // 双击检测
-    private var isDoubleClickDetection = false
-    private var firstClickTime = 0L
-    private val doubleClickThreshold = 400L
-
-    // 待处理的点击坐标（用于双击的第二次点击）
-    private data class PendingClick(
-        val editText: EditText,
-        val x: Float,
-        val y: Float
-    )
-    private var pendingClick: PendingClick? = null
+    // 滑动中点击的时间记录
+    private var scrollClickDownTime = 0L
+    private val quickClickThreshold = 200L // 200ms内算快速点击
+    private val layoutStableDelay = 100L   // 等待布局稳定的延迟
 
     // Activity调用此方法更新滚动状态
     fun setScrolling(scrolling: Boolean) {
         isRecyclerViewScrolling = scrolling
-
-        // 从滚动状态变为停止状态时，处理待处理的点击
-        if (!scrolling) {
-            processPendingClick()
-        }
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MyViewHolder {
@@ -76,91 +63,11 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
         holder.cleanup()
     }
 
-    // 处理待处理的点击（双击的第二次点击）
-    private fun processPendingClick() {
-        val click = pendingClick ?: return
-        pendingClick = null
-
-        // 延迟一段时间，确保布局完全稳定
-        click.editText.postDelayed({
-            setCursorAtCoordinate(click.editText, click.x, click.y)
-        }, 100)
-    }
-
-    /**
-     * 在指定坐标设置光标位置
-     */
-    private fun setCursorAtCoordinate(editText: EditText, x: Float, y: Float) {
-        try {
-            // 先请求焦点
-            editText.requestFocus()
-
-            // 延迟一小段时间确保焦点已获取和布局计算完成
-            editText.postDelayed({
-                try {
-                    val layout = editText.layout
-                    if (layout == null) {
-                        // 如果布局还没计算好，设置到末尾
-                        editText.setSelection(editText.text?.length ?: 0)
-                        notifyCheckKeyboardCoverage(editText, x, y)
-                        return@postDelayed
-                    }
-
-                    // 计算相对于EditText内容的坐标
-                    val scrollX = editText.scrollX
-                    val scrollY = editText.scrollY
-
-                    // 获取点击位置对应的字符偏移
-                    val line = layout.getLineForVertical((y + scrollY - editText.paddingTop).toInt())
-
-                    // 确保行号在有效范围内
-                    val safeLine = line.coerceIn(0, layout.lineCount - 1)
-
-                    // 计算水平位置
-                    val horizontalPos = x + scrollX - editText.paddingLeft
-
-                    // 获取偏移量
-                    val offset = layout.getOffsetForHorizontal(safeLine, horizontalPos)
-
-                    // 确保偏移量在有效范围内
-                    val safeOffset = offset.coerceIn(0, editText.text?.length ?: 0)
-
-                    // 设置光标位置
-                    editText.setSelection(safeOffset)
-
-                    // 通知Activity检查键盘遮挡
-                    notifyCheckKeyboardCoverage(editText, x, y)
-
-                    // 显示键盘
-                    showKeyboard(editText)
-
-                } catch (e: Exception) {
-                    // 如果计算失败，使用默认行为
-                    editText.setSelection(editText.text?.length ?: 0)
-                    notifyCheckKeyboardCoverage(editText, x, y)
-                }
-            }, 100)
-
-        } catch (e: Exception) {
-            editText.requestFocus()
-        }
-    }
-
-    /**
-     * 显示键盘
-     */
-    private fun showKeyboard(editText: EditText) {
-        editText.postDelayed({
-            val imm = editText.context.getSystemService(android.content.Context.INPUT_METHOD_SERVICE)
-                    as android.view.inputmethod.InputMethodManager
-            imm.showSoftInput(editText, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
-        }, 100)
-    }
-
     inner class MyViewHolder(val binding: ItemSourceEditBinding) :
         RecyclerView.ViewHolder(binding.root) {
 
         private var textWatcher: TextWatcher? = null
+        private var clickDownTime = 0L // 每个ViewHolder自己的点击时间记录
 
         fun bind(editEntity: EditEntity) = binding.run {
             editText.setTag(R.id.tag, editEntity.key)
@@ -172,22 +79,40 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
             editText.setOnTouchListener { v, event ->
                 when (event.action) {
                     MotionEvent.ACTION_DOWN -> {
-                        handleTouchDown(v as EditText, event.x, event.y)
-                        return@setOnTouchListener true
+                        // 如果正在滚动，阻止焦点获取
+                        if (isRecyclerViewScrolling) {
+                            // 记录滑动中点击的时间（用于滑动停止后的处理）
+                            scrollClickDownTime = System.currentTimeMillis()
+                            // 消费事件，阻止EditText获取焦点
+                            return@setOnTouchListener true
+                        }
+                        false
                     }
 
                     MotionEvent.ACTION_UP -> {
-                        // 如果是双击检测中的第一次点击，且没有第二次点击，取消双击检测
-                        if (isDoubleClickDetection && System.currentTimeMillis() - firstClickTime > doubleClickThreshold) {
-                            isDoubleClickDetection = false
+                        // 如果正在滚动，不处理抬起事件
+                        if (isRecyclerViewScrolling) {
+                            // 记录滑动中点击的时间（用于滑动停止后的处理）
+                            scrollClickDownTime = System.currentTimeMillis()
+                            // 消费事件，阻止EditText获取焦点
+                            return@setOnTouchListener true
                         }
-                    }
 
-                    MotionEvent.ACTION_CANCEL -> {
-                        isDoubleClickDetection = false
+                        if (System.currentTimeMillis() - scrollClickDownTime < quickClickThreshold) {
+                            // 非滚动状态：计算点击时长，如果是快速点击（<200ms），延迟处理等待布局稳定
+                            v.postDelayed({
+                                handleClickWithAccurateCursor(v as EditText, event)
+                                showKeyboard(v as EditText)
+                            }, layoutStableDelay)
+                        } else {
+                            // 正常点击，立即处理
+                            handleClickWithAccurateCursor(v as EditText, event)
+                            showKeyboard(v as EditText)
+                        }
+                        false
                     }
+                    else -> false
                 }
-                false
             }
 
             editText.setText(editEntity.value)
@@ -212,43 +137,35 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
             editText.addTextChangedListener(textWatcher)
         }
 
-        private fun handleTouchDown(editText: EditText, x: Float, y: Float) {
-            val currentTime = System.currentTimeMillis()
+        @SuppressLint("ClickableViewAccessibility")
+        private fun handleClickWithAccurateCursor(editText: EditText, event: MotionEvent) {
+            try {
+                val layout = editText.layout ?: return
 
-            if (isRecyclerViewScrolling) {
-                // 滑动状态：处理双击逻辑
-                if (!isDoubleClickDetection) {
-                    // 第一次点击：停止滚动，开启双击检测
-                    isDoubleClickDetection = true
-                    firstClickTime = currentTime
+                // 计算相对于EditText内容的坐标
+                val x = event.x - editText.paddingLeft
+                val y = event.y - editText.paddingTop
 
-                    // 停止滚动
-                    notifyScrollStopRequested()
+                // 获取点击位置对应的字符偏移
+                val line = layout.getLineForVertical(y.toInt())
+                val offset = layout.getOffsetForHorizontal(line, x)
+                    .coerceIn(0, editText.text?.length ?: 0)
 
-                    // 设置一个超时，如果400ms内没有第二次点击，则取消双击检测
-                    editText.postDelayed({
-                        if (isDoubleClickDetection) {
-                            isDoubleClickDetection = false
-                            // 滑动中的单次点击不处理，因为可能是误触
-                        }
-                    }, doubleClickThreshold)
-                } else if (currentTime - firstClickTime < doubleClickThreshold) {
-                    // 第二次快速点击：记录坐标，等待处理
-                    pendingClick = PendingClick(editText, x, y)
-                    isDoubleClickDetection = false
+                // 设置焦点和光标位置
+                editText.requestFocus()
+                editText.setSelection(offset)
 
-                    // 停止滚动
-                    notifyScrollStopRequested()
-                } else {
-                    // 超过时间阈值，重新开始
-                    isDoubleClickDetection = true
-                    firstClickTime = currentTime
-                    notifyScrollStopRequested()
-                }
-            } else {
-                // 非滑动状态：立即处理
-                setCursorAtCoordinate(editText, x, y)
+            } catch (e: Exception) {
+                // 如果计算失败，使用默认行为
             }
+        }
+
+        private fun showKeyboard(editText: EditText) {
+            editText.postDelayed({
+                val imm = editText.context.getSystemService(android.content.Context.INPUT_METHOD_SERVICE)
+                        as android.view.inputmethod.InputMethodManager
+                imm.showSoftInput(editText, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
+            }, 150)
         }
 
         fun cleanup() {
@@ -258,27 +175,5 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
             }
             binding.editText.setOnTouchListener(null)
         }
-    }
-
-    // 通知Activity停止滚动
-    private var scrollStopListener: (() -> Unit)? = null
-
-    // 通知Activity检查键盘遮挡
-    private var keyboardCoverageListener: ((EditText, Float, Float) -> Unit)? = null
-
-    fun setScrollStopListener(listener: () -> Unit) {
-        scrollStopListener = listener
-    }
-
-    fun setKeyboardCoverageListener(listener: (EditText, Float, Float) -> Unit) {
-        keyboardCoverageListener = listener
-    }
-
-    private fun notifyScrollStopRequested() {
-        scrollStopListener?.invoke()
-    }
-
-    private fun notifyCheckKeyboardCoverage(editText: EditText, x: Float, y: Float) {
-        keyboardCoverageListener?.invoke(editText, x, y)
     }
 }

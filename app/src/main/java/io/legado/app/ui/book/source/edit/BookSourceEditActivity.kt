@@ -1,12 +1,11 @@
 package io.legado.app.ui.book.source.edit
 
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
-import android.graphics.Rect
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
-import android.view.ViewTreeObserver
 import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
 import androidx.activity.viewModels
@@ -67,20 +66,8 @@ class BookSourceEditActivity :
     override val binding by viewBinding(ActivityBookSourceEditBinding::inflate)
     override val viewModel by viewModels<BookSourceEditViewModel>()
 
-    private val adapter by lazy {
-        BookSourceEditAdapter().apply {
-            setScrollStopListener {
-                // 停止滚动
-                binding.recyclerView.stopScroll()
-                // 隐藏键盘
-                hideKeyboard()
-            }
-            // 添加键盘遮挡监听器
-            setKeyboardCoverageListener { editText, x, y ->
-                checkKeyboardCoverage(editText, x, y)
-            }
-        }
-    }
+    private val adapter by lazy { BookSourceEditAdapter() }
+
     private val sourceEntities: ArrayList<EditEntity> = ArrayList()
     private val searchEntities: ArrayList<EditEntity> = ArrayList()
     private val exploreEntities: ArrayList<EditEntity> = ArrayList()
@@ -108,23 +95,11 @@ class BookSourceEditActivity :
         KeyboardToolPop(this, lifecycleScope, binding.root, this)
     }
 
-    private var keyboardHeight = 0
-    private var isKeyboardShowing = false
-    private val keyboardLayoutListener = ViewTreeObserver.OnGlobalLayoutListener {
-        val rect = Rect()
-        binding.root.getWindowVisibleDisplayFrame(rect)
-
-        val screenHeight = binding.root.height
-        val keyboardHeight = screenHeight - rect.bottom
-
-        if (keyboardHeight > screenHeight * 0.15) {
-            // 键盘弹出
-            isKeyboardShowing = true
-            this.keyboardHeight = keyboardHeight
-        } else {
-            // 键盘收起
-            isKeyboardShowing = false
-            this.keyboardHeight = 0
+    // 辅助方法：隐藏键盘
+    private fun hideKeyboard() {
+        currentFocus?.let { view ->
+            val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+            imm.hideSoftInputFromWindow(view.windowToken, 0)
         }
     }
 
@@ -134,16 +109,6 @@ class BookSourceEditActivity :
         viewModel.initData(intent) {
             upSourceView(viewModel.bookSource)
         }
-    }
-
-    override fun onResume() {
-        super.onResume()
-        binding.root.viewTreeObserver.addOnGlobalLayoutListener(keyboardLayoutListener)
-    }
-
-    override fun onPause() {
-        super.onPause()
-        binding.root.viewTreeObserver.removeOnGlobalLayoutListener(keyboardLayoutListener)
     }
 
     override fun onPostCreate(savedInstanceState: Bundle?) {
@@ -230,89 +195,43 @@ class BookSourceEditActivity :
         binding.recyclerView.setEdgeEffectColor(primaryColor)
         binding.recyclerView.layoutManager = LinearLayoutManager(this)
         binding.recyclerView.adapter = adapter
+
+        // 添加滚动监听，实时更新Adapter的滚动状态
         binding.recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrollStateChanged(rv: RecyclerView, newState: Int) {
-                // 实时更新滚动状态给Adapter
-                adapter.setScrolling(newState != RecyclerView.SCROLL_STATE_IDLE)
+                // 判断是否正在滚动
+                val isScrolling = newState != RecyclerView.SCROLL_STATE_IDLE
 
-                // 滚动时隐藏键盘
-                if (newState != RecyclerView.SCROLL_STATE_IDLE) {
+                // 更新Adapter的滚动状态
+                adapter.setScrolling(isScrolling)
+
+                // 滚动时隐藏键盘，提升用户体验
+                if (isScrolling) {
                     hideKeyboard()
                 }
             }
 
             override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
-                // 滚动时也隐藏键盘
-                if (dy != 0) {
-                    hideKeyboard()
-                }
+                // 可以在这里添加其他滚动相关逻辑
             }
         })
+
         binding.tabLayout.setBackgroundColor(backgroundColor)
         binding.tabLayout.setSelectedTabIndicatorColor(accentColor)
         binding.tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
             override fun onTabReselected(tab: TabLayout.Tab?) {
-                // 可以添加滚动到顶部的功能
-                binding.recyclerView.smoothScrollToPosition(0)
+                // 选项卡重新选中时滚动到顶部
+                binding.recyclerView.scrollToPosition(0)
             }
 
             override fun onTabUnselected(tab: TabLayout.Tab?) {
-                // 切换tab时隐藏键盘
-                hideKeyboard()
+
             }
 
             override fun onTabSelected(tab: TabLayout.Tab?) {
                 setEditEntities(tab?.position)
             }
         })
-    }
-
-    /**
-     * 检查键盘是否遮挡点击位置
-     * 如果点击位置被键盘遮挡，则滚动RecyclerView使其可见
-     */
-    private fun checkKeyboardCoverage(editText: EditText, clickX: Float, clickY: Float) {
-        if (!isKeyboardShowing) return
-
-        // 计算点击位置在屏幕上的绝对坐标
-        val location = IntArray(2)
-        editText.getLocationOnScreen(location)
-
-        // 计算点击位置相对于屏幕的Y坐标
-        val clickScreenY = location[1] + clickY
-
-        // 计算RecyclerView底部在屏幕上的位置
-        val recyclerViewLocation = IntArray(2)
-        binding.recyclerView.getLocationOnScreen(recyclerViewLocation)
-        val recyclerViewBottom = recyclerViewLocation[1] + binding.recyclerView.height
-
-        // 计算键盘顶部位置（屏幕底部 - 键盘高度）
-        val screenHeight = binding.root.height
-        val keyboardTop = screenHeight - keyboardHeight
-
-        // 如果点击位置在键盘遮挡区
-        if (clickScreenY > keyboardTop) {
-            // 计算EditText底部在屏幕上的位置
-            val editTextBottom = location[1] + editText.height
-
-            // 计算需要滚动的距离
-            val scrollY = (editTextBottom - keyboardTop + 20).toInt()
-
-            // 滚动RecyclerView
-            binding.recyclerView.smoothScrollBy(0, scrollY)
-        }
-    }
-
-    /**
-     * 隐藏键盘
-     */
-    private fun hideKeyboard() {
-        val view = currentFocus
-        view?.let {
-            val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
-            imm.hideSoftInputFromWindow(it.windowToken, 0)
-            it.clearFocus()
-        }
     }
 
     override fun finish() {
@@ -728,11 +647,11 @@ class BookSourceEditActivity :
         if (view is EditText) {
             val start = view.selectionStart
             val end = view.selectionEnd
-            val edit = view.editableText//获取EditText的文字
+            val edit = view.editableText
             if (start < 0 || start >= edit.length) {
                 edit.append(text)
             } else {
-                edit.replace(start, end, text)//光标所在位置插入文字
+                edit.replace(start, end, text)
             }
         }
     }
@@ -764,5 +683,4 @@ class BookSourceEditActivity :
     override fun setVariable(key: String, variable: String?) {
         viewModel.bookSource?.setVariable(variable)
     }
-
 }
