@@ -4,9 +4,10 @@ import android.annotation.SuppressLint
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.LayoutInflater
-import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
+import android.view.ViewTreeObserver
+import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
 import androidx.recyclerview.widget.RecyclerView
 import io.legado.app.R
@@ -64,64 +65,97 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
 
         private var textWatcher: TextWatcher? = null
 
-        fun bind(editEntity: EditEntity) = binding.run {
-            editText.setTag(R.id.tag, editEntity.key)
-            editText.maxLines = editEntityMaxLine
+        /* 用来延迟定位光标 */
+        private var lastClickXY: FloatArray? = null
 
-            // 移除旧的文本监听器
+        /* 当前 attach 的 RecyclerView，用来停滚/隐藏键盘 */
+        private var hostRv: RecyclerView? = null
+
+        init {
+            /* 拿到 RecyclerView 引用，后面好调 stopScroll/hideKeyboard */
+            binding.root.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
+                override fun onViewAttachedToWindow(v: View) {
+                    hostRv = v.parent as? RecyclerView
+                }
+                override fun onViewDetachedFromWindow(v: View) {
+                    hostRv = null
+                }
+            })
+        }
+
+        fun bind(editEntity: EditEntity) = binding.run {
             cleanup()
 
-            // 设置触摸监听器
-            editText.setOnTouchListener { v, event ->
-                when (event.action) {
-                    MotionEvent.ACTION_DOWN -> {
-                        // 如果正在滚动，消费事件，阻止焦点获取
-                        if (isRecyclerViewScrolling) {
-                            return@setOnTouchListener true
-                        }
-                        false
-                    }
+            editText.setTag(R.id.tag, editEntity.key)
+            editText.maxLines = editEntityMaxLine
+            editText.setText(editEntity.value)
+            textInputLayout.hint = editEntity.hint
 
-                    MotionEvent.ACTION_UP -> {
-                        // 如果正在滚动，不处理抬起事件
+            /* 1. 让光标回到可见区域 */
+            editText.viewTreeObserver.addOnGlobalLayout(object : ViewTreeObserver.OnGlobalLayoutListener {
+                override fun onGlobalLayout() {
+                    if (editText.selectionStart != editText.selectionEnd) return
+                    editText.viewTreeObserver.removeOnGlobalLayoutListener(this)
+                    if (editText.hasFocus()) {
+                        val imm = context.getSystemService(InputMethodManager::class.java)
+                        imm?.showSoftInput(editText, InputMethodManager.SHOW_IMPLICIT)
+                    }
+                }
+            })
+
+            /* 2. 核心触摸分发 */
+            editText.setOnTouchListener { _, event ->
+                when (event.actionMasked) {
+                    MotionEvent.ACTION_DOWN -> {
+                        /* 滚动中：只停滚，消费事件，不产生任何副作用 */
                         if (isRecyclerViewScrolling) {
+                            hostRv?.stopScroll()   // 立即停滚
                             return@setOnTouchListener true
                         }
-                        false
+
+                        /* 非滚动：记录坐标，排队定位 */
+                        lastClickXY = floatArrayOf(event.x, event.y)
+                        editText.post { placeCursorAccurately(editText) }
+                        false   // 放行，系统长按计时继续
                     }
                     else -> false
                 }
             }
 
-            editText.setText(editEntity.value)
-            textInputLayout.hint = editEntity.hint
-
-            // 创建新的文本监听器
+            /* 3. 文本监听 */
             textWatcher = object : TextWatcher {
-                override fun beforeTextChanged(
-                    s: CharSequence,
-                    start: Int,
-                    count: Int,
-                    after: Int
-                ) {
-                }
-
-                override fun onTextChanged(s: CharSequence, start: Int, before: Int, count: Int) {
-                }
-
                 override fun afterTextChanged(s: Editable?) {
-                    editEntity.value = (s?.toString())
+                    editEntity.value = s?.toString() ?: ""
                 }
+                override fun beforeTextChanged(s: CharSequence, start: Int, count: Int, after: Int) {}
+                override fun onTextChanged(s: CharSequence, start: Int, before: Int, count: Int) {}
             }
             editText.addTextChangedListener(textWatcher)
         }
 
-        fun cleanup() {
-            // 清理文本监听器
-            textWatcher?.let {
-                binding.editText.removeTextChangedListener(it)
-                textWatcher = null
+        /* 真正放光标：layout 就绪 + 未进入长按选择 */
+        private fun placeCursorAccurately(editText: EditText) {
+            val xy = lastClickXY ?: return
+            lastClickXY = null
+            val ly = editText.layout
+            if (ly == null) {          // layout 还没好，再排一次
+                editText.post { placeCursorAccurately(editText) }
+                return
             }
+            val x = xy[0] - editText.totalPaddingLeft
+            val y = xy[1] - editText.totalPaddingTop
+            var offset = ly.getOffsetForHorizontal(ly.getLineForVertical(y.toInt()), x)
+            if (offset < 0) offset = 0
+            // 已长按选择 → 不覆盖
+            if (editText.selectionStart != editText.selectionEnd) return
+            editText.setSelection(offset, offset)
+        }
+
+        fun cleanup() {
+            textWatcher?.let { binding.editText.removeTextChangedListener(it) }
+            textWatcher = null
+            lastClickXY = null
+            binding.editText.setOnTouchListener(null)
         }
     }
 }
