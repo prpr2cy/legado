@@ -87,6 +87,60 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
         }, 100)
     }
 
+    /**
+     * 在指定坐标设置光标位置
+     */
+    private fun setCursorAtCoordinate(editText: EditText, x: Float, y: Float) {
+        try {
+            // 先请求焦点
+            editText.requestFocus()
+
+            // 延迟一小段时间确保焦点已获取
+            editText.postDelayed({
+                try {
+                    val layout = editText.layout ?: return@postDelayed
+
+                    // 计算相对于EditText内容的坐标
+                    val contentX = x - editText.paddingLeft
+                    val contentY = y - editText.paddingTop
+
+                    // 获取点击位置对应的字符偏移
+                    val line = layout.getLineForVertical(contentY.toInt())
+                    val offset = layout.getOffsetForHorizontal(line, contentX)
+                        .coerceIn(0, editText.text?.length ?: 0)
+
+                    // 设置光标位置
+                    editText.setSelection(offset)
+
+                    // 通知Activity检查键盘遮挡
+                    notifyCheckKeyboardCoverage(editText, x, y)
+
+                    // 显示键盘
+                    showKeyboard(editText)
+
+                } catch (e: Exception) {
+                    // 如果计算失败，使用默认行为
+                    editText.setSelection(editText.text?.length ?: 0)
+                    notifyCheckKeyboardCoverage(editText, x, y)
+                }
+            }, 50)
+
+        } catch (e: Exception) {
+            editText.requestFocus()
+        }
+    }
+
+    /**
+     * 显示键盘
+     */
+    private fun showKeyboard(editText: EditText) {
+        editText.postDelayed({
+            val imm = editText.context.getSystemService(android.content.Context.INPUT_METHOD_SERVICE)
+                    as android.view.inputmethod.InputMethodManager
+            imm.showSoftInput(editText, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
+        }, 100)
+    }
+
     inner class MyViewHolder(val binding: ItemSourceEditBinding) :
         RecyclerView.ViewHolder(binding.root) {
 
@@ -179,54 +233,6 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
                 // 非滑动状态：立即处理
                 setCursorAtCoordinate(editText, x, y)
             }
-        }
-
-        private fun setCursorAtCoordinate(editText: EditText, x: Float, y: Float) {
-            try {
-                // 先请求焦点
-                editText.requestFocus()
-
-                // 延迟一小段时间确保焦点已获取
-                editText.postDelayed({
-                    try {
-                        val layout = editText.layout ?: return@postDelayed
-
-                        // 计算相对于EditText内容的坐标
-                        val contentX = x - editText.paddingLeft
-                        val contentY = y - editText.paddingTop
-
-                        // 获取点击位置对应的字符偏移
-                        val line = layout.getLineForVertical(contentY.toInt())
-                        val offset = layout.getOffsetForHorizontal(line, contentX)
-                            .coerceIn(0, editText.text?.length ?: 0)
-
-                        // 设置光标位置
-                        editText.setSelection(offset)
-
-                        // 通知Activity检查键盘遮挡
-                        notifyCheckKeyboardCoverage(editText, x, y)
-
-                        // 显示键盘
-                        showKeyboard(editText)
-
-                    } catch (e: Exception) {
-                        // 如果计算失败，使用默认行为
-                        editText.setSelection(editText.text?.length ?: 0)
-                        notifyCheckKeyboardCoverage(editText, x, y)
-                    }
-                }, 50)
-
-            } catch (e: Exception) {
-                editText.requestFocus()
-            }
-        }
-
-        private fun showKeyboard(editText: EditText) {
-            editText.postDelayed({
-                val imm = editText.context.getSystemService(android.content.Context.INPUT_METHOD_SERVICE)
-                        as android.view.inputmethod.InputMethodManager
-                imm.showSoftInput(editText, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT)
-            }, 100)
         }
 
         fun cleanup() {
