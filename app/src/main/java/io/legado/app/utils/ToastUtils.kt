@@ -26,6 +26,7 @@ fun Context.toastOnUi(message: Int, duration: Int = Toast.LENGTH_SHORT) {
 @SuppressLint("InflateParams")
 @Suppress("DEPRECATION")
 fun Context.toastOnUi(message: CharSequence?, duration: Int = Toast.LENGTH_SHORT) {
+    val appCtx = this.applicationContext
     runOnUI {
         kotlin.runCatching {
             if (toast == null || BuildConfig.DEBUG || AppConfig.recordLog) {

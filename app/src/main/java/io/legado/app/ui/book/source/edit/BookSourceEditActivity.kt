@@ -5,7 +5,6 @@ import android.content.Intent
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
-import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
@@ -99,10 +98,9 @@ class BookSourceEditActivity :
         KeyboardToolPop(this, lifecycleScope, binding.root, this)
     }
 
-    // 焦点和触摸状态管理
+    // 焦点管理
     private var lastFocusedKey: String? = null
     private var isScrolling = false
-    private var lastTouchY = 0f
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         softKeyboardTool.attachToWindow(window)
@@ -228,27 +226,6 @@ class BookSourceEditActivity :
             }
         })
 
-        // 设置触摸监听处理快速滑动时的点击
-        binding.recyclerView.setOnTouchListener { _, event ->
-            when (event.action) {
-                MotionEvent.ACTION_DOWN -> {
-                    lastTouchY = event.y
-                    // 如果正在惯性滑动，立即停止
-                    if (binding.recyclerView.scrollState == RecyclerView.SCROLL_STATE_SETTLING) {
-                        binding.recyclerView.stopScroll()
-                        isScrolling = false
-                    }
-                }
-                MotionEvent.ACTION_UP -> {
-                    // 如果是点击（不是滑动），处理焦点
-                    if (!isScrolling && Math.abs(event.y - lastTouchY) < 10) {
-                        handleSimpleClick(event)
-                    }
-                }
-            }
-            false
-        }
-
         binding.tabLayout.setBackgroundColor(backgroundColor)
         binding.tabLayout.setSelectedTabIndicatorColor(accentColor)
         binding.tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
@@ -313,33 +290,6 @@ class BookSourceEditActivity :
             key?.let {
                 editTextCache.remove(it)
                 et.setOnFocusChangeListener(null)
-            }
-        }
-    }
-
-    private fun handleSimpleClick(event: MotionEvent) {
-        val layoutManager = binding.recyclerView.layoutManager as? LinearLayoutManager
-        layoutManager?.let { lm ->
-            val firstVisiblePosition = lm.findFirstVisibleItemPosition()
-            val lastVisiblePosition = lm.findLastVisibleItemPosition()
-
-            for (i in firstVisiblePosition..lastVisiblePosition) {
-                val childView = lm.findViewByPosition(i)
-                childView?.let { view ->
-                    val viewTop = view.top
-                    val viewBottom = view.bottom
-
-                    // 检查是否点击在这个view范围内
-                    if (event.y >= viewTop && event.y <= viewBottom) {
-                        // 找到这个view中的EditText
-                        val editText = findEditTextInView(view)
-                        editText?.let { et ->
-                            // 简化处理：直接请求焦点，不计算具体位置
-                            et.requestFocus()
-                            return
-                        }
-                    }
-                }
             }
         }
     }
