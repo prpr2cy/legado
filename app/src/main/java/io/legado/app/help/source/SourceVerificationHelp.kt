@@ -1,5 +1,7 @@
 package io.legado.app.help.source
 
+import android.os.Handler 
+import android.os.Looper
 import io.legado.app.constant.AppLog
 import io.legado.app.data.entities.BaseSource
 import io.legado.app.exception.NoStackTraceException
@@ -88,11 +90,14 @@ object SourceVerificationHelp {
         }
     }
 
-
     fun checkResult(sourceKey: String) {
         getResult(sourceKey) ?: setResult(sourceKey, "")
         val thread = IntentData.get<Thread>(getKey(sourceKey))
-        LockSupport.unpark(thread)
+        appCtx.mainExecutor.execute {
+            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                LockSupport.unpark(thread)
+            }, 200)
+        }
     }
 
     fun setResult(sourceKey: String, result: String?) {
