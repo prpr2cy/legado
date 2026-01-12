@@ -1,15 +1,12 @@
 package io.legado.app.ui.book.source.edit
 
 import android.annotation.SuppressLint
-import android.content.Context
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.View
 import android.view.ViewGroup
 import android.view.MotionEvent
 import android.view.LayoutInflater
-import android.view.ViewTreeObserver
-import android.view.inputmethod.InputMethodManager
 import android.widget.EditText 
 import androidx.recyclerview.widget.RecyclerView
 import io.legado.app.R
@@ -74,7 +71,7 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
         private var hostRv: RecyclerView? = null
 
         init {
-            /* 拿到 RecyclerView 引用，后面好调 stopScroll/hideKeyboard */
+            /* 拿到 RecyclerView 引用 */
             binding.root.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
                 override fun onViewAttachedToWindow(v: View) {
                     hostRv = v.parent as? RecyclerView
@@ -93,19 +90,7 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
             editText.setText(editEntity.value)
             textInputLayout.hint = editEntity.hint
 
-            /* 1. 让光标回到可见区域 */
-            editText.viewTreeObserver.addOnGlobalLayoutListener(object : ViewTreeObserver.OnGlobalLayoutListener {
-                override fun onGlobalLayout() {
-                    if (editText.selectionStart != editText.selectionEnd) return
-                    editText.viewTreeObserver.removeOnGlobalLayoutListener(this)
-                    if (editText.hasFocus()) {
-                        val imm = binding.root.context.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
-                        imm?.showSoftInput(editText, InputMethodManager.SHOW_IMPLICIT)
-                    }
-                }
-            })
-
-            /* 2. 核心触摸分发 */
+            /* 核心触摸分发 */
             editText.setOnTouchListener { _, event ->
                 when (event.actionMasked) {
                     MotionEvent.ACTION_DOWN -> {
@@ -124,7 +109,7 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
                 }
             }
 
-            /* 3. 文本监听 */
+            /* 文本监听 */
             textWatcher = object : TextWatcher {
                 override fun afterTextChanged(s: Editable?) {
                     editEntity.value = s?.toString() ?: ""
