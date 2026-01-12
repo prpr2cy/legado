@@ -1,13 +1,13 @@
 package io.legado.app.ui.book.source.edit
 
 import android.annotation.SuppressLint
-import android.graphics.Rect
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
+import android.widget.EditText
 import androidx.recyclerview.widget.RecyclerView
 import io.legado.app.R
 import io.legado.app.databinding.ItemSourceEditBinding
@@ -28,18 +28,18 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
             notifyDataSetChanged()
         }
 
-    /* 当前是否正在滚动，供 TouchListener 实时查询 */
-    var recyclerViewIsScrolling = false
-        @SuppressLint("NotifyDataSetChanged")
-        set(value) {
-            field = value
-            // 如果后续需要立即通知所有 Holder 刷新状态，可在这里 notify
-        }
+    // 关键：暴露给Activity的滚动状态
+    private var isRecyclerViewScrolling = false
+
+    // Activity调用此方法更新滚动状态
+    fun setScrolling(scrolling: Boolean) {
+        isRecyclerViewScrolling = scrolling
+        // 不需要notifyDataSetChanged，因为ViewHolder会实时读取这个状态
+    }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MyViewHolder {
-        val binding = ItemSourceEditBinding.inflate(
-            LayoutInflater.from(parent.context), parent, false
-        )
+        val binding = ItemSourceEditBinding
+            .inflate(LayoutInflater.from(parent.context), parent, false)
         binding.editText.addLegadoPattern()
         binding.editText.addJsonPattern()
         binding.editText.addJsPattern()
@@ -50,98 +50,108 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
         holder.bind(editEntities[position])
     }
 
-    override fun getItemCount(): Int = editEntities.size
+    override fun getItemCount(): Int {
+        return editEntities.size
+    }
 
     override fun onViewRecycled(holder: MyViewHolder) {
         super.onViewRecycled(holder)
         holder.cleanup()
     }
 
-    inner class MyViewHolder(private val binding: ItemSourceEditBinding) :
+    inner class MyViewHolder(val binding: ItemSourceEditBinding) :
         RecyclerView.ViewHolder(binding.root) {
 
         private var textWatcher: TextWatcher? = null
 
-        /* TouchListener 只构造一次 */
-        private val touchListener by lazy {
-            OnEditTouchListener { recyclerViewIsScrolling }
-        }
-
         fun bind(editEntity: EditEntity) = binding.run {
-            /* 1. 基本绑定 */
             editText.setTag(R.id.tag, editEntity.key)
             editText.maxLines = editEntityMaxLine
 
-            /* 2. 清理旧监听器 */
             cleanup()
 
-            /* 3. TouchListener 只设一次 */
-            if (editText.getTag(R.id.tag_touch) == null) {
-                editText.setOnTouchListener(touchListener)
-                editText.setTag(R.id.tag_touch, touchListener)
+            // 关键修改：移除原来的OnAttachStateChangeListener
+            // 不再使用 isCursorVisible = false/true 的trick
+            // 而是完全控制焦点获取时机
+
+            // 设置触摸监听器
+            editText.setOnTouchListener { v, event ->
+                when (event.action) {
+                    MotionEvent.ACTION_DOWN -> {
+                        // 关键逻辑：滚动时完全阻止焦点获取
+                        if (isRecyclerViewScrolling) {
+                            // 消费事件，阻止EditText获取焦点
+                            return@setOnTouchListener true
+                        }
+                        false
+                    }
+                    MotionEvent.ACTION_UP -> {
+                        // 手指抬起时，如果之前被阻止了焦点，现在处理
+                        if (isRecyclerViewScrolling) {
+                            return@setOnTouchListener true
+                        }
+
+                        // 非滚动状态：手动处理光标准确定位
+                        handleClickWithAccurateCursor(v as android.widget.EditText, event)
+                        false
+                    }
+                    else -> false
+                }
             }
 
-            /* 4. 数据与 hint */
             editText.setText(editEntity.value)
             textInputLayout.hint = editEntity.hint
 
-            /* 5. 新 TextWatcher */
             textWatcher = object : TextWatcher {
                 override fun beforeTextChanged(
                     s: CharSequence,
                     start: Int,
                     count: Int,
                     after: Int
-                ) = Unit
+                ) {
+                }
 
-                override fun onTextChanged(
-                    s: CharSequence,
-                    start: Int,
-                    before: Int,
-                    count: Int
-                ) = Unit
+                override fun onTextChanged(s: CharSequence, start: Int, before: Int, count: Int) {
+                }
 
                 override fun afterTextChanged(s: Editable?) {
-                    editEntity.value = s?.toString() ?: ""
+                    editEntity.value = (s?.toString())
                 }
             }
-            editText.addTextChangedListener(textWatcher!!)
+            editText.addTextChangedListener(textWatcher)
+        }
+
+        @SuppressLint("ClickableViewAccessibility")
+        private fun handleClickWithAccurateCursor(editText: EditText, event: MotionEvent) {
+            try {
+                val layout = editText.layout ?: return
+
+                // 计算相对于EditText内容的坐标
+                val x = event.x - editText.paddingLeft
+                val y = event.y - editText.paddingTop
+
+                // 获取点击位置对应的字符偏移
+                val line = layout.getLineForVertical(y.toInt())
+                val offset = layout.getOffsetForHorizontal(line, x)
+                    .coerceIn(0, editText.text?.length ?: 0)
+
+                // 设置焦点和光标位置
+                editText.requestFocus()
+                editText.setSelection(offset)
+
+            } catch (e: Exception) {
+                // 如果计算失败，使用默认行为
+                editText.requestFocus()
+                editText.setSelection(editText.text?.length ?: 0)
+            }
         }
 
         fun cleanup() {
-            // 清理文本监听器
             textWatcher?.let {
                 binding.editText.removeTextChangedListener(it)
                 textWatcher = null
             }
-        }
-    }
-
-    /* 真正的 Touch 处理类，内部实时读取最新的 scrolling 状态 */
-    private inner class OnEditTouchListener(
-        private val scrollingProvider: () -> Boolean
-    ) : View.OnTouchListener {
-
-        override fun onTouch(v: View?, event: MotionEvent?): Boolean {
-            if (event?.actionMasked != MotionEvent.ACTION_DOWN) return false
-            if (scrollingProvider()) {
-                (v?.parent?.parent as? RecyclerView)?.stopScroll()
-                return true
-            }
-
-            val editText = v as? io.legado.app.ui.widget.text.AdaptiveTextInputEditText ?: return false
-            val x = event.x.toInt() - editText.totalPaddingLeft
-            val y = event.y.toInt() - editText.totalPaddingTop
-            val layout = editText.layout ?: return false
-            val line = layout.getLineForVertical(y)
-            val offset = layout.getOffsetForHorizontal(line, x.toFloat())
-                .coerceIn(0, editText.text?.length ?: 0)
-
-            editText.post {
-                editText.requestFocus()
-                editText.setSelection(offset)
-            }
-            return false
+            binding.editText.setOnTouchListener(null)
         }
     }
 }
