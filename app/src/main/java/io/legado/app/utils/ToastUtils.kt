@@ -48,7 +48,7 @@ private fun drainQueue(context: Context) {
         override fun run() {
             val task: ToastTask
             synchronized(toastQueue) {
-                task = toastQueue.pollFirst() ?: run {
+                task = toastQueue.removeFirstOrNull() ?: run {
                     toastQueued = false
                     return
                 }
