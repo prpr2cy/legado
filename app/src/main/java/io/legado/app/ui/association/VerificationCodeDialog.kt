@@ -125,7 +125,7 @@ class VerificationCodeDialog() : BaseDialogFragment(R.layout.dialog_verification
     override fun onDestroy() {
         SourceVerificationHelp.checkResult(sourceOrigin!!)
         super.onDestroy()
-        binding.root.postDelayed({ activity?.finish() }, 300)
+        binding.root.postDelayed({ activity?.finish() }, 450)
     }
 
 }
