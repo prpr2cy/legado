@@ -93,6 +93,7 @@ object SourceVerificationHelp {
     fun checkResult(sourceKey: String) {
         getResult(sourceKey) ?: setResult(sourceKey, "")
         val thread = IntentData.get<Thread>(getKey(sourceKey))
+        // 延迟200ms防止吞toastOnUi的消息
         appCtx.mainExecutor.execute {
             android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
                 LockSupport.unpark(thread)

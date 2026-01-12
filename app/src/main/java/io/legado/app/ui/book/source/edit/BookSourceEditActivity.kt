@@ -5,8 +5,6 @@ import android.content.Intent
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
-import android.view.View
-import android.view.ViewGroup
 import android.widget.EditText
 import androidx.activity.viewModels
 import androidx.lifecycle.lifecycleScope
@@ -66,7 +64,7 @@ class BookSourceEditActivity :
     override val binding by viewBinding(ActivityBookSourceEditBinding::inflate)
     override val viewModel by viewModels<BookSourceEditViewModel>()
 
-    private val adapter by lazy { BookSourceEditAdapter(binding.recyclerView) }
+    private val adapter by lazy { BookSourceEditAdapter() }
     private val sourceEntities: ArrayList<EditEntity> = ArrayList()
     private val searchEntities: ArrayList<EditEntity> = ArrayList()
     private val exploreEntities: ArrayList<EditEntity> = ArrayList()
@@ -74,10 +72,6 @@ class BookSourceEditActivity :
     private val tocEntities: ArrayList<EditEntity> = ArrayList()
     private val contentEntities: ArrayList<EditEntity> = ArrayList()
     private val reviewEntities: ArrayList<EditEntity> = ArrayList()
-
-    // 缓存所有EditText引用
-    private val editTextCache = mutableMapOf<String, EditText>()
-
     private val qrCodeResult = registerForActivityResult(QrCodeResult()) {
         it ?: return@registerForActivityResult
         viewModel.importSource(it) { source ->
@@ -97,10 +91,6 @@ class BookSourceEditActivity :
     private val softKeyboardTool by lazy {
         KeyboardToolPop(this, lifecycleScope, binding.root, this)
     }
-
-    // 焦点管理
-    private var lastFocusedKey: String? = null
-    private var isScrolling = false
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         softKeyboardTool.attachToWindow(window)
@@ -194,104 +184,26 @@ class BookSourceEditActivity :
         binding.recyclerView.setEdgeEffectColor(primaryColor)
         binding.recyclerView.layoutManager = LinearLayoutManager(this)
         binding.recyclerView.adapter = adapter
-
-        // 设置子视图附加监听器来缓存EditText引用
-        binding.recyclerView.addOnChildAttachStateChangeListener(object : RecyclerView.OnChildAttachStateChangeListener {
-            override fun onChildViewAttachedToWindow(view: View) {
-                // 查找EditText并缓存
-                findAndCacheEditText(view)
-            }
-
-            override fun onChildViewDetachedFromWindow(view: View) {
-                // 清理缓存
-                findAndRemoveEditText(view)
-            }
-        })
-
-        // 滑动监听 - 焦点管理修复
         binding.recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
-            override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
-                super.onScrollStateChanged(recyclerView, newState)
-                when (newState) {
-                    RecyclerView.SCROLL_STATE_DRAGGING,
-                    RecyclerView.SCROLL_STATE_SETTLING -> {
-                        isScrolling = true
-                        // 滑动时清除所有焦点
-                        recyclerView.clearFocus()
-                    }
-                    RecyclerView.SCROLL_STATE_IDLE -> {
-                        isScrolling = false
-                    }
-                }
+            override fun onScrollStateChanged(rv: RecyclerView, newState: Int) {
+                adapter.setScrolling(newState != RecyclerView.SCROLL_STATE_IDLE)
             }
         })
-
         binding.tabLayout.setBackgroundColor(backgroundColor)
         binding.tabLayout.setSelectedTabIndicatorColor(accentColor)
         binding.tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
             override fun onTabReselected(tab: TabLayout.Tab?) {
-                // 点击当前tab时滚动到顶部
-                binding.recyclerView.smoothScrollToPosition(0)
+
             }
 
             override fun onTabUnselected(tab: TabLayout.Tab?) {
-                // 切换tab时清除焦点
-                binding.recyclerView.clearFocus()
+
             }
 
             override fun onTabSelected(tab: TabLayout.Tab?) {
                 setEditEntities(tab?.position)
             }
         })
-    }
-
-    private fun findAndCacheEditText(view: View) {
-        // 使用循环查找EditText
-        val editText = findEditTextInView(view)
-        editText?.let { et ->
-            val key = et.getTag(R.id.tag) as? String
-            key?.let {
-                editTextCache[it] = et
-                et.setOnFocusChangeListener { v, hasFocus ->
-                    if (hasFocus) {
-                        lastFocusedKey = key
-                    }
-                }
-            }
-        }
-    }
-
-    private fun findEditTextInView(root: View): EditText? {
-        // 使用队列进行广度优先搜索
-        val queue = ArrayDeque<View>()
-        queue.add(root)
-
-        while (queue.isNotEmpty()) {
-            val current = queue.removeFirst()
-
-            if (current is EditText) {
-                return current
-            }
-
-            if (current is ViewGroup) {
-                for (i in 0 until current.childCount) {
-                    queue.add(current.getChildAt(i))
-                }
-            }
-        }
-
-        return null
-    }
-
-    private fun findAndRemoveEditText(view: View) {
-        val editText = findEditTextInView(view)
-        editText?.let { et ->
-            val key = et.getTag(R.id.tag) as? String
-            key?.let {
-                editTextCache.remove(it)
-                et.setOnFocusChangeListener(null)
-            }
-        }
     }
 
     override fun finish() {
@@ -312,29 +224,19 @@ class BookSourceEditActivity :
     override fun onDestroy() {
         super.onDestroy()
         softKeyboardTool.dismiss()
-        editTextCache.clear()
     }
 
     private fun setEditEntities(tabPosition: Int?) {
-        // 切换tab前清除焦点
-        binding.recyclerView.clearFocus()
-
         when (tabPosition) {
             1 -> adapter.editEntities = searchEntities
             2 -> adapter.editEntities = exploreEntities
             3 -> adapter.editEntities = infoEntities
             4 -> adapter.editEntities = tocEntities
             5 -> adapter.editEntities = contentEntities
+            6 -> adapter.editEntities = reviewEntities
             else -> adapter.editEntities = sourceEntities
         }
         binding.recyclerView.scrollToPosition(0)
-
-        // 切换tab后恢复焦点
-        binding.recyclerView.post {
-            lastFocusedKey?.let { key ->
-                editTextCache[key]?.requestFocus()
-            }
-        }
     }
 
     private fun upSourceView(bookSource: BookSource?) {
@@ -352,9 +254,6 @@ class BookSourceEditActivity :
                 }
             )
         }
-        // 清空缓存，因为要重新创建视图
-        editTextCache.clear()
-
         // 基本信息
         sourceEntities.clear()
         sourceEntities.apply {
