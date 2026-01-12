@@ -3,6 +3,7 @@
 package io.legado.app.utils
 
 import android.annotation.SuppressLint
+import android.view.View
 import android.content.Context
 import android.widget.TextView
 import android.widget.Toast
@@ -36,7 +37,7 @@ fun Context.toastOnUi(message: CharSequence?, duration: Int = Toast.LENGTH_SHORT
             val textView = toastView.findViewById<TextView>(R.id.tv_text)
             textView.setTextColor(appCtx.getPrimaryTextColor(isLight))
             textView.text = message 
- 
+
             Toast(appCtx).apply {
                 this.view = toastView 
                 this.duration = duration 
