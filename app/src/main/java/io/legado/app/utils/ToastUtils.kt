@@ -26,22 +26,20 @@ fun Context.toastOnUi(message: Int, duration: Int = Toast.LENGTH_SHORT) {
 @SuppressLint("InflateParams")
 @Suppress("DEPRECATION")
 fun Context.toastOnUi(message: CharSequence?, duration: Int = Toast.LENGTH_SHORT) {
-    val appCtx = this.applicationContext
+    val appCtx = this.applicationContext 
     runOnUI {
         kotlin.runCatching {
-            val toastView = appCtx.inflate<R.layout.view_toast>().apply {
-                findViewById<CardView>(R.id.cv_content)
-                    .setCardBackgroundColor(appCtx.bottomBackground)
-                val isLight = ColorUtils.isColorLight(appCtx.bottomBackground)
-                findViewById<TextView>(R.id.tv_text).apply {
-                    setTextColor(appCtx.getPrimaryTextColor(isLight))
-                    text = message
-                }
-            }
-
+            val toastView = appCtx.inflate<View>(R.layout.view_toast)
+            val cardView = toastView.findViewById<CardView>(R.id.cv_content)
+            cardView.setCardBackgroundColor(appCtx.bottomBackground)
+            val isLight = ColorUtils.isColorLight(appCtx.bottomBackground)
+            val textView = toastView.findViewById<TextView>(R.id.tv_text)
+            textView.setTextColor(appCtx.getPrimaryTextColor(isLight))
+            textView.text = message 
+ 
             Toast(appCtx).apply {
-                view = toastView
-                this.duration = duration
+                this.view = toastView 
+                this.duration = duration 
                 show()
             }
         }
