@@ -95,22 +95,38 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
             // 先请求焦点
             editText.requestFocus()
 
-            // 延迟一小段时间确保焦点已获取
+            // 延迟一小段时间确保焦点已获取和布局计算完成
             editText.postDelayed({
                 try {
-                    val layout = editText.layout ?: return@postDelayed
+                    val layout = editText.layout
+                    if (layout == null) {
+                        // 如果布局还没计算好，设置到末尾
+                        editText.setSelection(editText.text?.length ?: 0)
+                        notifyCheckKeyboardCoverage(editText, x, y)
+                        return@postDelayed
+                    }
 
                     // 计算相对于EditText内容的坐标
-                    val contentX = x - editText.paddingLeft
-                    val contentY = y - editText.paddingTop
+                    val scrollX = editText.scrollX
+                    val scrollY = editText.scrollY
 
                     // 获取点击位置对应的字符偏移
-                    val line = layout.getLineForVertical(contentY.toInt())
-                    val offset = layout.getOffsetForHorizontal(line, contentX)
-                        .coerceIn(0, editText.text?.length ?: 0)
+                    val line = layout.getLineForVertical((y + scrollY - editText.paddingTop).toInt())
+
+                    // 确保行号在有效范围内
+                    val safeLine = line.coerceIn(0, layout.lineCount - 1)
+
+                    // 计算水平位置
+                    val horizontalPos = x + scrollX - editText.paddingLeft
+
+                    // 获取偏移量
+                    val offset = layout.getOffsetForHorizontal(safeLine, horizontalPos)
+
+                    // 确保偏移量在有效范围内
+                    val safeOffset = offset.coerceIn(0, editText.text?.length ?: 0)
 
                     // 设置光标位置
-                    editText.setSelection(offset)
+                    editText.setSelection(safeOffset)
 
                     // 通知Activity检查键盘遮挡
                     notifyCheckKeyboardCoverage(editText, x, y)
@@ -123,7 +139,7 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
                     editText.setSelection(editText.text?.length ?: 0)
                     notifyCheckKeyboardCoverage(editText, x, y)
                 }
-            }, 50)
+            }, 100)
 
         } catch (e: Exception) {
             editText.requestFocus()

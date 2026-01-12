@@ -286,13 +286,19 @@ class BookSourceEditActivity :
         binding.recyclerView.getLocationOnScreen(recyclerViewLocation)
         val recyclerViewBottom = recyclerViewLocation[1] + binding.recyclerView.height
 
-        // 计算键盘顶部位置
-        val keyboardTop = recyclerViewBottom - keyboardHeight
+        // 计算键盘顶部位置（屏幕底部 - 键盘高度）
+        val screenHeight = binding.root.height
+        val keyboardTop = screenHeight - keyboardHeight
 
         // 如果点击位置在键盘遮挡区
         if (clickScreenY > keyboardTop) {
+            // 计算EditText底部在屏幕上的位置
+            val editTextBottom = location[1] + editText.height
+
             // 计算需要滚动的距离
-            val scrollY = (clickScreenY - keyboardTop + 50).toInt()
+            val scrollY = (editTextBottom - keyboardTop + 20).toInt()
+
+            // 滚动RecyclerView
             binding.recyclerView.smoothScrollBy(0, scrollY)
         }
     }
