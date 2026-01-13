@@ -37,32 +37,30 @@ class PhotoDialog() : BaseDialogFragment(R.layout.dialog_photo_view) {
 
     @SuppressLint("CheckResult")
     override fun onFragmentCreated(view: View, savedInstanceState: Bundle?) {
-        val arguments = arguments ?: return
+        val arguments = arguments ?: return 
         arguments.getString("src")?.let { src ->
-            ImageProvider.get(src)?.let {
-                binding.photoView.setImageBitmap(it)
-                return
+            ImageProvider.get(src)?.let { bmp ->
+                binding.photoView.setImageBitmap(bmp)
+            } ?: run {
+                val file = ReadBook.book?.let { book ->
+                    BookHelp.getImage(book, src)
+                }
+                if (file?.exists() == true) {
+                    ImageLoader.load(requireContext(), file)
+                        .error(R.drawable.image_loading_error)
+                        .into(binding.photoView)
+                } else {
+                    ImageLoader.load(requireContext(), src)
+                        .apply {
+                            arguments.getString("sourceOrigin")?.let { origin ->
+                                apply(RequestOptions().set(OkHttpModelLoader.sourceOriginOption, origin))
+                            }
+                        }
+                        .error(BookCover.defaultDrawable)
+                        .into(binding.photoView)
+                }
             }
-            val file = ReadBook.book?.let { book ->
-                BookHelp.getImage(book, src)
-            }
-            if (file?.exists() == true) {
-                ImageLoader.load(requireContext(), file)
-                    .error(R.drawable.image_loading_error)
-                    .into(binding.photoView)
-            } else {
-                ImageLoader.load(requireContext(), src).apply {
-                    arguments.getString("sourceOrigin")?.let { sourceOrigin ->
-                        apply(
-                            RequestOptions().set(
-                                OkHttpModelLoader.sourceOriginOption,
-                                sourceOrigin
-                            )
-                        )
-                    }
-                }.error(BookCover.defaultDrawable)
-                    .into(binding.photoView)
-            }
+            binding.photoView.rotationEnabled = true 
         }
     }
 

@@ -81,7 +81,7 @@ class OtherConfigFragment : PreferenceFragment(),
             }
             PreferKey.preDownloadNum -> NumberPickerDialog(requireContext())
                 .setTitle(getString(R.string.pre_download))
-                .setMaxValue(999)
+                .setMaxValue(9999)
                 .setMinValue(0)
                 .setValue(AppConfig.preDownloadNum)
                 .show {
