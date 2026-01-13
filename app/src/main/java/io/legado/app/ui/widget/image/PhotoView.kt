@@ -852,7 +852,6 @@ class PhotoView @JvmOverloads constructor(
                     needFix = true
                 }
                 if (needFix) {
-                    doTranslateReset(mImgRect)
                     applyAnima()
                 }
                 invalidate()
@@ -1234,8 +1233,6 @@ class PhotoView @JvmOverloads constructor(
             } else {
                 from = mScale 
                 to = 1f
-                mScaleCenter[e.x] = e.y
-                mTranslate.withRotate(mDegrees.toInt(), 0)
                 isZoomUp = false 
             }
             mTmpMatrix.reset()
