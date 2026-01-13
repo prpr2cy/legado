@@ -207,49 +207,11 @@ class BookSourceEditActivity :
         binding.recyclerView.setOnApplyWindowInsetsListenerCompat { view, windowInsets ->
             val navigationBarHeight = windowInsets.navigationBarHeight
             val imeHeight = windowInsets.imeHeight
-            view.bottomPadding = navigationBarHeight
+            view.bottomPadding = if (imeHeight == 0) navigationBarHeight
+            else navigationBarHeight + imeHeight
             softKeyboardTool.initialPadding = imeHeight
             windowInsets
         }
-
-        binding.root.viewTreeObserver.addOnGlobalLayoutListener {
-            val rect = Rect()
-            binding.root.getWindowVisibleDisplayFrame(rect)
-            val screenHeight = binding.root.rootView.height 
-            val keyboardHeight = screenHeight - rect.bottom 
-            
-            // 键盘弹出时（高度大于200像素）
-            if (keyboardHeight > 200) {
-                val focusedView = window.decorView.findFocus()
-                if (focusedView is EditText) {
-                    // 使用更可靠的方法确保EditText可见 
-                    focusedView.post {
-                        // 获取EditText在屏幕上的位置 
-                        val location = IntArray(2)
-                        focusedView.getLocationOnScreen(location)
-                        
-                        // 计算EditText底部位置 
-                        val editTextBottom = location[1] + focusedView.height 
-                        
-                        // 如果EditText在键盘下方 
-                        if (editTextBottom > rect.bottom) {
-                            // 计算需要滚动的距离 
-                            val scrollDistance = editTextBottom - rect.bottom + focusedView.height 
-                            
-                            // 滚动RecyclerView 
-                            binding.recyclerView.smoothScrollBy(0, scrollDistance)
-                            
-                            // 或者使用系统方法 
-                            focusedView.requestRectangleOnScreen(
-                                Rect(0, 0, focusedView.width, focusedView.height),
-                                true 
-                            )
-                        }
-                    }
-                }
-            }
-        }
-
     }
 
     override fun finish() {
