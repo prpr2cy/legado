@@ -208,22 +208,8 @@ class BookSourceEditActivity :
         })
         binding.recyclerView.setOnApplyWindowInsetsListenerCompat { view, windowInsets ->
             val navigationBarHeight = windowInsets.navigationBarHeight
-            view.bottomPadding = navigationBarHeight
             val imeHeight = windowInsets.imeHeight
-            if (imeHeight > 0) {
-                val focusedView = window.decorView.findFocus()
-                if (focusedView is EditText) {
-                    val location = IntArray(2)
-                    focusedView.getLocationInWindow(location)
-                    val inputBottom = location[1] + focusedView.height
-                    val windowHeight = window.decorView.height
-                    val visibleBottom = windowHeight - imeHeight
-                    if (inputBottom > visibleBottom) {
-                        val scrollDistance = inputBottom - visibleBottom
-                        binding.recyclerView.scrollBy(0, scrollDistance)
-                    }
-                }
-            }
+            view.bottomPadding = imeHeight.coerceAtLeast(navigationBarHeight)
             softKeyboardTool.initialPadding = imeHeight
             windowInsets
         }
