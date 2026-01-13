@@ -26,6 +26,15 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
             notifyDataSetChanged()
         }
 
+    // 滚动状态 - 由Activity实时更新
+    private var isRecyclerViewScrolling = false
+
+    // Activity调用此方法更新滚动状态
+    fun setScrolling(scrolling: Boolean) {
+        isRecyclerViewScrolling = scrolling
+        // 不需要notifyDataSetChanged，因为ViewHolder会实时读取这个状态
+    }
+
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MyViewHolder {
         val binding = ItemSourceEditBinding
             .inflate(LayoutInflater.from(parent.context), parent, false)
@@ -62,9 +71,11 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
 
                     }
                 }
+
                 editText.addOnAttachStateChangeListener(listener)
                 editText.setTag(R.id.tag1, listener)
             }
+
             editText.getTag(R.id.tag2)?.let {
                 if (it is TextWatcher) {
                     editText.removeTextChangedListener(it)
@@ -72,6 +83,7 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
             }
             editText.setText(editEntity.value)
             textInputLayout.hint = editEntity.hint
+
             val textWatcher = object : TextWatcher {
                 override fun beforeTextChanged(
                     s: CharSequence,
@@ -94,6 +106,5 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
             editText.setTag(R.id.tag2, textWatcher)
         }
     }
-
 
 }

@@ -1,17 +1,12 @@
 package io.legado.app.ui.book.source.edit
 
-import android.app.Activity
-import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
-import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
 import androidx.activity.viewModels
 import androidx.lifecycle.lifecycleScope
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.tabs.TabLayout
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel
 import io.legado.app.R
@@ -39,16 +34,19 @@ import io.legado.app.ui.book.source.debug.BookSourceDebugActivity
 import io.legado.app.ui.file.HandleFileContract
 import io.legado.app.ui.login.SourceLoginActivity
 import io.legado.app.ui.qrcode.QrCodeResult
-import io.legado.app.ui.widget.dialog.TextDialog
 import io.legado.app.ui.widget.dialog.UrlOptionDialog
 import io.legado.app.ui.widget.dialog.VariableDialog
 import io.legado.app.ui.widget.keyboard.KeyboardToolPop
+import io.legado.app.ui.widget.recycler.NoChildScrollLinearLayoutManager
 import io.legado.app.ui.widget.text.EditEntity
 import io.legado.app.utils.GSON
+import io.legado.app.utils.imeHeight
 import io.legado.app.utils.isContentScheme
 import io.legado.app.utils.launch
+import io.legado.app.utils.navigationBarHeight
 import io.legado.app.utils.sendToClip
 import io.legado.app.utils.setEdgeEffectColor
+import io.legado.app.utils.setOnApplyWindowInsetsListenerCompat
 import io.legado.app.utils.share
 import io.legado.app.utils.shareWithQr
 import io.legado.app.utils.showDialogFragment
@@ -57,9 +55,10 @@ import io.legado.app.utils.viewbindingdelegate.viewBinding
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import splitties.views.bottomPadding
 
 class BookSourceEditActivity :
-    VMBaseActivity<ActivityBookSourceEditBinding, BookSourceEditViewModel>(false),
+    VMBaseActivity<ActivityBookSourceEditBinding, BookSourceEditViewModel>(),
     KeyboardToolPop.CallBack,
     VariableDialog.Callback {
 
@@ -67,7 +66,6 @@ class BookSourceEditActivity :
     override val viewModel by viewModels<BookSourceEditViewModel>()
 
     private val adapter by lazy { BookSourceEditAdapter() }
-
     private val sourceEntities: ArrayList<EditEntity> = ArrayList()
     private val searchEntities: ArrayList<EditEntity> = ArrayList()
     private val exploreEntities: ArrayList<EditEntity> = ArrayList()
@@ -75,12 +73,14 @@ class BookSourceEditActivity :
     private val tocEntities: ArrayList<EditEntity> = ArrayList()
     private val contentEntities: ArrayList<EditEntity> = ArrayList()
     private val reviewEntities: ArrayList<EditEntity> = ArrayList()
-    private val qrCodeResult = registerForActivityResult(QrCodeResult()) {
+ 
+   private val qrCodeResult = registerForActivityResult(QrCodeResult()) {
         it ?: return@registerForActivityResult
         viewModel.importSource(it) { source ->
             upSourceView(source)
         }
     }
+
     private val selectDoc = registerForActivityResult(HandleFileContract()) {
         it.uri?.let { uri ->
             if (uri.isContentScheme()) {
@@ -93,14 +93,6 @@ class BookSourceEditActivity :
 
     private val softKeyboardTool by lazy {
         KeyboardToolPop(this, lifecycleScope, binding.root, this)
-    }
-
-    // 辅助方法：隐藏键盘
-    private fun hideKeyboard() {
-        currentFocus?.let { view ->
-            val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-            imm.hideSoftInputFromWindow(view.windowToken, 0)
-        }
     }
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
@@ -193,33 +185,8 @@ class BookSourceEditActivity :
             setText(R.string.source_tab_content)
         })
         binding.recyclerView.setEdgeEffectColor(primaryColor)
-        binding.recyclerView.layoutManager = LinearLayoutManager(this)
+        binding.recyclerView.layoutManager = NoChildScrollLinearLayoutManager(this)
         binding.recyclerView.adapter = adapter
-
-        // 添加滚动监听，实时更新Adapter的滚动状态
-        binding.recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
-            override fun onScrollStateChanged(rv: RecyclerView, newState: Int) {
-                // 判断是否正在滚动
-                val isScrolling = newState != RecyclerView.SCROLL_STATE_IDLE
-
-                // 更新Adapter的滚动状态
-                adapter.setScrolling(isScrolling)
-
-                if (newState == RecyclerView.SCROLL_STATE_IDLE) {
-                    adapter.onScrollStateIdle()   // 触发补聚焦 
-                }
-
-                // 滚动时隐藏键盘，提升用户体验
-                if (isScrolling) {
-                    hideKeyboard()
-                }
-            }
-
-            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
-                // 可以在这里添加其他滚动相关逻辑
-            }
-        })
-
         binding.tabLayout.setBackgroundColor(backgroundColor)
         binding.tabLayout.setSelectedTabIndicatorColor(accentColor)
         binding.tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
@@ -236,6 +203,13 @@ class BookSourceEditActivity :
                 setEditEntities(tab?.position)
             }
         })
+        binding.recyclerView.setOnApplyWindowInsetsListenerCompat { view, windowInsets ->
+            val navigationBarHeight = windowInsets.navigationBarHeight
+            val imeHeight = windowInsets.imeHeight
+            view.bottomPadding = if (imeHeight == 0) navigationBarHeight else 0
+            softKeyboardTool.initialPadding = imeHeight
+            windowInsets
+        }
     }
 
     override fun finish() {
@@ -259,14 +233,14 @@ class BookSourceEditActivity :
     }
 
     private fun setEditEntities(tabPosition: Int?) {
-        when (tabPosition) {
-            1 -> adapter.editEntities = searchEntities
-            2 -> adapter.editEntities = exploreEntities
-            3 -> adapter.editEntities = infoEntities
-            4 -> adapter.editEntities = tocEntities
-            5 -> adapter.editEntities = contentEntities
-            6 -> adapter.editEntities = reviewEntities
-            else -> adapter.editEntities = sourceEntities
+        adapter.editEntities = when (tabPosition) {
+            1 -> searchEntities
+            2 -> exploreEntities
+            3 -> infoEntities
+            4 -> tocEntities
+            5 -> contentEntities
+            6 -> reviewEntities
+            else -> sourceEntities
         }
         binding.recyclerView.scrollToPosition(0)
     }
@@ -654,6 +628,8 @@ class BookSourceEditActivity :
             val edit = view.editableText
             if (start < 0 || start >= edit.length) {
                 edit.append(text)
+            } else if (start > end) {
+                edit.replace(end, start, text)
             } else {
                 edit.replace(start, end, text)
             }
