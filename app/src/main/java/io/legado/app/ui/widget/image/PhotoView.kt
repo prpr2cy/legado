@@ -28,18 +28,20 @@ class PhotoView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null
 ) : AppCompatImageView(context, attrs) {
-    val MIN_ROTATE = 35
-    val ANIMA_DURING = 340
-    val MAX_SCALE = 2.5f
+    const val MIN_ROTATE = 35
+    const val ANIMA_DURING = 340
+    const val MAX_SCALE = 5.0f
+    const val DOUBLE_TAP_MAX_SCALE = 2.0f
 
-    private var mMinRotate = 0
-    var mAnimaDuring = 0
-    private var mMaxScale = 0f
+    var mMinRotate = 35
+    var mAnimaDuring = 340
+    var mMaxScale = 5.0f
+    var mDoubleTapMaxScale = 2.0f
 
-    var MAX_OVER_SCROLL = 0
-    var MAX_FLING_OVER_SCROLL = 0
-    var MAX_OVER_RESISTANCE = 0
-    var MAX_ANIM_FROM_WAITE = 500
+    var maxOverScroll = 0
+    var maxFlingOverScroll = 0
+    var maxOverResistance = 0
+    var maxAnimFromWait = 500
 
     private val mBaseMatrix: Matrix = Matrix()
     private val mAnimMatrix: Matrix = Matrix()
@@ -67,7 +69,7 @@ class PhotoView @JvmOverloads constructor(
     private var mAdjustViewBounds = false
 
     // 当前是否处于放大状态
-    private var isZoonUp = false
+    private var isZoomUp = false
     private var canRotate = false
 
     private var imgLargeWidth = false
@@ -112,12 +114,13 @@ class PhotoView @JvmOverloads constructor(
         mDetector = GestureDetector(context, mGestureListener)
         mScaleDetector = ScaleGestureDetector(context, mScaleListener)
         val density = resources.displayMetrics.density
-        MAX_OVER_SCROLL = (density * 30).toInt()
-        MAX_FLING_OVER_SCROLL = (density * 30).toInt()
-        MAX_OVER_RESISTANCE = (density * 140).toInt()
+        maxOverScroll = (density * 30).toInt()
+        maxFlingOverScroll = (density * 30).toInt()
+        maxOverResistance = (density * 140).toInt()
         mMinRotate = MIN_ROTATE
         mAnimaDuring = ANIMA_DURING
         mMaxScale = MAX_SCALE
+        mDoubleTapMaxScale = DOUBLE_TAP_MAX_SCALE
     }
 
     /**
@@ -168,23 +171,37 @@ class PhotoView @JvmOverloads constructor(
     }
 
     /**
-     * 设置最大可以缩放的倍数
+     * 设置最大可以缩放的倍数（双指缩放）
      */
     fun setMaxScale(maxScale: Float) {
         mMaxScale = maxScale
     }
 
     /**
-     * 获取最大可以缩放的倍数
+     * 获取最大可以缩放的倍数（双指缩放）
      */
     fun getMaxScale(): Float {
         return mMaxScale
     }
 
     /**
+     * 设置双击最大放大倍数
+     */
+    fun setDoubleTapMaxScale(maxScale: Float) {
+        mDoubleTapMaxScale = maxScale.coerceAtMost(mMaxScale)  // 不能超过双指最大放大倍数
+    }
+
+    /**
+     * 获取双击最大放大倍数
+     */
+    fun getDoubleTapMaxScale(): Float {
+        return mDoubleTapMaxScale
+    }
+
+    /**
      */
     fun setMaxAnimFromWaiteTime(wait: Int) {
-        MAX_ANIM_FROM_WAITE = wait
+        maxAnimFromWait = wait
     }
 
     @SuppressLint("UseCompatLoadingForDrawables")
@@ -233,7 +250,7 @@ class PhotoView @JvmOverloads constructor(
         if (!isKnowSize) return
         mBaseMatrix.reset()
         mAnimMatrix.reset()
-        isZoonUp = false
+        isZoomUp = false
         val img = drawable
         val w = width
         val h = height
@@ -277,7 +294,7 @@ class PhotoView @JvmOverloads constructor(
         }
         isInit = true
         mFromInfo?.let {
-            if (System.currentTimeMillis() - mInfoTime < MAX_ANIM_FROM_WAITE) {
+            if (System.currentTimeMillis() - mInfoTime < maxAnimFromWait) {
                 animaFrom(it)
             }
         }
@@ -493,9 +510,11 @@ class PhotoView @JvmOverloads constructor(
             mDegrees = toDegrees
         }
         var scale = mScale
-        if (mScale < 1) {
-            scale = 1f
-            mTranslate.withScale(mScale, 1F)
+
+        // 限制最小缩放为0.5倍，最大缩放为5倍（双指缩放）
+        if (mScale < 0.5f) {
+            scale = 0.5f
+            mTranslate.withScale(mScale, 0.5f)
         } else if (mScale > mMaxScale) {
             scale = mMaxScale
             mTranslate.withScale(mScale, mMaxScale)
@@ -557,14 +576,14 @@ class PhotoView @JvmOverloads constructor(
         overScroll: Float,
         detalX: Float
     ): Float {
-        return detalX * (abs(abs(overScroll) - MAX_OVER_RESISTANCE) / MAX_OVER_RESISTANCE.toFloat())
+        return detalX * (abs(abs(overScroll) - maxOverResistance) / maxOverResistance.toFloat())
     }
 
     private fun resistanceScrollByY(
         overScroll: Float,
         detalY: Float
     ): Float {
-        return detalY * (abs(abs(overScroll) - MAX_OVER_RESISTANCE) / MAX_OVER_RESISTANCE.toFloat())
+        return detalY * (abs(abs(overScroll) - maxOverResistance) / maxOverResistance.toFloat())
     }
 
     /**
@@ -739,8 +758,8 @@ class PhotoView @JvmOverloads constructor(
                 maxX,
                 minY,
                 maxY,
-                if (abs(overX) < MAX_FLING_OVER_SCROLL * 2) 0 else MAX_FLING_OVER_SCROLL,
-                if (abs(overY) < MAX_FLING_OVER_SCROLL * 2) 0 else MAX_FLING_OVER_SCROLL
+                if (abs(overX) < maxFlingOverScroll * 2) 0 else maxFlingOverScroll,
+                if (abs(overY) < maxFlingOverScroll * 2) 0 else maxFlingOverScroll
             )
         }
 
@@ -833,6 +852,7 @@ class PhotoView @JvmOverloads constructor(
                     needFix = true
                 }
                 if (needFix) {
+                    doTranslateReset(mImgRect)
                     applyAnima()
                 }
                 invalidate()
@@ -1206,13 +1226,17 @@ class PhotoView @JvmOverloads constructor(
             mRotateCenter[imgCx] = imgCy
             mTranslateX = 0
             mTranslateY = 0
-            if (isZoonUp) {
-                from = mScale
-                to = 1f
+            if (abs(mScale - 1f) <= 0.01f) {
+                from = 1f 
+                to = mDoubleTapMaxScale
+                mScaleCenter[e.x] = e.y 
+                isZoomUp = true
             } else {
-                from = mScale
-                to = mMaxScale
-                mScaleCenter[e.x] = e.y
+                from = mScale 
+                to = 1f
+                mScaleCenter.set(mScreenCenter)
+                mTranslate.withRotate(mDegrees.toInt(), 0)
+                isZoomUp = false 
             }
             mTmpMatrix.reset()
             mTmpMatrix.postTranslate(-mBaseRect.left, -mBaseRect.top)
@@ -1223,7 +1247,6 @@ class PhotoView @JvmOverloads constructor(
             mTmpMatrix.postTranslate(mTranslateX.toFloat(), mTranslateY.toFloat())
             mTmpMatrix.mapRect(mTmpRect, mBaseRect)
             doTranslateReset(mTmpRect)
-            isZoonUp = !isZoonUp
             mTranslate.withScale(from, to)
             mTranslate.start()
             return false
@@ -1234,14 +1257,18 @@ class PhotoView @JvmOverloads constructor(
         override fun onScale(detector: ScaleGestureDetector): Boolean {
             val scaleFactor = detector.scaleFactor
             if (java.lang.Float.isNaN(scaleFactor) || java.lang.Float.isInfinite(scaleFactor)) return false
-            mScale *= scaleFactor
-            //mScaleCenter.set(detector.getFocusX(), detector.getFocusY());
+
+            // 计算新的缩放比例
+            val newScale = (mScale * scaleFactor).coerceIn(0.5f, mMaxScale)
+            val actualScaleFactor = newScale / mScale 
+            mScale = newScale
             mAnimMatrix.postScale(
-                scaleFactor,
-                scaleFactor,
+                actualScaleFactor,
+                actualScaleFactor,
                 detector.focusX,
                 detector.focusY
             )
+
             executeTranslate()
             return true
         }
