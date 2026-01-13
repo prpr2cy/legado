@@ -188,7 +188,7 @@ class PhotoView @JvmOverloads constructor(
      * 设置双击最大放大倍数
      */
     fun setDoubleTapMaxScale(maxScale: Float) {
-        mDoubleTapMaxScale = maxScale.coerceAtMost(mMaxScale)  // 不能超过双指最大放大倍数
+        mDoubleTapMaxScale = maxScale.coerceAtMost(mMaxScale)
     }
 
     /**
@@ -511,7 +511,7 @@ class PhotoView @JvmOverloads constructor(
         }
         var scale = mScale
 
-        // 限制最小缩放为0.5倍，最大缩放为5倍（双指缩放）
+        // 限制最小和最大缩放倍数（双指缩放）
         if (mScale < 0.5f) {
             scale = 0.5f
             mTranslate.withScale(mScale, 0.5f)
@@ -1234,7 +1234,7 @@ class PhotoView @JvmOverloads constructor(
             } else {
                 from = mScale 
                 to = 1f
-                mScaleCenter.set(mScreenCenter)
+                mScaleCenter[e.x] = e.y
                 mTranslate.withRotate(mDegrees.toInt(), 0)
                 isZoomUp = false 
             }
@@ -1268,7 +1268,6 @@ class PhotoView @JvmOverloads constructor(
                 detector.focusX,
                 detector.focusY
             )
-
             executeTranslate()
             return true
         }
