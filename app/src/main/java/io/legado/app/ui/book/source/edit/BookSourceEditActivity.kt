@@ -3,14 +3,12 @@ package io.legado.app.ui.book.source.edit
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
-import android.view.View
 import android.view.Menu
 import android.view.MenuItem
 import android.widget.EditText
-import android.graphics.Rect
 import androidx.activity.viewModels
 import androidx.lifecycle.lifecycleScope
-import androidx.recyclerview.widget.RecyclerView
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.tabs.TabLayout
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel
 import io.legado.app.R
@@ -77,14 +75,12 @@ class BookSourceEditActivity :
     private val tocEntities: ArrayList<EditEntity> = ArrayList()
     private val contentEntities: ArrayList<EditEntity> = ArrayList()
     private val reviewEntities: ArrayList<EditEntity> = ArrayList()
- 
     private val qrCodeResult = registerForActivityResult(QrCodeResult()) {
         it ?: return@registerForActivityResult
         viewModel.importSource(it) { source ->
             upSourceView(source)
         }
     }
-
     private val selectDoc = registerForActivityResult(HandleFileContract()) {
         it.uri?.let { uri ->
             if (uri.isContentScheme()) {
@@ -98,10 +94,6 @@ class BookSourceEditActivity :
     private val softKeyboardTool by lazy {
         KeyboardToolPop(this, lifecycleScope, binding.root, this)
     }
-
-    // 保存RecyclerView滚动位置
-    private var savedScrollPosition = 0
-    private var savedScrollOffset = 0
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         softKeyboardTool.attachToWindow(window)
@@ -193,9 +185,7 @@ class BookSourceEditActivity :
             setText(R.string.source_tab_content)
         })
         binding.recyclerView.setEdgeEffectColor(primaryColor)
-        
-        // 使用自定义LayoutManager彻底禁用自动滚动
-        binding.recyclerView.layoutManager = NoAutoScrollLinearLayoutManager(this)
+        binding.recyclerView.layoutManager = LinearLayoutManager(this)
         binding.recyclerView.adapter = adapter
         binding.tabLayout.setBackgroundColor(backgroundColor)
         binding.tabLayout.setSelectedTabIndicatorColor(accentColor)
@@ -213,36 +203,10 @@ class BookSourceEditActivity :
                 setEditEntities(tab?.position)
             }
         })
-        
-        // 添加RecyclerView滚动监听，保存滚动位置
-        binding.recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
-            override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
-                super.onScrolled(recyclerView, dx, dy)
-                val layoutManager = recyclerView.layoutManager as LinearLayoutManager
-                savedScrollPosition = layoutManager.findFirstVisibleItemPosition()
-                savedScrollOffset = layoutManager.findViewByPosition(savedScrollPosition)?.top ?: 0
-            }
-        })
-        
-        // 优化WindowInsets处理，仅在输入法弹出且输入框被遮挡时滚动
         binding.recyclerView.setOnApplyWindowInsetsListenerCompat { view, windowInsets ->
             val navigationBarHeight = windowInsets.navigationBarHeight
-            view.bottomPadding = navigationBarHeight
             val imeHeight = windowInsets.imeHeight
-            if (imeHeight > 0) {
-                val focusedView = window.decorView.findFocus()
-                if (focusedView is EditText) {
-                    val location = IntArray(2)
-                    focusedView.getLocationInWindow(location)
-                    val inputBottom = location[1] + focusedView.height
-                    val windowHeight = window.decorView.height
-                    val visibleBottom = windowHeight - imeHeight
-                    if (inputBottom > visibleBottom) {
-                        val scrollDistance = inputBottom - visibleBottom
-                        binding.recyclerView.smoothScrollBy(0, scrollDistance)
-                    }
-                }
-            }
+            view.bottomPadding = if (imeHeight == 0) navigationBarHeight else 0
             softKeyboardTool.initialPadding = imeHeight
             windowInsets
         }
@@ -699,17 +663,5 @@ class BookSourceEditActivity :
     override fun setVariable(key: String, variable: String?) {
         viewModel.bookSource?.setVariable(variable)
     }
-    
-    // 自定义LayoutManager，彻底禁用自动滚动到焦点View
-    private class NoAutoScrollLinearLayoutManager(context: Context) : LinearLayoutManager(context) {
-        override fun requestChildRectangleOnScreen(
-            parent: RecyclerView,
-            child: View,
-            rect: Rect,
-            immediate: Boolean,
-            focusedChildVisible: Boolean
-        ): Boolean {
-            return false
-        }
-    }
+
 }

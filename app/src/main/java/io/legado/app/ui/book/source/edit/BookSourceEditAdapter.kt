@@ -62,11 +62,9 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
 
                     }
                 }
-
                 editText.addOnAttachStateChangeListener(listener)
                 editText.setTag(R.id.tag1, listener)
             }
-
             editText.getTag(R.id.tag2)?.let {
                 if (it is TextWatcher) {
                     editText.removeTextChangedListener(it)
@@ -74,7 +72,6 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
             }
             editText.setText(editEntity.value)
             textInputLayout.hint = editEntity.hint
-
             val textWatcher = object : TextWatcher {
                 override fun beforeTextChanged(
                     s: CharSequence,

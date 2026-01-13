@@ -62,25 +62,11 @@ class RssSourceEditAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
         return editEntities.size
     }
 
-    override fun onViewRecycled(holder: RecyclerView.ViewHolder) {
-        super.onViewRecycled(holder)
-        when (holder) {
-            is EditTextViewHolder -> holder.cleanup()
-            // CheckBoxViewHolder 不需要清理，因为逻辑简单
-        }
-    }
-
     inner class EditTextViewHolder(val binding: ItemSourceEditBinding) :
         RecyclerView.ViewHolder(binding.root) {
 
-        private var textWatcher: TextWatcher? = null
-
         fun bind(editEntity: EditEntity) = binding.run {
             editText.maxLines = editEntityMaxLine
-
-            // 移除旧的文本监听器
-            cleanup()
-
             if (editText.getTag(R.id.tag1) == null) {
                 val listener = object : View.OnAttachStateChangeListener {
                     override fun onViewAttachedToWindow(v: View) {
@@ -97,12 +83,14 @@ class RssSourceEditAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
                 editText.addOnAttachStateChangeListener(listener)
                 editText.setTag(R.id.tag1, listener)
             }
-
+            editText.getTag(R.id.tag2)?.let {
+                if (it is TextWatcher) {
+                    editText.removeTextChangedListener(it)
+                }
+            }
             editText.setText(editEntity.value)
             textInputLayout.hint = editEntity.hint
-
-            // 创建新的文本监听器
-            textWatcher = object : TextWatcher {
+            val textWatcher = object : TextWatcher {
                 override fun beforeTextChanged(
                     s: CharSequence,
                     start: Int,
@@ -121,14 +109,7 @@ class RssSourceEditAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
                 }
             }
             editText.addTextChangedListener(textWatcher)
-        }
-
-        fun cleanup() {
-            // 清理文本监听器
-            textWatcher?.let {
-                binding.editText.removeTextChangedListener(it)
-                textWatcher = null
-            }
+            editText.setTag(R.id.tag2, textWatcher)
         }
     }
 
@@ -144,4 +125,5 @@ class RssSourceEditAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
             }
         }
     }
+
 }
