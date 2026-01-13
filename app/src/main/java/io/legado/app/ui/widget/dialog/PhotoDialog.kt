@@ -52,8 +52,11 @@ class PhotoDialog() : BaseDialogFragment(R.layout.dialog_photo_view) {
                 } else {
                     ImageLoader.load(requireContext(), src)
                         .apply {
-                            arguments.getString("sourceOrigin")?.let { origin ->
-                                apply(RequestOptions().set(OkHttpModelLoader.sourceOriginOption, origin))
+                            arguments.getString("sourceOrigin")?.let { sourceOrigin ->
+                                apply(RequestOptions().set(
+                                    OkHttpModelLoader.sourceOriginOption,
+                                    sourceOrigin
+                                ))
                             }
                         }
                         .error(BookCover.defaultDrawable)
