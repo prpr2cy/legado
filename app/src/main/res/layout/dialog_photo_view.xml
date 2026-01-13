@@ -9,10 +9,10 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:scaleType="centerInside"
-        android:maximumScale="6"
-        android:mediumScale="2"
-        android:minimumScale="0.5"
-        android:extraScale="0" />
+        app:maximumScale="6"
+        app:mediumScale="2"
+        app:minimumScale="0.5"
+        app:extraScale="0" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
 
