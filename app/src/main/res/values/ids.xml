@@ -13,6 +13,8 @@
 
     <item name="menu_page_id" type="id" />
 
+    <item name="fast_scroller" type="id" />
+
     <item name="bettermovementmethod_highlight_background_span" type="id" />
 
 </resources>
