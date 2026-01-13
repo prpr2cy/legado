@@ -5,6 +5,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
+import android.graphics.Rect
 import android.widget.EditText
 import androidx.activity.viewModels
 import androidx.lifecycle.lifecycleScope
@@ -206,7 +207,7 @@ class BookSourceEditActivity :
         binding.recyclerView.setOnApplyWindowInsetsListenerCompat { view, windowInsets ->
             val navigationBarHeight = windowInsets.navigationBarHeight
             val imeHeight = windowInsets.imeHeight
-            view.bottomPadding = if (imeHeight == 0) navigationBarHeight else 0
+            view.bottomPadding = navigationBarHeight
             if (imeHeight > 0) {
                 val focusedView = window.decorView.findFocus()
                 if (focusedView is EditText) {
@@ -216,6 +217,34 @@ class BookSourceEditActivity :
             softKeyboardTool.initialPadding = imeHeight
             windowInsets
         }
+    }
+
+    private fun ensureEditTextVisible(editText: EditText) {
+        // 延迟一点确保布局已经更新
+        editText.postDelayed({
+            // 获取EditText在屏幕上的位置
+            val location = IntArray(2)
+            editText.getLocationOnScreen(location)
+            val editTextBottom = location[1] + editText.height
+            
+            // 获取屏幕可见区域
+            val rect = Rect()
+            binding.root.getWindowVisibleDisplayFrame(rect)
+            val screenVisibleBottom = rect.bottom
+            
+            // 如果EditText底部在键盘下方，滚动到可见位置
+            if (editTextBottom > screenVisibleBottom) {
+                // 计算需要滚动的距离
+                val scrollY = editTextBottom - screenVisibleBottom + 100 // 加一些边距
+                
+                // 找到EditText在RecyclerView中的位置
+                val viewHolder = binding.recyclerView.findContainingViewHolder(editText)
+                viewHolder?.let {
+                    // 平滑滚动到该位置
+                    binding.recyclerView.smoothScrollBy(0, scrollY)
+                }
+            }
+        }, 100)
     }
 
     override fun finish() {
