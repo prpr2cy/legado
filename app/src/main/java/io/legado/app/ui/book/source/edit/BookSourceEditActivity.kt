@@ -3,6 +3,7 @@ package io.legado.app.ui.book.source.edit
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
+import android.view.View
 import android.view.Menu
 import android.view.MenuItem
 import android.widget.EditText
@@ -76,7 +77,7 @@ class BookSourceEditActivity :
     private val contentEntities: ArrayList<EditEntity> = ArrayList()
     private val reviewEntities: ArrayList<EditEntity> = ArrayList()
  
-   private val qrCodeResult = registerForActivityResult(QrCodeResult()) {
+    private val qrCodeResult = registerForActivityResult(QrCodeResult()) {
         it ?: return@registerForActivityResult
         viewModel.importSource(it) { source ->
             upSourceView(source)
@@ -207,8 +208,22 @@ class BookSourceEditActivity :
         })
         binding.recyclerView.setOnApplyWindowInsetsListenerCompat { view, windowInsets ->
             val navigationBarHeight = windowInsets.navigationBarHeight
+            view.bottomPadding = navigationBarHeight
             val imeHeight = windowInsets.imeHeight
-            view.bottomPadding = if (imeHeight == 0) navigationBarHeight else 0
+            if (imeHeight > 0) {
+                val focusedView = window.decorView.findFocus()
+                if (focusedView is EditText) {
+                    val location = IntArray(2)
+                    focusedView.getLocationInWindow(location)
+                    val inputBottom = location[1] + focusedView.height
+                    val windowHeight = window.decorView.height
+                    val visibleBottom = windowHeight - imeHeight
+                    if (inputBottom > visibleBottom) {
+                        val scrollDistance = inputBottom - visibleBottom
+                        binding.recyclerView.scrollBy(0, scrollDistance)
+                    }
+                }
+            }
             softKeyboardTool.initialPadding = imeHeight
             windowInsets
         }
