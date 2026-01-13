@@ -380,11 +380,13 @@ class RssSourceEditActivity :
         if (view is EditText) {
             val start = view.selectionStart
             val end = view.selectionEnd
-            val edit = view.editableText//获取EditText的文字
+            val edit = view.editableText
             if (start < 0 || start >= edit.length) {
                 edit.append(text)
+            } else if (start > end) {
+                edit.replace(end, start, text)
             } else {
-                edit.replace(start, end, text)//光标所在位置插入文字
+                edit.replace(start, end, text)
             }
         }
     }

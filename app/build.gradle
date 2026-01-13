@@ -13,7 +13,7 @@ static def releaseTime() {
 }
 
 def name = "legado"
-def version = "3." + "23.110211"//releaseTime()
+def version = "3." + "23.110211" //releaseTime()
 def gitCommits = Integer.parseInt("git rev-list HEAD --count".execute().text.trim())
 
 android {
@@ -89,9 +89,8 @@ android {
                 signingConfig signingConfigs.myConfig
             }
             applicationIdSuffix ".release"
-
             minifyEnabled false
-            shrinkResources false
+            shrinkResources true
             proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
         }
         debug {
@@ -118,6 +117,7 @@ android {
             applicationIdSuffix ".debug"
             versionNameSuffix "debug"
             minifyEnabled false
+            shrinkResources false
             proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
         }
     }
@@ -246,7 +246,6 @@ dependencies {
     //规则相关
     implementation("org.jsoup:jsoup:1.16.2")
     implementation("com.jayway.jsonpath:json-path:2.9.0")
-    implementation("org.glassfish:jakarta.json:2.0.1")
     implementation("cn.wanghaomiao:JsoupXpath:2.5.3")
     implementation(project(path: ":modules:book"))
 

@@ -48,10 +48,6 @@ class ExploreShowActivity : VMBaseActivity<ActivityExploreShowBinding, ExploreSh
     private var oldPage = -1
     private var isClearAll = false
 
-    companion object {
-        private const val MENU_PAGE_ID = 10001
-    }
-
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         binding.titleBar.title = intent.getStringExtra("exploreName")
         initRecyclerView()
@@ -165,7 +161,7 @@ class ExploreShowActivity : VMBaseActivity<ActivityExploreShowBinding, ExploreSh
 
     override fun onCompatCreateOptionsMenu(menu: Menu): Boolean {
         menu.clear()
-        val pageMenuItem = menu.add(Menu.NONE, MENU_PAGE_ID, 0, getString(R.string.menu_page, 1))
+        val pageMenuItem = menu.add(Menu.NONE, R.id.menu_page_id, 0, getString(R.string.menu_page, 1))
         pageMenuItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
         menuInflater.inflate(R.menu.explore_show, menu)
         return super.onCompatCreateOptionsMenu(menu)
@@ -173,7 +169,7 @@ class ExploreShowActivity : VMBaseActivity<ActivityExploreShowBinding, ExploreSh
 
     override fun onCompatOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
-            MENU_PAGE_ID -> {
+            R.id.menu_page_id -> {
                 val page = viewModel.pageLiveData.value ?: 1
                 NumberPickerDialog(this@ExploreShowActivity)
                     .setTitle(getString(R.string.change_page))
@@ -215,14 +211,7 @@ class ExploreShowActivity : VMBaseActivity<ActivityExploreShowBinding, ExploreSh
 
     private fun updatePageMenuTitle(currentPage: Int) {
         runOnUiThread {
-            val menu = binding.titleBar.menu
-            for (i in 0 until menu.size()) {
-                val item = menu.getItem(i)
-                if (item.itemId == MENU_PAGE_ID) {
-                    item.title = getString(R.string.menu_page, currentPage)
-                    break
-                }
-            }
+            binding.titleBar.menu.findItem(R.id.menu_page_id)?.title = getString(R.string.menu_page, currentPage)
         }
     }
 
