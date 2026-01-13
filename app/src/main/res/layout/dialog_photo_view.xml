@@ -8,11 +8,7 @@
         android:id="@+id/photo_view"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:scaleType="centerInside"
-        app:maximumScale="6"
-        app:mediumScale="2"
-        app:minimumScale="0.5"
-        app:extraScale="0" />
+        android:scaleType="centerInside" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
 

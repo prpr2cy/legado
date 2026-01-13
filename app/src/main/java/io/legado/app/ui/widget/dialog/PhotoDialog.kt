@@ -60,7 +60,12 @@ class PhotoDialog() : BaseDialogFragment(R.layout.dialog_photo_view) {
                         .into(binding.photoView)
                 }
             }
-            binding.photoView.rotationEnabled = true 
+            binding.photoView.run {
+                rotationEnabled = true
+                maximumScale = 10f
+                minimumScale = 0.5f
+                setScaleLevels(0.5f, 1f, 2f)
+            }
         }
     }
 
