@@ -60,7 +60,7 @@ import kotlinx.coroutines.withContext
 import splitties.views.bottomPadding
 
 class BookSourceEditActivity :
-    VMBaseActivity<ActivityBookSourceEditBinding, BookSourceEditViewModel>(),
+    VMBaseActivity<ActivityBookSourceEditBinding, BookSourceEditViewModel>(false),
     KeyboardToolPop.CallBack,
     VariableDialog.Callback {
 
