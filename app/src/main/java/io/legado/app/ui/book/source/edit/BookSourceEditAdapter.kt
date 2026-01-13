@@ -91,21 +91,28 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
             textInputLayout.hint = editEntity.hint
 
             /* 核心触摸分发 */
-            editText.setOnTouchListener { _, event ->
+            editText.setOnTouchListener { v, event ->
                 when (event.actionMasked) {
                     MotionEvent.ACTION_DOWN -> {
-                        /* 滚动中：只停滚，消费事件，不产生任何副作用 */
+                        /* 1. 滚动中只停滚 */
                         if (isRecyclerViewScrolling) {
-                            hostRv?.stopScroll()   // 立即停滚
                             return@setOnTouchListener true
                         }
 
-                        /* 非滚动：记录坐标，排队定位 */
-                        lastClickXY = floatArrayOf(event.x, event.y)
-                        editText.post { placeCursorAccurately(editText) }
-                        false   // 放行，系统长按计时继续
+                        /* 2. 无焦点 → 先强制给焦点，阻止系统置 0 */
+                        if (!v.isFocused) {
+                            v.requestFocus()          // 抢焦点
+                            // 马上定位光标
+                            val xy = floatArrayOf(event.x, event.y)
+                            v.post { placeCursorAccurately(v as EditText) }
+                        }
+
+                        /* 3. 把事件继续交给系统，保证长按/选择/光标手柄可用 */
+                        v.onTouchEvent(event)         // 关键：手动抛给系统
+                        true                          // 我们自己已处理过，不再重复
                     }
-                    else -> false
+
+                    else -> v.onTouchEvent(event)     // 其余动作原样抛给系统
                 }
             }
 
