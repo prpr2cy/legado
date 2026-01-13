@@ -205,6 +205,10 @@ class BookSourceEditActivity :
                 // 更新Adapter的滚动状态
                 adapter.setScrolling(isScrolling)
 
+                if (newState == RecyclerView.SCROLL_STATE_IDLE) {
+                    adapter.onScrollStateIdle()   // 触发补聚焦 
+                }
+
                 // 滚动时隐藏键盘，提升用户体验
                 if (isScrolling) {
                     hideKeyboard()

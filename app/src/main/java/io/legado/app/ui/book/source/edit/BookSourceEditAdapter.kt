@@ -28,6 +28,28 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
             notifyDataSetChanged()
         }
 
+    /* 记录已假性聚焦的 EditText */
+    private val fakeFocused = WeakHashMap<EditText, Boolean>()
+ 
+    /* 由 Activity 通知：滚动真正结束 */
+    fun onScrollStateIdle() {
+        isRecyclerViewScrolling = false 
+        /* 给屏幕内可见 Holder 补一次假性聚焦 */
+        for (i in 0 until itemCount) {
+            (recyclerView?.findViewHolderForAdapterPosition(i) as? MyViewHolder)
+                ?.preFocus()
+        }
+    }
+ 
+    /* 持有 RecyclerView 引用，方便遍历 */
+    private var recyclerView: RecyclerView? = null 
+    override fun onAttachedToRecyclerView(rv: RecyclerView) {
+        recyclerView = rv 
+    }
+    override fun onDetachedFromRecyclerView(rv: RecyclerView) {
+        recyclerView = null 
+    }
+
     // 滚动状态 - 由Activity实时更新
     private var isRecyclerViewScrolling = false
 
@@ -70,6 +92,17 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
         /* 当前 attach 的 RecyclerView，用来停滚/隐藏键盘 */
         private var hostRv: RecyclerView? = null
 
+        fun preFocus() {
+            val et = binding.editText 
+            if (fakeFocused[et] == true) return 
+            et.isFocusable = true 
+            et.isFocusableInTouchMode = true 
+            et.setTextIsSelectable(false)   // 隐藏光标 
+            et.requestFocus()
+            et.setSelection(0, 0)           // 放到开头，系统不会 reset 
+            fakeFocused[et] = true 
+        }
+
         init {
             /* 拿到 RecyclerView 引用 */
             binding.root.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
@@ -84,6 +117,7 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
 
         fun bind(editEntity: EditEntity) = binding.run {
             cleanup()
+            preFocus()
 
             editText.setTag(R.id.tag, editEntity.key)
             editText.maxLines = editEntityMaxLine
@@ -99,14 +133,10 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
                             return@setOnTouchListener true
                         }
 
-                        /* 2. 无焦点 → 先强制给焦点，阻止系统置 0 */
-                        if (!v.isFocused) {
-                            v.requestFocus()          // 抢焦点
-                            // 马上定位光标
-                            val xy = floatArrayOf(event.x, event.y)
-                            v.post { placeCursorAccurately(v as EditText) }
-                        }
-
+                        val et = v as EditText
+                        et.setTextIsSelectable(true)
+                        lastClickXY = floatArrayOf(event.x, event.y)
+                        v.post { placeCursorAccurately(et) }
                         /* 3. 把事件继续交给系统，保证长按/选择/光标手柄可用 */
                         v.onTouchEvent(event)         // 关键：手动抛给系统
                         true                          // 我们自己已处理过，不再重复
