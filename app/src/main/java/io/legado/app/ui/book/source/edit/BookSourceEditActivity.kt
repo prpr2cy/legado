@@ -8,6 +8,7 @@ import android.view.MenuItem
 import android.widget.EditText
 import androidx.activity.viewModels
 import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.tabs.TabLayout
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel
@@ -102,24 +103,10 @@ class BookSourceEditActivity :
     // 使用协程 Job 管理滚动任务
     private var scrollJob: Job? = null
 
-    // WindowInsets 监听器
-    private val windowInsetsListener = ViewCompat.OnApplyWindowInsetsListener { v, insets ->
-        val layoutManager = binding.recyclerView.layoutManager as? NoChildScrollLinearLayoutManager
-        val imeHeight = insets.imeHeight
-
-        if (imeHeight > 0) {
-            layoutManager?.allowAutoScroll = false
-        } else {
-            layoutManager?.allowAutoScroll = true
-        }
-        insets
-    }
-
     /**
      * 滚动 EditText 到键盘上方可见位置
      */
     private fun scrollEditTextIntoView(editText: EditText) {
-        // 使用 WindowInsetsCompat 获取键盘和导航栏高度
         val insets = ViewCompat.getRootWindowInsets(binding.root)
         val imeHeight = insets?.imeHeight ?: 0
 
@@ -255,14 +242,24 @@ class BookSourceEditActivity :
                     }
                 }
             } else {
-                // EditText 失去焦点
                 binding.recyclerView.postDelayed({
                     layoutManager?.allowAutoScroll = true
                 }, 200)
             }
         }
 
-        ViewCompat.setOnApplyWindowInsetsListener(binding.root, windowInsetsListener)
+        // 使用扩展函数设置 WindowInsets 监听器
+        binding.root.setOnApplyWindowInsetsListenerCompat { view, insets ->
+            val layoutManager = binding.recyclerView.layoutManager as? NoChildScrollLinearLayoutManager
+            val imeHeight = insets.imeHeight
+
+            if (imeHeight > 0) {
+                layoutManager?.allowAutoScroll = false
+            } else {
+                layoutManager?.allowAutoScroll = true
+            }
+            insets
+        }
 
         binding.tabLayout.setBackgroundColor(backgroundColor)
         binding.tabLayout.setSelectedTabIndicatorColor(accentColor)

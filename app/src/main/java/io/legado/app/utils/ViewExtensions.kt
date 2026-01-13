@@ -18,15 +18,15 @@ import androidx.annotation.ColorInt
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.view.menu.MenuPopupHelper
 import androidx.appcompat.widget.PopupMenu
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.get
 import androidx.recyclerview.widget.RecyclerView
 import androidx.viewpager.widget.ViewPager
 import io.legado.app.help.config.AppConfig
 import io.legado.app.lib.theme.TintHelper
 import splitties.systemservices.inputMethodManager
-
 import java.lang.reflect.Field
-
 
 private tailrec fun getCompatActivity(context: Context?): AppCompatActivity? {
     return when (context) {
@@ -219,4 +219,19 @@ fun View.shouldHideSoftInput(event: MotionEvent): Boolean {
         return !(event.x > left && event.x < right && event.y > top && event.y < bottom)
     }
     return false
+}
+
+private val requestLayoutBroken = Build.VERSION.SDK_INT <= Build.VERSION_CODES.M
+        || Build.VERSION.SDK_INT in Build.VERSION_CODES.O..Build.VERSION_CODES.Q
+
+fun View.setOnApplyWindowInsetsListenerCompat(listener: (View, WindowInsetsCompat) -> WindowInsetsCompat) {
+    ViewCompat.setOnApplyWindowInsetsListener(this) { view, insets ->
+        val windowInsets = listener(view, insets)
+        if (requestLayoutBroken && isLayoutRequested) {
+            post {
+                requestLayout()
+            }
+        }
+        windowInsets
+    }
 }
