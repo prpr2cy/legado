@@ -28,10 +28,10 @@ class PhotoView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null
 ) : AppCompatImageView(context, attrs) {
-    const val MIN_ROTATE = 35
-    const val ANIMA_DURING = 340
-    const val MAX_SCALE = 5.0f
-    const val DOUBLE_TAP_MAX_SCALE = 2.0f
+    val MIN_ROTATE = 35
+    val ANIMA_DURING = 340
+    val MAX_SCALE = 5.0f
+    val DOUBLE_TAP_MAX_SCALE = 2.0f
 
     var mMinRotate = 35
     var mAnimaDuring = 340
