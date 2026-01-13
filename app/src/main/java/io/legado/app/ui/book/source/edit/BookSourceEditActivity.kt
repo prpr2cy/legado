@@ -7,8 +7,8 @@ import android.view.Menu
 import android.view.MenuItem
 import android.widget.EditText
 import androidx.activity.viewModels
+import androidx.core.view.ViewCompat
 import androidx.lifecycle.lifecycleScope
-import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.tabs.TabLayout
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel
 import io.legado.app.R
@@ -40,10 +40,13 @@ import io.legado.app.ui.widget.dialog.TextDialog
 import io.legado.app.ui.widget.dialog.UrlOptionDialog
 import io.legado.app.ui.widget.dialog.VariableDialog
 import io.legado.app.ui.widget.keyboard.KeyboardToolPop
+import io.legado.app.ui.widget.recycler.NoChildScrollLinearLayoutManager
 import io.legado.app.ui.widget.text.EditEntity
 import io.legado.app.utils.GSON
+import io.legado.app.utils.imeHeight
 import io.legado.app.utils.isContentScheme
 import io.legado.app.utils.launch
+import io.legado.app.utils.navigationBarHeight
 import io.legado.app.utils.sendToClip
 import io.legado.app.utils.setEdgeEffectColor
 import io.legado.app.utils.share
@@ -52,6 +55,9 @@ import io.legado.app.utils.showDialogFragment
 import io.legado.app.utils.startActivity
 import io.legado.app.utils.viewbindingdelegate.viewBinding
 import kotlinx.coroutines.Dispatchers.IO
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -71,12 +77,14 @@ class BookSourceEditActivity :
     private val tocEntities: ArrayList<EditEntity> = ArrayList()
     private val contentEntities: ArrayList<EditEntity> = ArrayList()
     private val reviewEntities: ArrayList<EditEntity> = ArrayList()
+
     private val qrCodeResult = registerForActivityResult(QrCodeResult()) {
         it ?: return@registerForActivityResult
         viewModel.importSource(it) { source ->
             upSourceView(source)
         }
     }
+
     private val selectDoc = registerForActivityResult(HandleFileContract()) {
         it.uri?.let { uri ->
             if (uri.isContentScheme()) {
@@ -89,6 +97,48 @@ class BookSourceEditActivity :
 
     private val softKeyboardTool by lazy {
         KeyboardToolPop(this, lifecycleScope, binding.root, this)
+    }
+
+    // 使用协程 Job 管理滚动任务
+    private var scrollJob: Job? = null
+
+    // WindowInsets 监听器
+    private val windowInsetsListener = ViewCompat.OnApplyWindowInsetsListener { v, insets ->
+        val layoutManager = binding.recyclerView.layoutManager as? NoChildScrollLinearLayoutManager
+        val imeHeight = insets.imeHeight
+
+        if (imeHeight > 0) {
+            layoutManager?.allowAutoScroll = false
+        } else {
+            layoutManager?.allowAutoScroll = true
+        }
+        insets
+    }
+
+    /**
+     * 滚动 EditText 到键盘上方可见位置
+     */
+    private fun scrollEditTextIntoView(editText: EditText) {
+        // 使用 WindowInsetsCompat 获取键盘和导航栏高度
+        val insets = ViewCompat.getRootWindowInsets(binding.root)
+        val imeHeight = insets?.imeHeight ?: 0
+
+        if (imeHeight > 0) {
+            val location = IntArray(2)
+            editText.getLocationOnScreen(location)
+            val y = location[1]
+            val screenHeight = resources.displayMetrics.heightPixels
+            val navBarHeight = insets?.navigationBarHeight ?: 0
+
+            // 计算可用高度（屏幕高度 - 键盘高度 - 导航栏高度）
+            val availableHeight = screenHeight - imeHeight - navBarHeight
+
+            if (y + editText.height > availableHeight) {
+                // 如果EditText会被遮挡，滚动到可见位置
+                val scrollAmount = (y + editText.height - availableHeight + 50).toInt()
+                binding.recyclerView.smoothScrollBy(0, scrollAmount)
+            }
+        }
     }
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
@@ -181,8 +231,39 @@ class BookSourceEditActivity :
             setText(R.string.source_tab_content)
         })
         binding.recyclerView.setEdgeEffectColor(primaryColor)
-        binding.recyclerView.layoutManager = LinearLayoutManager(this)
+
+        binding.recyclerView.layoutManager = NoChildScrollLinearLayoutManager(this)
+
         binding.recyclerView.adapter = adapter
+
+        // 设置 Adapter 的焦点监听器
+        adapter.onFocusChangeListener = { view, hasFocus ->
+            val editText = view as EditText
+            val layoutManager = binding.recyclerView.layoutManager as? NoChildScrollLinearLayoutManager
+
+            if (hasFocus) {
+                layoutManager?.allowAutoScroll = false
+
+                // 取消之前的滚动任务
+                scrollJob?.cancel()
+
+                // 创建新的滚动任务
+                scrollJob = lifecycleScope.launch {
+                    delay(100) // 延迟100ms，等待布局稳定
+                    if (isActive) { // 检查任务是否仍然活跃
+                        scrollEditTextIntoView(editText)
+                    }
+                }
+            } else {
+                // EditText 失去焦点
+                binding.recyclerView.postDelayed({
+                    layoutManager?.allowAutoScroll = true
+                }, 200)
+            }
+        }
+
+        ViewCompat.setOnApplyWindowInsetsListener(binding.root, windowInsetsListener)
+
         binding.tabLayout.setBackgroundColor(backgroundColor)
         binding.tabLayout.setSelectedTabIndicatorColor(accentColor)
         binding.tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
@@ -218,6 +299,10 @@ class BookSourceEditActivity :
     override fun onDestroy() {
         super.onDestroy()
         softKeyboardTool.dismiss()
+        ViewCompat.setOnApplyWindowInsetsListener(binding.root, null)
+
+        // 取消所有协程任务
+        scrollJob?.cancel()
     }
 
     private fun setEditEntities(tabPosition: Int?) {

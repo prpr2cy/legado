@@ -17,7 +17,7 @@ import io.legado.app.ui.widget.text.EditEntity
 
 class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewHolder>() {
 
-    val editEntityMaxLine = AppConfig.sourceEditMaxLine
+    val editEntityMaxLine get() = AppConfig.sourceEditMaxLine 
 
     var editEntities: ArrayList<EditEntity> = ArrayList()
         @SuppressLint("NotifyDataSetChanged")
@@ -25,6 +25,9 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
             field = value
             notifyDataSetChanged()
         }
+
+    // 添加焦点变化监听器
+    var onFocusChangeListener: ((View, Boolean) -> Unit)? = null
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MyViewHolder {
         val binding = ItemSourceEditBinding
@@ -49,6 +52,17 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
         fun bind(editEntity: EditEntity) = binding.run {
             editText.setTag(R.id.tag, editEntity.key)
             editText.maxLines = editEntityMaxLine
+
+            // 移除旧的焦点监听器
+            editText.onFocusChangeListener = null
+
+            // 设置新的焦点监听器
+            onFocusChangeListener?.let { listener ->
+                editText.onFocusChangeListener = View.OnFocusChangeListener { v, hasFocus ->
+                    listener(v, hasFocus)
+                }
+            }
+
             if (editText.getTag(R.id.tag1) == null) {
                 val listener = object : View.OnAttachStateChangeListener {
                     override fun onViewAttachedToWindow(v: View) {
@@ -59,19 +73,22 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
                     }
 
                     override fun onViewDetachedFromWindow(v: View) {
-
+                        editText.removeOnAttachStateChangeListener(this)
                     }
                 }
                 editText.addOnAttachStateChangeListener(listener)
                 editText.setTag(R.id.tag1, listener)
             }
+
             editText.getTag(R.id.tag2)?.let {
                 if (it is TextWatcher) {
                     editText.removeTextChangedListener(it)
                 }
             }
+
             editText.setText(editEntity.value)
             textInputLayout.hint = editEntity.hint
+
             val textWatcher = object : TextWatcher {
                 override fun beforeTextChanged(
                     s: CharSequence,
@@ -82,7 +99,12 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
 
                 }
 
-                override fun onTextChanged(s: CharSequence, start: Int, before: Int, count: Int) {
+                override fun onTextChanged(
+                    s: CharSequence,
+                    start: Int,
+                    before: Int,
+                    count: Int
+                ) {
 
                 }
 
