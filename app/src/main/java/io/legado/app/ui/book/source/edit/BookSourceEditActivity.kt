@@ -72,6 +72,7 @@ class BookSourceEditActivity :
 
     private lateinit var layoutManager: NoChildScrollLinearLayoutManager
     private val adapter by lazy { BookSourceEditAdapter() }
+
     private var focusScrollJob: Job? = null
     private var currentFocusedEditText: EditText? = null
     private val sourceEntities: ArrayList<EditEntity> = ArrayList()

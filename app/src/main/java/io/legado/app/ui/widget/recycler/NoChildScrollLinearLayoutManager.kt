@@ -54,12 +54,24 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         }
 
     /* 在真正布局阶段处理光标滚动 */
+    private var hostRecyclerView: RecyclerView? = null 
+
+    override fun onAttachedToWindow(view: RecyclerView) {
+        super.onAttachedToWindow(view)
+        hostRecyclerView = view 
+    }
+ 
+    override fun onDetachedFromWindow(view: RecyclerView, recycler: RecyclerView.Recycler) {
+        super.onDetachedFromWindow(view, recycler)
+        hostRecyclerView = null 
+    }
+
     override fun onLayoutChildren(recycler: RecyclerView.Recycler, state: RecyclerView.State) {
         super.onLayoutChildren(recycler, state)
         if (!pendingScrollToCursor || keyboardHeight <= 0) return 
         pendingScrollToCursor = false 
  
-        val rv = this@NoChildScrollLinearLayoutManager.recyclerView ?: return 
+        val rv = hostRecyclerView ?: return 
         val focus = rv.findFocus() as? EditText ?: return 
         val cursorY = getCursorScreenY(focus)
         if (cursorY == -1 || !isCursorObscuredByKeyboard(cursorY)) return 
