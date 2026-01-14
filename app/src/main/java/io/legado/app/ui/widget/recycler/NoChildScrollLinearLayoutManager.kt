@@ -30,8 +30,9 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
     var keyboardHeight: Int = 0
 
     /** 屏幕高度（实时获取，兼容折叠屏） */
+    private val mContext = context 
     private val screenHeight: Int
-        get() = context.resources.displayMetrics.heightPixels
+        get() = mContext.resources.displayMetrics.heightPixels
 
     companion object {
         /** 光标额外留白（dp） */
@@ -161,7 +162,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         focusedChildVisible: Boolean
     ): Boolean {
         /** 拦截初次焦点触发的自动滚动，手动处理光标遮挡
-         * 其它光标移动、键盘操作等场景，focusedChildVisible = false，应该放行
+         * 其它光标移动、键盘操作等场景不拦截，focusedChildVisible = false
          */
         if (!allowFocusScroll && focusedChildVisible) {
             scrollToCursorVisible(parent, child)
