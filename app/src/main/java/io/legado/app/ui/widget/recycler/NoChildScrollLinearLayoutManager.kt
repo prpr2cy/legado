@@ -26,7 +26,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
     /** 是否允许因焦点变化产生的自动滚动 */
     var allowFocusScroll: Boolean = true
 
-    private val mContext = context 
+    private val mContext = context
 
     /** 屏幕高度（实时获取，兼容折叠屏） */
     private val screenHeight: Int
@@ -45,10 +45,10 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
     private var pendingScrollToCursor = false 
 
     /** 键盘高度（由外部通过 WindowInsets 赋值） */
-    override var keyboardHeight: Int = 0 
+    var keyboardHeight: Int = 0 
         set(value) {
+            if (field == value) return 
             field = value 
-            // 键盘高度变化后，下次布局时尝试滚一下 
             pendingScrollToCursor = true 
             requestLayout()
         }
@@ -59,7 +59,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         if (!pendingScrollToCursor || keyboardHeight <= 0) return 
         pendingScrollToCursor = false 
  
-        val rv = recyclerView ?: return 
+        val rv = this@NoChildScrollLinearLayoutManager.recyclerView ?: return 
         val focus = rv.findFocus() as? EditText ?: return 
         val cursorY = getCursorScreenY(focus)
         if (cursorY == -1 || !isCursorObscuredByKeyboard(cursorY)) return 
