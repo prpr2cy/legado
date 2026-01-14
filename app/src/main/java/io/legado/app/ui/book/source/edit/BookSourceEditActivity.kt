@@ -200,7 +200,12 @@ class BookSourceEditActivity :
 
         binding.recyclerView.setOnApplyWindowInsetsListenerCompat { view, insets ->
             val bottomPadding = insets.imeHeight - insets.systemBarsHeight
-            view.updatePadding(bottom = bottomPadding)
+            view.setPadding(
+                view.paddingLeft,
+                view.paddingTop,
+                view.paddingRight,
+                bottomPadding 
+            )
             if (bottomPadding > 0) {
                 keyboardScrollJob?.cancel()
                 currentFocusedEditText?.let { editText ->
@@ -209,7 +214,7 @@ class BookSourceEditActivity :
                         keyboardScrollJob = lifecycleScope.launch {
                             delay(200)
                             if (isActive) {
-                                val layoutManager = view.layoutManager as? NoChildScrollLinearLayoutManager
+                                val layoutManager = binding.recyclerView.layoutManager as? NoChildScrollLinearLayoutManager
                                 layoutManager?.scrollToPositionWithOffset(pos, 50)
                             }
                         }

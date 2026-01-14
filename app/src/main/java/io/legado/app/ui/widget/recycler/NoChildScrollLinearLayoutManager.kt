@@ -112,9 +112,9 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         }
 
         // 如果子View已经在可见区域内，不需要滚动
-        if (isChildVisible(parent, child, rect)) {
-            return false
-        }
+        //if (isChildVisible(parent, child, rect)) {
+        //    return false
+        //}
 
         // 否则调用父类方法进行滚动
         return super.requestChildRectangleOnScreen(parent, child, rect, immediate, focusedChildVisible)
