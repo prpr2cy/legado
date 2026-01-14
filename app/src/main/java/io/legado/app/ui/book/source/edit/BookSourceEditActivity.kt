@@ -9,6 +9,7 @@ import android.widget.EditText
 import androidx.activity.viewModels
 import androidx.core.view.ViewCompat
 import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.tabs.TabLayout
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel
 import io.legado.app.R
@@ -107,12 +108,12 @@ class BookSourceEditActivity :
      * 滚动 EditText 到键盘上方可见位置
      */
     private fun scrollEditTextIntoView(editText: EditText) {
-        val root = binding.root ?: return 
-        val insets = ViewCompat.getRootWindowInsets(root) ?: return 
-        val imeHeight = insets.imeHeight.takeIf { it > 0 } ?: return 
+        val root = binding.root ?: return
+        val insets = ViewCompat.getRootWindowInsets(root) ?: return
+        val imeHeight = insets.imeHeight.takeIf { it > 0 } ?: return
 
-        val layoutManager = binding.recyclerView.layoutManager as? NoChildScrollLinearLayoutManager 
-        if (layoutManager?.isSmoothScrolling == true) return 
+        val layoutManager = binding.recyclerView.layoutManager as? NoChildScrollLinearLayoutManager
+        if (layoutManager?.isSmoothScrolling == true) return
 
         val pos = adapter.editEntities.indexOfFirst { it.key == editText.tag }
         if (pos != -1) {
@@ -123,9 +124,9 @@ class BookSourceEditActivity :
     private val scrollListener = object : RecyclerView.OnScrollListener() {
         override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
             super.onScrollStateChanged(recyclerView, newState)
-        
+
             // 当用户手动滚动时，取消自动滚动任务
-            if (newState == RecyclerView.SCROLL_STATE_DRAGGING || 
+            if (newState == RecyclerView.SCROLL_STATE_DRAGGING ||
                 newState == RecyclerView.SCROLL_STATE_SETTLING) {
                 scrollJob?.cancel()
             }
@@ -233,7 +234,6 @@ class BookSourceEditActivity :
         adapter.onFocusChangeListener = { view, hasFocus ->
             if (view is EditText) {
                 val layoutManager = binding.recyclerView.layoutManager as? NoChildScrollLinearLayoutManager
-
                 if (hasFocus) {
                     layoutManager?.allowAutoScroll = false
 
@@ -242,9 +242,9 @@ class BookSourceEditActivity :
 
                     // 创建新的滚动任务
                     scrollJob = lifecycleScope.launch {
-                        delay(150) // 延迟200ms，等待布局稳定
+                        delay(150) // 延迟150ms，等待布局稳定
                         if (isActive) { // 检查任务是否仍然活跃
-                            scrollEditTextIntoView(EditText)
+                            scrollEditTextIntoView(view)
                         }
                     }
                 } else {
@@ -257,8 +257,8 @@ class BookSourceEditActivity :
 
         // 使用扩展函数设置 WindowInsets 监听器
         binding.root.setOnApplyWindowInsetsListenerCompat { view, insets ->
-            val layoutManager = binding.recyclerView.layoutManager as? NoChildScrollLinearLayoutManager
             val imeHeight = insets.imeHeight
+            val layoutManager = binding.recyclerView.layoutManager as? NoChildScrollLinearLayoutManager
 
             if (imeHeight > 0) {
                 layoutManager?.allowAutoScroll = false
