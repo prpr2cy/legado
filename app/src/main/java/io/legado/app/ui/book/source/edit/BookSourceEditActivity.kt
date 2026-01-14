@@ -103,7 +103,6 @@ class BookSourceEditActivity :
     // 使用协程 Job 管理滚动任务 - 只有最新编辑框的才生效
     private var focusScrollJob: Job? = null
     private var currentFocusedEditText: EditText? = null
-    private var keyboardScrollJob: Job? = null
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         softKeyboardTool.attachToWindow(window)
@@ -199,6 +198,7 @@ class BookSourceEditActivity :
         binding.recyclerView.layoutManager = NoChildScrollLinearLayoutManager(this)
 
         binding.recyclerView.setOnApplyWindowInsetsListenerCompat { view, insets ->
+            /*
             val bottomPadding = insets.imeHeight - insets.systemBarsHeight
             view.setPadding(
                 view.paddingLeft,
@@ -206,22 +206,9 @@ class BookSourceEditActivity :
                 view.paddingRight,
                 bottomPadding 
             )
-            if (bottomPadding > 0) {
-                keyboardScrollJob?.cancel()
-                currentFocusedEditText?.let { editText ->
-                    val pos = adapter.editEntities.indexOfFirst { it.key == editText.tag }
-                    if (pos != -1) {
-                        keyboardScrollJob = lifecycleScope.launch {
-                            delay(200)
-                            if (isActive) {
-                                val layoutManager = binding.recyclerView.layoutManager as? NoChildScrollLinearLayoutManager
-                                layoutManager?.scrollToPositionWithOffset(pos, 50)
-                            }
-                        }
-                    }
-                }
-            } else {
-                keyboardScrollJob?.cancel()
+            */
+            (binding.recyclerView.layoutManager as? NoChildScrollLinearLayoutManager)?.let { layoutManager ->
+                layoutManager.keyboardHeight = insets.imeHeight
             }
             insets
         }

@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Rect
 import android.util.AttributeSet
 import android.view.View
+import android.widget.EditText
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 
@@ -23,6 +24,11 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
      * 默认值为true，保持与原生LinearLayoutManager一致的行为
      */
     var allowFocusScroll: Boolean = true
+
+    /**
+     * 键盘高度
+     */
+    var keyboardHeight: Int = 0
 
     /**
      * 判断子项是否可见
@@ -73,6 +79,43 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
     }
 
     /**
+     * 计算光标位置并手动滚动
+     * @param parent RecyclerView父容器
+     * @param child 要滚动的子项View
+     * @param immediate 是否立即滚动，不使用平滑滚动动画
+     * @return true表示滚动已执行，false表示滚动未执行
+     */
+    private fun scrollToCursorPosition(parent: RecyclerView, child: View, immediate: Boolean): Boolean {
+        // 如果子View不是EditText，或者键盘高度为0，不执行滚动
+        if (child !is EditText || keyboardHeight <= 0) {
+            return false
+        }
+
+        // 获取光标位置
+        val cursorRect = Rect()
+        child.getGlobalVisibleRect(cursorRect)
+        val screenHeight = parent.rootView.height
+        val keyboardTop = screenHeight - keyboardHeight
+
+        // 如果光标底部大于键盘顶部，说明光标位于键盘遮蔽区
+        // 注意：这里的坐标是屏幕坐标，y轴向下为正
+        if (cursorRect.bottom > keyboardTop) {
+            val scrollDistance = cursorRect.bottom - keyboardTop
+            if (immediate) {
+                // 立即滚动
+                parent.scrollBy(0, scrollDistance)
+            } else {
+                // 平滑滚动
+                parent.smoothScrollBy(0, scrollDistance)
+            }
+            return true
+        }
+
+        // 光标不在键盘遮蔽区，不执行滚动
+        return false
+    }
+
+    /**
      * 请求将子项的指定矩形区域滚动到屏幕可见区域
      * @param parent RecyclerView父容器
      * @param child 要滚动的子项View
@@ -110,6 +153,9 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         if (!allowFocusScroll && focusedChildVisible) {
             return false
         }
+
+        // 计算光标位置并手动滚动
+        scrollToCursorPosition(parent, child, immediate))
 
         // 如果子View已经在可见区域内，不需要滚动
         if (isChildVisible(parent, child, rect)) {
