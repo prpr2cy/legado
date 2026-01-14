@@ -58,17 +58,8 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
             editText.setTag(R.id.tag, editEntity.key)
             editText.maxLines = editEntityMaxLine
 
-            // 移除旧的焦点监听器
-            editText.onFocusChangeListener = null
-
-            // 设置新的焦点监听器
-            onFocusChangeListener?.let { listener ->
-                editText.onFocusChangeListener = View.OnFocusChangeListener { view, hasFocus ->
-                    listener(view, hasFocus)
-                }
-            } ?: run {
-                editText.onFocusChangeListener = null
-            }
+            // 设置焦点监听器
+            editText.onFocusChangeListener = onFocusChangeListener ?: View.OnFocusChangeListener { _, _ -> }
 
             if (editText.getTag(R.id.tag1) == null) {
                 val listener = object : View.OnAttachStateChangeListener {

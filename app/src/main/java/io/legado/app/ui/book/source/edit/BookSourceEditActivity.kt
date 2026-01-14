@@ -7,7 +7,6 @@ import android.view.Menu
 import android.view.MenuItem
 import android.widget.EditText
 import androidx.activity.viewModels
-import androidx.core.view.ViewCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.tabs.TabLayout
@@ -105,23 +104,6 @@ class BookSourceEditActivity :
     private var focusScrollJob: Job? = null
     private var currentFocusedEditText: EditText? = null
 
-    /**
-     * 滚动 EditText 到键盘上方可见位置
-     */
-    private fun scrollEditTextIntoView(editText: EditText) {
-        val root = binding.root ?: return
-        val insets = ViewCompat.getRootWindowInsets(root) ?: return
-        val imeHeight = insets.imeHeight.takeIf { it > 0 } ?: return
-
-        val layoutManager = binding.recyclerView.layoutManager as? NoChildScrollLinearLayoutManager
-        if (layoutManager?.isSmoothScrolling == true) return
-
-        val pos = adapter.editEntities.indexOfFirst { it.key == editText.tag }
-        if (pos != -1) {
-            root.post { layoutManager?.scrollToPositionWithOffset(pos, imeHeight) }
-        }
-    }
-
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         softKeyboardTool.attachToWindow(window)
         initView()
@@ -215,6 +197,16 @@ class BookSourceEditActivity :
 
         binding.recyclerView.layoutManager = NoChildScrollLinearLayoutManager(this)
 
+        binding.recyclerView.setOnApplyWindowInsetsListenerCompat { view, insets ->
+            view.setPadding(
+                view.paddingLeft,
+                view.paddingTop,
+                view.paddingRight,
+                insets.imeHeight - insets.systemBarsHeight
+            )
+            insets
+        }
+
         binding.recyclerView.adapter = adapter
 
         // 设置 Adapter 的焦点监听器 - 使用Job管理，只有最新编辑框的才生效
@@ -226,25 +218,17 @@ class BookSourceEditActivity :
                     val isSameEditText = currentFocusedEditText == view
                     currentFocusedEditText = view
                     if (isSameEditText) {
-                        // 同一个EditText，已经处理过初次滚动
-                        // 允许滚动，让光标移动时EditText能跟着滚动
+                        // 同一个EditText，已经处理过，允许滚动
                         layoutManager?.allowFocusScroll = true
                     } else {
                         // 新的EditText获得焦点，取消之前的Job
                         focusScrollJob?.cancel()
                         // 创建新的Job
                         focusScrollJob = lifecycleScope.launch {
-                            // 第一步：暂时禁止自动滚动
+                            // 暂时禁止自动滚动
                             layoutManager?.allowFocusScroll = false
-                            // 第二步：延迟150ms后执行滚动
-                            delay(150)
-                            // 检查Job是否仍然活跃（防止用户快速切换时执行旧任务）
-                            if (isActive) {
-                                scrollEditTextIntoView(view)
-                            }
-                            // 第三步：延迟恢复自动滚动
-                            delay(100)
-                            // 再次检查Job是否仍然活跃
+                            // 延迟恢复自动滚动
+                            delay(300)
                             if (isActive) {
                                 layoutManager?.allowFocusScroll = true
                             }
