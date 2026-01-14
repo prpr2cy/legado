@@ -70,7 +70,10 @@ class BookSourceEditActivity :
     override val binding by viewBinding(ActivityBookSourceEditBinding::inflate)
     override val viewModel by viewModels<BookSourceEditViewModel>()
 
+    private lateinit var layoutManager: NoChildScrollLinearLayoutManager
     private val adapter by lazy { BookSourceEditAdapter() }
+    private var focusScrollJob: Job? = null
+    private var currentFocusedEditText: EditText? = null
     private val sourceEntities: ArrayList<EditEntity> = ArrayList()
     private val searchEntities: ArrayList<EditEntity> = ArrayList()
     private val exploreEntities: ArrayList<EditEntity> = ArrayList()
@@ -99,10 +102,6 @@ class BookSourceEditActivity :
     private val softKeyboardTool by lazy {
         KeyboardToolPop(this, lifecycleScope, binding.root, this)
     }
-
-    // 使用协程 Job 管理滚动任务 - 只有最新编辑框的才生效
-    private var focusScrollJob: Job? = null
-    private var currentFocusedEditText: EditText? = null
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         softKeyboardTool.attachToWindow(window)
@@ -195,11 +194,12 @@ class BookSourceEditActivity :
         })
         binding.recyclerView.setEdgeEffectColor(primaryColor)
 
-        binding.recyclerView.layoutManager = NoChildScrollLinearLayoutManager(this)
+        layoutManager = NoChildScrollLinearLayoutManager(this)
+        binding.recyclerView.layoutManager = layoutManager 
 
         binding.recyclerView.setOnApplyWindowInsetsListenerCompat { view, insets ->
             val imeHeight = insets.imeHeight
-            (view.layoutManager as? NoChildScrollLinearLayoutManager)?.keyboardHeight = imeHeight
+            layoutManager.keyboardHeight = imeHeight
             softKeyboardTool.initialPadding = imeHeight
             insets
         }
