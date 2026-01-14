@@ -107,24 +107,16 @@ class BookSourceEditActivity :
      * 滚动 EditText 到键盘上方可见位置
      */
     private fun scrollEditTextIntoView(editText: EditText) {
-        val insets = ViewCompat.getRootWindowInsets(binding.root)
-        val imeHeight = insets?.imeHeight ?: 0
+        val root = binding.root ?: return 
+        val insets = ViewCompat.getRootWindowInsets(root) ?: return 
+        val imeHeight = insets.imeHeight.takeIf { it > 0 } ?: return 
 
-        if (imeHeight > 0) {
-            val location = IntArray(2)
-            editText.getLocationOnScreen(location)
-            val y = location[1]
-            val screenHeight = resources.displayMetrics.heightPixels
-            val navBarHeight = insets?.navigationBarHeight ?: 0
+        val layoutManager = binding.recyclerView.layoutManager as? NoChildScrollLinearLayoutManager 
+        if (layoutManager?.isSmoothScrolling == true) return 
 
-            // 计算可用高度（屏幕高度 - 键盘高度 - 导航栏高度）
-            val availableHeight = screenHeight - imeHeight - navBarHeight
-
-            if (y + editText.height > availableHeight) {
-                // 如果EditText会被遮挡，滚动到可见位置
-                val scrollAmount = (y + editText.height - availableHeight + 50).toInt()
-                binding.recyclerView.smoothScrollBy(0, scrollAmount)
-            }
+        val pos = adapter.editEntities.indexOfFirst { it.key == editText.tag }
+        if (pos != -1) {
+            root.post { layoutManager?.scrollToPositionWithOffset(pos, imeHeight) }
         }
     }
 
