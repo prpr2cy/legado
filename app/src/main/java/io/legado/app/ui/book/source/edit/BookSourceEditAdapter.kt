@@ -66,6 +66,8 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
                 editText.onFocusChangeListener = View.OnFocusChangeListener { view, hasFocus ->
                     listener(view, hasFocus)
                 }
+            } ?: run {
+                editText.onFocusChangeListener = null
             }
 
             if (editText.getTag(R.id.tag1) == null) {

@@ -105,6 +105,23 @@ class BookSourceEditActivity :
     private var focusScrollJob: Job? = null
     private var currentFocusedEditText: EditText? = null
 
+    /**
+     * 滚动 EditText 到键盘上方可见位置
+     */
+    private fun scrollEditTextIntoView(editText: EditText) {
+        val root = binding.root ?: return
+        val insets = ViewCompat.getRootWindowInsets(root) ?: return
+        val imeHeight = insets.imeHeight.takeIf { it > 0 } ?: return
+
+        val layoutManager = binding.recyclerView.layoutManager as? NoChildScrollLinearLayoutManager
+        if (layoutManager?.isSmoothScrolling == true) return
+
+        val pos = adapter.editEntities.indexOfFirst { it.key == editText.tag }
+        if (pos != -1) {
+            root.post { layoutManager?.scrollToPositionWithOffset(pos, imeHeight) }
+        }
+    }
+
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         softKeyboardTool.attachToWindow(window)
         initView()
@@ -208,36 +225,29 @@ class BookSourceEditActivity :
                     // 检查是否是同一个EditText
                     val isSameEditText = currentFocusedEditText == view
                     currentFocusedEditText = view
-
                     if (isSameEditText) {
                         // 同一个EditText，已经处理过初次滚动
                         // 允许滚动，让光标移动时EditText能跟着滚动
                         layoutManager?.allowFocusScroll = true
-                        return@onFocusChangeListener
-                    }
-
-                    // 新的EditText获得焦点，取消之前的Job
-                    focusScrollJob?.cancel()
-
-                    // 创建新的Job
-                    focusScrollJob = lifecycleScope.launch {
-                        // 第一步：暂时禁止自动滚动
-                        layoutManager?.allowFocusScroll = false
-
-                        // 第二步：延迟150ms后执行滚动
-                        delay(150)
-
-                        // 检查Job是否仍然活跃（防止用户快速切换时执行旧任务）
-                        if (isActive) {
-                            scrollEditTextIntoView(view)
-                        }
-
-                        // 第三步：延迟恢复自动滚动
-                        delay(100)
-
-                        // 再次检查Job是否仍然活跃
-                        if (isActive) {
-                            layoutManager?.allowFocusScroll = true
+                    } esle {
+                        // 新的EditText获得焦点，取消之前的Job
+                        focusScrollJob?.cancel()
+                        // 创建新的Job
+                        focusScrollJob = lifecycleScope.launch {
+                            // 第一步：暂时禁止自动滚动
+                            layoutManager?.allowFocusScroll = false
+                            // 第二步：延迟150ms后执行滚动
+                            delay(150)
+                            // 检查Job是否仍然活跃（防止用户快速切换时执行旧任务）
+                            if (isActive) {
+                                scrollEditTextIntoView(view)
+                            }
+                            // 第三步：延迟恢复自动滚动
+                            delay(100)
+                            // 再次检查Job是否仍然活跃
+                            if (isActive) {
+                                layoutManager?.allowFocusScroll = true
+                            }
                         }
                     }
                 } else {
@@ -281,7 +291,6 @@ class BookSourceEditActivity :
     override fun onDestroy() {
         super.onDestroy()
         softKeyboardTool.dismiss()
-        binding.recyclerView.removeOnScrollListener(scrollListener)
         // 取消所有协程任务
         focusScrollJob?.cancel()
     }
