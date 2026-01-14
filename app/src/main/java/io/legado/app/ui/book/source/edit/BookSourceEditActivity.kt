@@ -271,13 +271,9 @@ class BookSourceEditActivity :
         binding.tabLayout.setBackgroundColor(backgroundColor)
         binding.tabLayout.setSelectedTabIndicatorColor(accentColor)
         binding.tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
-            override fun onTabReselected(tab: TabLayout.Tab?) {
+            override fun onTabReselected(tab: TabLayout.Tab?) {}
 
-            }
-
-            override fun onTabUnselected(tab: TabLayout.Tab?) {
-
-            }
+            override fun onTabUnselected(tab: TabLayout.Tab?) {}
 
             override fun onTabSelected(tab: TabLayout.Tab?) {
                 setEditEntities(tab?.position)
@@ -287,7 +283,8 @@ class BookSourceEditActivity :
 
     override fun finish() {
         val source = getSource()
-        if (!source.equal(viewModel.bookSource ?: BookSource())) {
+        val originalSource = viewModel.bookSource ?: BookSource()
+        if (!source.equal(originalSource)) {
             alert(R.string.exit) {
                 setMessage(R.string.exit_no_save)
                 positiveButton(R.string.yes)

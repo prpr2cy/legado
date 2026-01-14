@@ -26,15 +26,17 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
             notifyDataSetChanged()
         }
 
-    // 添加焦点变化监听器
-    var onFocusChangeListener: ((View, Boolean) -> Unit)? = null
-
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MyViewHolder {
-        val binding = ItemSourceEditBinding
-            .inflate(LayoutInflater.from(parent.context), parent, false)
-        binding.editText.addLegadoPattern()
-        binding.editText.addJsonPattern()
-        binding.editText.addJsPattern()
+        val binding = ItemSourceEditBinding.inflate(
+            LayoutInflater.from(parent.context),
+            parent,
+            false
+        )
+        binding.editText.apply {
+            addLegadoPattern()
+            addJsonPattern()
+            addJsPattern()
+        }
         return MyViewHolder(binding)
     }
 
@@ -53,27 +55,19 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
             editText.setTag(R.id.tag, editEntity.key)
             editText.maxLines = editEntityMaxLine
 
-            // 移除旧的焦点监听器
-            editText.onFocusChangeListener = null
-
-            // 设置新的焦点监听器
-            onFocusChangeListener?.let { listener ->
-                editText.onFocusChangeListener = View.OnFocusChangeListener { v, hasFocus ->
-                    listener(v, hasFocus)
-                }
-            }
-
             if (editText.getTag(R.id.tag1) == null) {
                 val listener = object : View.OnAttachStateChangeListener {
                     override fun onViewAttachedToWindow(v: View) {
-                        editText.isCursorVisible = false
-                        editText.isCursorVisible = true
-                        editText.isFocusable = true
-                        editText.isFocusableInTouchMode = true
+                        editText.apply {
+                            isCursorVisible = false
+                            isCursorVisible = true
+                            isFocusable = true
+                            isFocusableInTouchMode = true
+                        }
                     }
 
                     override fun onViewDetachedFromWindow(v: View) {
-                        editText.removeOnAttachStateChangeListener(this)
+
                     }
                 }
                 editText.addOnAttachStateChangeListener(listener)
