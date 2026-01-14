@@ -225,6 +225,7 @@ class BookSourceEditActivity :
 
         // 设置 Adapter 的焦点监听器
         adapter.onFocusChangeListener = { view, hasFocus ->
+            if (view !is EditText) return@OnFocusChangeListener
             val editText = view as EditText
             val layoutManager = binding.recyclerView.layoutManager as? NoChildScrollLinearLayoutManager
 
