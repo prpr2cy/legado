@@ -229,7 +229,7 @@ class BookSourceEditActivity :
                         // 同一个EditText，已经处理过初次滚动
                         // 允许滚动，让光标移动时EditText能跟着滚动
                         layoutManager?.allowFocusScroll = true
-                    } esle {
+                    } else {
                         // 新的EditText获得焦点，取消之前的Job
                         focusScrollJob?.cancel()
                         // 创建新的Job
