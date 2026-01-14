@@ -120,6 +120,18 @@ class BookSourceEditActivity :
         }
     }
 
+    private val scrollListener = object : RecyclerView.OnScrollListener() {
+        override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
+            super.onScrollStateChanged(recyclerView, newState)
+        
+            // 当用户手动滚动时，取消自动滚动任务
+            if (newState == RecyclerView.SCROLL_STATE_DRAGGING || 
+                newState == RecyclerView.SCROLL_STATE_SETTLING) {
+                scrollJob?.cancel()
+            }
+        }
+    }
+
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         softKeyboardTool.attachToWindow(window)
         initView()
@@ -211,33 +223,35 @@ class BookSourceEditActivity :
         })
         binding.recyclerView.setEdgeEffectColor(primaryColor)
 
+        binding.recyclerView.addOnScrollListener(scrollListener)
+
         binding.recyclerView.layoutManager = NoChildScrollLinearLayoutManager(this)
 
         binding.recyclerView.adapter = adapter
 
         // 设置 Adapter 的焦点监听器
         adapter.onFocusChangeListener = { view, hasFocus ->
-            if (view !is EditText) return@OnFocusChangeListener
-            val editText = view as EditText
-            val layoutManager = binding.recyclerView.layoutManager as? NoChildScrollLinearLayoutManager
+            if (view is EditText) {
+                val layoutManager = binding.recyclerView.layoutManager as? NoChildScrollLinearLayoutManager
 
-            if (hasFocus) {
-                layoutManager?.allowAutoScroll = false
+                if (hasFocus) {
+                    layoutManager?.allowAutoScroll = false
 
-                // 取消之前的滚动任务
-                scrollJob?.cancel()
+                    // 取消之前的滚动任务
+                    scrollJob?.cancel()
 
-                // 创建新的滚动任务
-                scrollJob = lifecycleScope.launch {
-                    delay(100) // 延迟100ms，等待布局稳定
-                    if (isActive) { // 检查任务是否仍然活跃
-                        scrollEditTextIntoView(editText)
+                    // 创建新的滚动任务
+                    scrollJob = lifecycleScope.launch {
+                        delay(150) // 延迟200ms，等待布局稳定
+                        if (isActive) { // 检查任务是否仍然活跃
+                            scrollEditTextIntoView(EditText)
+                        }
                     }
+                } else {
+                    binding.recyclerView.postDelayed({
+                        layoutManager?.allowAutoScroll = true
+                    }, 250)
                 }
-            } else {
-                binding.recyclerView.postDelayed({
-                    layoutManager?.allowAutoScroll = true
-                }, 200)
             }
         }
 
@@ -289,6 +303,7 @@ class BookSourceEditActivity :
     override fun onDestroy() {
         super.onDestroy()
         softKeyboardTool.dismiss()
+        binding.recyclerView.removeOnScrollListener(scrollListener)
         // 取消所有协程任务
         scrollJob?.cancel()
     }
