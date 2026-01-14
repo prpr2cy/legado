@@ -74,24 +74,15 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
     }
 
     /**
-     * 滚动到光标可见区域
+     * 判断光标在EditText的矩形区域是否可见
      * @param parent RecyclerView父容器
      * @param child 要滚动的子项View
-     * @param immediate 是否立即滚动，不使用平滑滚动动画
-     * @return true表示滚动已执行，false表示滚动未执行
+     * @return true表示矩形区域可见，false表示不可见
      */
-    private fun scrollToCursorPosition(parent: RecyclerView, child: View, immediate: Boolean): Boolean {
-        // 如果子View不是EditText，不执行滚动
-        if (child !is EditText) {
-            return false
-        }
-
-        // 获取光标在EditText内部的矩形区域（相对于EditText自身坐标）
+    private fun isCursorVisible(parent: RecyclerView, child: View): Boolean {
         val cursorRect = Rect()
         child.getCursorRect(cursorRect)
-
-        // 调用下面的方法滚动到可见区域
-        return requestChildRectangleOnScreen(parent, child, cursorRect, immediate)
+        return isChildVisible(parent, child, cursorRect)
     }
 
     /**
@@ -133,8 +124,8 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
             return false
         }
 
-        // 优先处理光标滚动请求
-        if (scrollToCursorPosition(parent, child, immediate)) {
+        // 如果光标所在矩形已经在可见区域，不需要滚动
+        if (isCursorVisible(parent, child)) {
             return false
         }
 
