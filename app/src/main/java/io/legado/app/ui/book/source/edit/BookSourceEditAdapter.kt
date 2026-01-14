@@ -17,7 +17,7 @@ import io.legado.app.ui.widget.text.EditEntity
 
 class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewHolder>() {
 
-    val editEntityMaxLine get() = AppConfig.sourceEditMaxLine 
+    val editEntityMaxLine get() = AppConfig.sourceEditMaxLine
 
     var editEntities: ArrayList<EditEntity> = ArrayList()
         @SuppressLint("NotifyDataSetChanged")
