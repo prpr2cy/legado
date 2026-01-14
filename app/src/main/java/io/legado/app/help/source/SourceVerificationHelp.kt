@@ -19,8 +19,10 @@ import kotlin.time.Duration.Companion.minutes
  */
 object SourceVerificationHelp {
 
+    companion object {
+        private val mainHandler = Handler(Looper.getMainLooper())
+    }
     private val waitTime = 1.minutes.inWholeNanoseconds
-
     private fun getKey(source: BaseSource) = getKey(source.getKey())
     fun getKey(sourceKey: String) = "${sourceKey}_verificationResult"
 
@@ -94,11 +96,9 @@ object SourceVerificationHelp {
         getResult(sourceKey) ?: setResult(sourceKey, "")
         val thread = IntentData.get<Thread>(getKey(sourceKey))
         // 延迟200ms防止吞toastOnUi的消息
-        appCtx.mainExecutor.execute {
-            android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                LockSupport.unpark(thread)
-            }, 200)
-        }
+        mainHandler.postDelayed({
+            LockSupport.unpark(thread)
+        }, 200)
     }
 
     fun setResult(sourceKey: String, result: String?) {

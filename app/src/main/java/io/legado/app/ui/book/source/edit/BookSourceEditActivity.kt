@@ -2,11 +2,15 @@ package io.legado.app.ui.book.source.edit
 
 import android.app.Activity
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
+import android.view.WindowInsets
+import android.view.WindowInsetsAnimation
 import android.widget.EditText
 import androidx.activity.viewModels
+import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.tabs.TabLayout
@@ -70,7 +74,7 @@ class BookSourceEditActivity :
     override val binding by viewBinding(ActivityBookSourceEditBinding::inflate)
     override val viewModel by viewModels<BookSourceEditViewModel>()
 
-    private lateinit var layoutManager: NoChildScrollLinearLayoutManager
+    private val layoutManager by lazy { NoChildScrollLinearLayoutManager(this) }
     private val adapter by lazy { BookSourceEditAdapter() }
 
     private var focusScrollJob: Job? = null
@@ -195,7 +199,6 @@ class BookSourceEditActivity :
         })
         binding.recyclerView.setEdgeEffectColor(primaryColor)
 
-        layoutManager = NoChildScrollLinearLayoutManager(this)
         binding.recyclerView.layoutManager = layoutManager 
 
         binding.recyclerView.setOnApplyWindowInsetsListenerCompat { view, insets ->
@@ -203,6 +206,26 @@ class BookSourceEditActivity :
             layoutManager.keyboardHeight = imeHeight
             softKeyboardTool.initialPadding = imeHeight
             insets
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            binding.recyclerView.setWindowInsetsAnimationCallback(
+                object : WindowInsetsAnimation.Callback(WindowInsetsAnimation.Callback.DISPATCH_MODE_STOP) {
+                    private var lastIme = -1
+                    override fun onProgress(
+                        insets: WindowInsets,
+                        runningAnims: MutableList<WindowInsetsAnimation>
+                    ): WindowInsets {
+                        val imeHeight = insets.imeHeight
+                        if (imeHeight != lastIme) {
+                            lastIme = imeHeight
+                            layoutManager.keyboardHeight = insets.imeHeight
+                            softKeyboardTool.initialPadding = insets.imeHeight
+                        }
+                        return insets
+                    }
+                }
+            )
         }
 
         binding.recyclerView.adapter = adapter
@@ -273,7 +296,11 @@ class BookSourceEditActivity :
     override fun onDestroy() {
         super.onDestroy()
         softKeyboardTool.dismiss()
+        layoutManager.allowFocusScroll = true
         adapter.onFocusChangeListener = null
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            binding.recyclerView.setWindowInsetsAnimationCallback(null)
+        }
     }
 
     private fun setEditEntities(tabPosition: Int?) {
