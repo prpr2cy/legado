@@ -198,7 +198,10 @@ class BookSourceEditActivity :
         binding.recyclerView.layoutManager = NoChildScrollLinearLayoutManager(this)
 
         binding.recyclerView.setOnApplyWindowInsetsListenerCompat { view, insets ->
-            softKeyboardTool.initialPadding = insets.imeHeight
+            val imeHeight = insets.imeHeight
+            val layoutManager = view.layoutManager as? NoChildScrollLinearLayoutManager
+            layoutManager?.keyboardHeight = imeHeight
+            softKeyboardTool.initialPadding = imeHeight
             insets
         }
 

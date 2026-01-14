@@ -5,12 +5,16 @@ import android.graphics.Rect
 import android.util.AttributeSet
 import android.view.View
 import android.widget.EditText
+import androidx.core.view.ViewCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import io.legado.app.utils.imeHeight
+import androidx.core.view.WindowInsetsCompat
 
 /**
- * 禁止子项自动滚动的LinearLayoutManager
- * 主要用于解决RecyclerView中EditText获取焦点时自动滚动的问题
+ * 禁止子项自动滚动的 LinearLayoutManager
+ * 主要用于解决 RecyclerView 中 EditText 获取焦点时自动滚动的问题
+ * allowFocusScroll = false 关闭原生滚动，光标被遮挡时手动处理
  */
 class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
     context: Context,
@@ -19,11 +23,61 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
     defStyleRes: Int = 0
 ) : LinearLayoutManager(context, attrs, defStyleAttr, defStyleRes) {
 
-    /**
-     * 是否允许自动滚动
-     * 默认值为true，保持与原生LinearLayoutManager一致的行为
-     */
+    /** 是否允许因焦点变化产生的自动滚动 */
     var allowFocusScroll: Boolean = true
+
+    /** 键盘高度（由外部通过 WindowInsets 赋值） */
+    var keyboardHeight: Int = 0
+
+    /** 屏幕高度（实时获取，兼容折叠屏） */
+    private val screenHeight: Int
+        get() = context.resources.displayMetrics.heightPixels
+
+    companion object {
+        /** 光标额外留白（dp） */
+        private const val EXTRA_SLACK_DP = 4f
+    }
+
+    private val extraSlackPx by lazy {
+        (EXTRA_SLACK_DP * context.resources.displayMetrics.density + 0.5f).toInt()
+    }
+
+    /** 判断光标是否被键盘遮挡 */
+    private fun isCursorObscuredByKeyboard(cursorScreenY: Int): Boolean =
+        keyboardHeight > 0 && cursorScreenY > screenHeight - keyboardHeight
+
+    /** 获取 EditText 光标在屏幕上的 Y 坐标（包含 descent 留白） */
+    private fun getCursorScreenY(editText: EditText): Int {
+        if (!ViewCompat.isAttachedToWindow(editText)) return -1
+        val layout = editText.layout ?: return -1
+        val selection = editText.selectionStart.takeIf { it >= 0 } ?: return -1
+        val line = layout.getLineForOffset(selection)
+        val baseline = layout.getLineBaseline(line)
+        val descent = layout.getLineDescent(line)
+        val cursorHeight = descent + extraSlackPx
+        val cursorY = baseline + cursorHeight - editText.scrollY
+        val loc = IntArray(2)
+        editText.getLocationOnScreen(loc)
+        return loc[1] + cursorY
+    }
+
+    /** 计算“尚未滚动的距离”——正值表示需要再上滚多少像素 */
+    private fun calculateRemainScroll(cursorScreenY: Int): Int {
+        if (keyboardHeight <= 0) return 0
+        val visibleBottom = screenHeight - keyboardHeight
+        return (cursorScreenY - visibleBottom).coerceAtLeast(0)
+    }
+
+    /** 手动滚到光标可见；返回 true 表示确实滚动了 */
+    private fun scrollToCursorVisible(parent: RecyclerView, child: View): Boolean {
+        // OPT：真正持焦点的可能是任意后代
+        val focus = child.findFocus() as? EditText ?: return false
+        val cursorY = getCursorScreenY(focus)
+        if (cursorY == -1 || !isCursorObscuredByKeyboard(cursorY)) return false
+        val dy = calculateRemainScroll(cursorY)
+        if (dy > 0) parent.scrollBy(0, dy)
+        return dy > 0
+    }
 
     /**
      * 判断子项是否可见
@@ -74,18 +128,6 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
     }
 
     /**
-     * 判断光标在EditText的矩形区域是否可见
-     * @param parent RecyclerView父容器
-     * @param child 要滚动的子项View
-     * @return true表示矩形区域可见，false表示不可见
-     */
-    private fun isCursorVisible(parent: RecyclerView, child: View): Boolean {
-        val cursorRect = Rect()
-        child.getCursorRect(cursorRect)
-        return isChildVisible(parent, child, cursorRect)
-    }
-
-    /**
      * 请求将子项的指定矩形区域滚动到屏幕可见区域
      * @param parent RecyclerView父容器
      * @param child 要滚动的子项View
@@ -118,23 +160,23 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         immediate: Boolean,
         focusedChildVisible: Boolean
     ): Boolean {
-        // 只拦截因焦点变化触发的滚动
-        // 光标移动、键盘操作等场景，focusedChildVisible = false，应该放行
+        /** 拦截初次焦点触发的自动滚动，手动处理光标遮挡
+         * 其它光标移动、键盘操作等场景，focusedChildVisible = false，应该放行
+         */
         if (!allowFocusScroll && focusedChildVisible) {
+            scrollToCursorVisible(parent, child)
             return false
         }
 
-        // 如果光标所在矩形已经在可见区域，不需要滚动
-        if (isCursorVisible(parent, child)) {
-            return false
-        }
-
-        // 如果子View已经在可见区域内，不需要滚动
+        /** 如果子View已经在可见区域内
+         * 也尝试手动滚一下光标（光标可能在矩形内但仍被键盘挡）
+         */
         if (isChildVisible(parent, child, rect)) {
+            scrollToCursorVisible(parent, child)
             return false
         }
 
-        // 否则调用父类方法进行滚动
+        /** 否则调用父类方法进行滚动 */
         return super.requestChildRectangleOnScreen(parent, child, rect, immediate, focusedChildVisible)
     }
 }
