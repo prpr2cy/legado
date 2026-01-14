@@ -11,6 +11,7 @@ import android.view.WindowInsetsAnimation
 import android.widget.EditText
 import androidx.activity.viewModels
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsCompat.toWindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.tabs.TabLayout
@@ -216,11 +217,11 @@ class BookSourceEditActivity :
                         insets: WindowInsets,
                         runningAnims: MutableList<WindowInsetsAnimation>
                     ): WindowInsets {
-                        val imeHeight = insets.imeHeight
+                        val imeHeight = toWindowInsetsCompat(insets).imeHeight
                         if (imeHeight != lastIme) {
                             lastIme = imeHeight
-                            layoutManager.keyboardHeight = insets.imeHeight
-                            softKeyboardTool.initialPadding = insets.imeHeight
+                            layoutManager.keyboardHeight = imeHeight
+                            softKeyboardTool.initialPadding = imeHeight
                         }
                         return insets
                     }
