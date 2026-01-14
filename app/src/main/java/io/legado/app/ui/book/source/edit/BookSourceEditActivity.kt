@@ -103,6 +103,7 @@ class BookSourceEditActivity :
     // 使用协程 Job 管理滚动任务 - 只有最新编辑框的才生效
     private var focusScrollJob: Job? = null
     private var currentFocusedEditText: EditText? = null
+    private var keyboardScrollJob: Job? = null
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         softKeyboardTool.attachToWindow(window)
@@ -198,12 +199,25 @@ class BookSourceEditActivity :
         binding.recyclerView.layoutManager = NoChildScrollLinearLayoutManager(this)
 
         binding.recyclerView.setOnApplyWindowInsetsListenerCompat { view, insets ->
-            view.setPadding(
-                view.paddingLeft,
-                view.paddingTop,
-                view.paddingRight,
-                insets.imeHeight - insets.systemBarsHeight
-            )
+            val bottomPadding = insets.imeHeight - insets.systemBarsHeight
+            view.updatePadding(bottom = bottomPadding)
+            if (bottomPadding > 0) {
+                keyboardScrollJob?.cancel()
+                currentFocusedEditText?.let { editText ->
+                    val pos = adapter.editEntities.indexOfFirst { it.key == editText.tag }
+                    if (pos != -1) {
+                        keyboardScrollJob = lifecycleScope.launch {
+                            delay(200)
+                            if (isActive) {
+                                val layoutManager = view.layoutManager as? NoChildScrollLinearLayoutManager
+                                layoutManager?.scrollToPositionWithOffset(pos, 50)
+                            }
+                        }
+                    }
+                }
+            } else {
+                keyboardScrollJob?.cancel()
+            }
             insets
         }
 
@@ -216,11 +230,11 @@ class BookSourceEditActivity :
                 if (hasFocus) {
                     // 检查是否是同一个EditText
                     val isSameEditText = currentFocusedEditText == view
-                    currentFocusedEditText = view
                     if (isSameEditText) {
                         // 同一个EditText，已经处理过，允许滚动
                         layoutManager?.allowFocusScroll = true
                     } else {
+                        currentFocusedEditText = view
                         // 新的EditText获得焦点，取消之前的Job
                         focusScrollJob?.cancel()
                         // 创建新的Job
