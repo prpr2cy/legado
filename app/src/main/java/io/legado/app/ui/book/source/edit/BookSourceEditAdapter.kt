@@ -62,7 +62,11 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
             editText.onFocusChangeListener = null
 
             // 设置新的焦点监听器
-            editText.onFocusChangeListener = onFocusChangeListener
+            onFocusChangeListener?.let { listener ->
+                editText.onFocusChangeListener = View.OnFocusChangeListener { view, hasFocus ->
+                    listener(view, hasFocus)
+                }
+            }
 
             if (editText.getTag(R.id.tag1) == null) {
                 val listener = object : View.OnAttachStateChangeListener {
