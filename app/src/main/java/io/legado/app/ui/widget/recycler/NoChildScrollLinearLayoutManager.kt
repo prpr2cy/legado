@@ -26,11 +26,9 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
     /** 是否允许因焦点变化产生的自动滚动 */
     var allowFocusScroll: Boolean = true
 
-    /** 键盘高度（由外部通过 WindowInsets 赋值） */
-    var keyboardHeight: Int = 0
+    private val mContext = context 
 
     /** 屏幕高度（实时获取，兼容折叠屏） */
-    private val mContext = context 
     private val screenHeight: Int
         get() = mContext.resources.displayMetrics.heightPixels
 
@@ -41,6 +39,36 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
 
     private val extraSlackPx by lazy {
         (EXTRA_SLACK_DP * context.resources.displayMetrics.density + 0.5f).toInt()
+    }
+
+    /** 标记：下次 layout 时是否需要把光标滚出来 */
+    private var pendingScrollToCursor = false 
+
+    /** 键盘高度（由外部通过 WindowInsets 赋值） */
+    override var keyboardHeight: Int = 0 
+        set(value) {
+            field = value 
+            // 键盘高度变化后，下次布局时尝试滚一下 
+            pendingScrollToCursor = true 
+            requestLayout()
+        }
+
+    /* 在真正布局阶段处理光标滚动 */
+    override fun onLayoutChildren(recycler: RecyclerView.Recycler, state: RecyclerView.State) {
+        super.onLayoutChildren(recycler, state)
+        if (!pendingScrollToCursor || keyboardHeight <= 0) return 
+        pendingScrollToCursor = false 
+ 
+        val rv = recyclerView ?: return 
+        val focus = rv.findFocus() as? EditText ?: return 
+        val cursorY = getCursorScreenY(focus)
+        if (cursorY == -1 || !isCursorObscuredByKeyboard(cursorY)) return 
+ 
+        val dy = calculateRemainScroll(cursorY)
+        if (dy > 0) {
+            // 使用 LayoutManager 自己的滚动接口，避开 adjustResize 冲突 
+            scrollVerticallyBy(dy, recycler, state)
+        }
     }
 
     /** 判断光标是否被键盘遮挡 */
@@ -69,7 +97,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         return (cursorScreenY - visibleBottom).coerceAtLeast(0)
     }
 
-    /** 手动滚到光标可见；返回 true 表示确实滚动了 */
+    /** 滚动光标到可见区；返回 true 表示确实滚动了 */
     private fun scrollToCursorVisible(parent: RecyclerView, child: View): Boolean {
         // OPT：真正持焦点的可能是任意后代
         val focus = child.findFocus() as? EditText ?: return false
