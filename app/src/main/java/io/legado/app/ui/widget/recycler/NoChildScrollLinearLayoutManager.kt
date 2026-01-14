@@ -205,7 +205,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
          * 其它光标移动、键盘操作等场景不拦截，focusedChildVisible = false
          */
         if (!allowFocusScroll && focusedChildVisible) {
-            scrollToCursorVisible(parent, child)
+            getCursorScreenY(child)
             return false
         }
 
@@ -213,7 +213,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
          * 也尝试手动滚一下光标（光标可能在矩形内但仍被键盘挡）
          */
         if (isChildVisible(parent, child, rect)) {
-            scrollToCursorVisible(parent, child)
+            getCursorScreenY(child)
             return false
         }
 
