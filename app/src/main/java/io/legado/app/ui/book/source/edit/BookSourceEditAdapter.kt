@@ -59,7 +59,13 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
             editText.maxLines = editEntityMaxLine
 
             // 设置焦点监听器
-            editText.onFocusChangeListener = onFocusChangeListener ?: View.OnFocusChangeListener { _, _ -> }
+            if (editText.onFocusChangeListener != onFocusChangeListener) {
+                editText.onFocusChangeListener = onFocusChangeListener?.let { listener ->
+                    View.OnFocusChangeListener { view, hasFocus ->
+                        listener(view, hasFocus)
+                    }
+                } ?: null
+            }
 
             if (editText.getTag(R.id.tag1) == null) {
                 val listener = object : View.OnAttachStateChangeListener {
