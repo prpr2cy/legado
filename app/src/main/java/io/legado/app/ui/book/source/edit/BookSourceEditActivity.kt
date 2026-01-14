@@ -198,18 +198,7 @@ class BookSourceEditActivity :
         binding.recyclerView.layoutManager = NoChildScrollLinearLayoutManager(this)
 
         binding.recyclerView.setOnApplyWindowInsetsListenerCompat { view, insets ->
-            /*
-            val bottomPadding = insets.imeHeight - insets.systemBarsHeight
-            view.setPadding(
-                view.paddingLeft,
-                view.paddingTop,
-                view.paddingRight,
-                bottomPadding 
-            )
-            */
-            (binding.recyclerView.layoutManager as? NoChildScrollLinearLayoutManager)?.let { layoutManager ->
-                layoutManager.keyboardHeight = insets.imeHeight
-            }
+            softKeyboardTool.initialPadding = insets.imeHeight
             insets
         }
 
