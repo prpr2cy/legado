@@ -22,7 +22,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
      * 是否允许自动滚动
      * 默认值为true，保持与原生LinearLayoutManager一致的行为
      */
-    var allowAutoScroll: Boolean = true
+    var allowFocusScroll: Boolean = true
 
     /**
      * 判断子项是否可见
@@ -105,8 +105,9 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         immediate: Boolean,
         focusedChildVisible: Boolean
     ): Boolean {
-        // 如果不允许自动滚动，直接返回 false
-        if (!allowAutoScroll) {
+        // 只拦截因焦点变化触发的滚动
+        // 光标移动、键盘操作等场景，focusedChildVisible = false，应该放行
+        if (!allowFocusScroll && focusedChildVisible) {
             return false
         }
 

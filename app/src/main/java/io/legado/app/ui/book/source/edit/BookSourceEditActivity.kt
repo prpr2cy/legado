@@ -101,37 +101,9 @@ class BookSourceEditActivity :
         KeyboardToolPop(this, lifecycleScope, binding.root, this)
     }
 
-    // 使用协程 Job 管理滚动任务
-    private var scrollJob: Job? = null
-
-    /**
-     * 滚动 EditText 到键盘上方可见位置
-     */
-    private fun scrollEditTextIntoView(editText: EditText) {
-        val root = binding.root ?: return
-        val insets = ViewCompat.getRootWindowInsets(root) ?: return
-        val imeHeight = insets.imeHeight.takeIf { it > 0 } ?: return
-
-        val layoutManager = binding.recyclerView.layoutManager as? NoChildScrollLinearLayoutManager
-        if (layoutManager?.isSmoothScrolling == true) return
-
-        val pos = adapter.editEntities.indexOfFirst { it.key == editText.tag }
-        if (pos != -1) {
-            root.post { layoutManager?.scrollToPositionWithOffset(pos, imeHeight) }
-        }
-    }
-
-    private val scrollListener = object : RecyclerView.OnScrollListener() {
-        override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
-            super.onScrollStateChanged(recyclerView, newState)
-
-            // 当用户手动滚动时，取消自动滚动任务
-            if (newState == RecyclerView.SCROLL_STATE_DRAGGING ||
-                newState == RecyclerView.SCROLL_STATE_SETTLING) {
-                scrollJob?.cancel()
-            }
-        }
-    }
+    // 使用协程 Job 管理滚动任务 - 只有最新编辑框的才生效
+    private var focusScrollJob: Job? = null
+    private var currentFocusedEditText: EditText? = null
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         softKeyboardTool.attachToWindow(window)
@@ -224,48 +196,57 @@ class BookSourceEditActivity :
         })
         binding.recyclerView.setEdgeEffectColor(primaryColor)
 
-        binding.recyclerView.addOnScrollListener(scrollListener)
-
         binding.recyclerView.layoutManager = NoChildScrollLinearLayoutManager(this)
 
         binding.recyclerView.adapter = adapter
 
-        // 设置 Adapter 的焦点监听器
+        // 设置 Adapter 的焦点监听器 - 使用Job管理，只有最新编辑框的才生效
         adapter.onFocusChangeListener = { view, hasFocus ->
             if (view is EditText) {
                 val layoutManager = binding.recyclerView.layoutManager as? NoChildScrollLinearLayoutManager
                 if (hasFocus) {
-                    layoutManager?.allowAutoScroll = false
+                    // 检查是否是同一个EditText
+                    val isSameEditText = currentFocusedEditText == view
+                    currentFocusedEditText = view
 
-                    // 取消之前的滚动任务
-                    scrollJob?.cancel()
+                    if (isSameEditText) {
+                        // 同一个EditText，已经处理过初次滚动
+                        // 允许滚动，让光标移动时EditText能跟着滚动
+                        layoutManager?.allowFocusScroll = true
+                        return@onFocusChangeListener
+                    }
 
-                    // 创建新的滚动任务
-                    scrollJob = lifecycleScope.launch {
-                        delay(150) // 延迟150ms，等待布局稳定
-                        if (isActive) { // 检查任务是否仍然活跃
+                    // 新的EditText获得焦点，取消之前的Job
+                    focusScrollJob?.cancel()
+
+                    // 创建新的Job
+                    focusScrollJob = lifecycleScope.launch {
+                        // 第一步：暂时禁止自动滚动
+                        layoutManager?.allowFocusScroll = false
+
+                        // 第二步：延迟150ms后执行滚动
+                        delay(150)
+
+                        // 检查Job是否仍然活跃（防止用户快速切换时执行旧任务）
+                        if (isActive) {
                             scrollEditTextIntoView(view)
+                        }
+
+                        // 第三步：延迟恢复自动滚动
+                        delay(100)
+
+                        // 再次检查Job是否仍然活跃
+                        if (isActive) {
+                            layoutManager?.allowFocusScroll = true
                         }
                     }
                 } else {
-                    binding.recyclerView.postDelayed({
-                        layoutManager?.allowAutoScroll = true
-                    }, 250)
+                    // 失去焦点时，如果是当前EditText，清除引用
+                    if (currentFocusedEditText == view) {
+                        currentFocusedEditText = null
+                    }
                 }
             }
-        }
-
-        // 使用扩展函数设置 WindowInsets 监听器
-        binding.root.setOnApplyWindowInsetsListenerCompat { view, insets ->
-            val imeHeight = insets.imeHeight
-            val layoutManager = binding.recyclerView.layoutManager as? NoChildScrollLinearLayoutManager
-
-            if (imeHeight > 0) {
-                layoutManager?.allowAutoScroll = false
-            } else {
-                layoutManager?.allowAutoScroll = true
-            }
-            insets
         }
 
         binding.tabLayout.setBackgroundColor(backgroundColor)
@@ -302,7 +283,7 @@ class BookSourceEditActivity :
         softKeyboardTool.dismiss()
         binding.recyclerView.removeOnScrollListener(scrollListener)
         // 取消所有协程任务
-        scrollJob?.cancel()
+        focusScrollJob?.cancel()
     }
 
     private fun setEditEntities(tabPosition: Int?) {
