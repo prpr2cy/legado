@@ -10,6 +10,7 @@ import android.view.WindowInsets
 import android.view.WindowInsetsAnimation
 import android.widget.EditText
 import androidx.activity.viewModels
+import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsCompat.toWindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
@@ -54,7 +55,6 @@ import io.legado.app.utils.isContentScheme
 import io.legado.app.utils.launch
 import io.legado.app.utils.sendToClip
 import io.legado.app.utils.setEdgeEffectColor
-import io.legado.app.utils.setOnApplyWindowInsetsListenerCompat
 import io.legado.app.utils.share
 import io.legado.app.utils.shareWithQr
 import io.legado.app.utils.showDialogFragment
@@ -108,6 +108,19 @@ class BookSourceEditActivity :
 
     private val softKeyboardTool by lazy {
         KeyboardToolPop(this, lifecycleScope, binding.root, this)
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        // 1. 先把窗口设为 EDGE-TO-EDGE，否则 ime insets 永远是 0
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        // 2. 再注册回调，一定要在 super.onCreate 之前 
+        ViewCompat.setOnApplyWindowInsetsListener(window.decorView) { v, insets ->
+            val ime = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom
+            val sys = insets.getInsets(WindowInsetsCompat.Type.systemBars()).bottom
+            AppLog.put(""apply insets ime=$ime  sys=$sys")
+            ViewCompat.onApplyWindowInsets(v, insets)
+        }
+        super.onCreate(savedInstanceState)
     }
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
