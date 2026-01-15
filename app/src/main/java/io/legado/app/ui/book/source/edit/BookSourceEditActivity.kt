@@ -45,7 +45,6 @@ import io.legado.app.ui.widget.text.EditEntity
 import io.legado.app.utils.GSON
 import io.legado.app.utils.isContentScheme
 import io.legado.app.utils.launch
-import io.legado.app.utils.scrollCursorIntoViewIfNeeded
 import io.legado.app.utils.sendToClip
 import io.legado.app.utils.setEdgeEffectColor
 import io.legado.app.utils.share
@@ -205,9 +204,6 @@ class BookSourceEditActivity :
                     val isSameEditText = currentFocusedEditText == view
                     if (isSameEditText) {
                         // 同一个EditText，已经处理过，允许滚动
-                        layoutManager?.allowFocusScroll = false
-                        binding.recyclerView.scrollCursorIntoViewIfNeeded()
-                        delay(200)
                         layoutManager?.allowFocusScroll = true
                     } else {
                         currentFocusedEditText = view
@@ -217,7 +213,6 @@ class BookSourceEditActivity :
                         focusScrollJob = lifecycleScope.launch {
                             // 暂时禁止自动滚动
                             layoutManager?.allowFocusScroll = false
-                            binding.recyclerView.scrollCursorIntoViewIfNeeded()
                             // 延迟恢复自动滚动
                             delay(200)
                             if (isActive) {

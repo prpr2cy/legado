@@ -4,6 +4,8 @@ import android.content.Context
 import android.graphics.Rect
 import android.util.AttributeSet
 import android.view.View
+import android.view.ViewTreeObserver
+import android.widget.EditText
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 
@@ -23,6 +25,58 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
      * 默认值为true，保持与原生LinearLayoutManager一致的行为
      */
     var allowFocusScroll: Boolean = true
+
+    private var mContext = context
+    private var recyclerView: RecyclerView? = null
+    private val globalLayoutListener = ViewTreeObserver.OnGlobalLayoutListener {
+        handleCursorIfNeeded()
+    }
+
+    override fun onAttachedToWindow(view: RecyclerView) {
+        super.onAttachedToWindow(view)
+        recyclerView = view
+        view.viewTreeObserver.addOnGlobalLayoutListener(globalLayoutListener)
+    }
+
+    override fun onDetachedFromWindow(view: RecyclerView, recycler: RecyclerView.Recycler) {
+        super.onDetachedFromWindow(view, recycler)
+        view.viewTreeObserver.removeOnGlobalLayoutListener(globalLayoutListener)
+        recyclerView = null
+    }
+
+    private fun handleCursorIfNeeded() {
+        val rv = recyclerView ?: return
+        val edit = rv.findFocus() as? EditText ?: return
+        val layout = edit.layout ?: return
+        val sel = edit.selectionStart.takeIf { it >= 0 } ?: return
+        val line = layout.getLineForOffset(sel)
+
+        // 1. 光标矩形（相对 EditText）
+        val local = Rect(
+            layout.getPrimaryHorizontal(sel).toInt() - 2,
+            layout.getLineTop(line),
+            layout.getPrimaryHorizontal(sel).toInt() + 2,
+            layout.getLineBottom(line)
+        )
+
+        // 2. 屏幕坐标
+        val loc = IntArray(2)
+        edit.getLocationOnScreen(loc)
+        local.offset(loc[0], loc[1])
+
+        // 3. 可视区域（已减去键盘/导航栏）
+        val visible = Rect()
+        rv.getWindowVisibleDisplayFrame(visible)
+
+        // 4. 滚动距离
+        val overflow = local.bottom - visible.bottom
+        if (overflow > 0) {
+            rv.post { rv.scrollBy(0, overflow + 8.dp) }
+        }
+    }
+
+    private val Int.dp: Int
+        get() = (this * mContext.resources.displayMetrics.density + 0.5f).toInt()
 
     /**
      * 判断子项是否可见
