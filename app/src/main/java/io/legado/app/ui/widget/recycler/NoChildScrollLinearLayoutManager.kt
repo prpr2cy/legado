@@ -4,16 +4,12 @@ import android.content.Context
 import android.graphics.Rect
 import android.util.AttributeSet
 import android.view.View
-import android.widget.EditText
-import androidx.core.view.ViewCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import io.legado.app.constant.AppLog
 
 /**
- * 禁止子项自动滚动的 LinearLayoutManager
- * 主要用于解决 RecyclerView 中 EditText 获取焦点时自动滚动的问题
- * allowFocusScroll = false 关闭原生滚动，光标被遮挡时手动处理
+ * 禁止子项自动滚动的LinearLayoutManager
+ * 主要用于解决RecyclerView中EditText获取焦点时自动滚动的问题
  */
 class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
     context: Context,
@@ -22,49 +18,11 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
     defStyleRes: Int = 0
 ) : LinearLayoutManager(context, attrs, defStyleAttr, defStyleRes) {
 
-    /** 是否允许因焦点变化产生的自动滚动 */
+    /**
+     * 是否允许因焦点变化产生的自动滚动
+     * 默认值为true，保持与原生LinearLayoutManager一致的行为
+     */
     var allowFocusScroll: Boolean = true
-
-    /** 标记：下次 layout 时是否需要把光标滚出来 */
-    private var pendingScrollToCursor = false 
-
-    /** 键盘高度（由外部通过 WindowInsets 赋值） */
-    var keyboardHeight: Int = 0 
-        set(value) {
-            if (field == value) return 
-            field = value 
-            pendingScrollToCursor = true 
-            requestLayout()
-        }
-
-    /* 在真正布局阶段处理光标滚动 */
-    private var hostRecyclerView: RecyclerView? = null 
-
-    override fun onAttachedToWindow(view: RecyclerView) {
-        super.onAttachedToWindow(view)
-        hostRecyclerView = view 
-    }
- 
-    override fun onDetachedFromWindow(view: RecyclerView, recycler: RecyclerView.Recycler) {
-        super.onDetachedFromWindow(view, recycler)
-        hostRecyclerView = null 
-    }
-
-    override fun onLayoutChildren(recycler: RecyclerView.Recycler, state: RecyclerView.State) {
-        super.onLayoutChildren(recycler, state)
-        AppLog.put("键盘高度=$keyboardHeight")
-        if (!pendingScrollToCursor || keyboardHeight <= 0) return 
-        pendingScrollToCursor = false 
- 
-        val rv = hostRecyclerView ?: return 
-        val edit = rv.findFocus() as? EditText ?: return
-        AppLog.put("编辑框post")
-        edit.post {
-            val rect = Rect()
-            edit.getFocusedRect(rect)
-            edit.requestRectangleOnScreen(rect, false)
-        }
-    }
 
     /**
      * 判断子项是否可见
@@ -147,21 +105,18 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         immediate: Boolean,
         focusedChildVisible: Boolean
     ): Boolean {
-        /** 拦截初次焦点触发的自动滚动，手动处理光标遮挡
-         * 其它光标移动、键盘操作等场景不拦截，focusedChildVisible = false
+        /**
+         * 拦截初次焦点触发的自动滚动
+         * 后续光标移动、键盘操作等场景不拦截，focusedChildVisible = false
          */
         if (!allowFocusScroll && focusedChildVisible) {
             return false
         }
 
-        /** 如果子View已经在可见区域内
-         * 也尝试手动滚一下光标（光标可能在矩形内但仍被键盘挡）
-         */
+        /** 如果子View已经在可见区域内，不需要滚动 */
         if (isChildVisible(parent, child, rect)) {
-            AppLog.put("没自动滚动")
             return false
         }
-        AppLog.put("自动滚动")
 
         /** 否则调用父类方法进行滚动 */
         return super.requestChildRectangleOnScreen(parent, child, rect, immediate, focusedChildVisible)

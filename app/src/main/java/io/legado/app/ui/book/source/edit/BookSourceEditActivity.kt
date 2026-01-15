@@ -2,24 +2,17 @@ package io.legado.app.ui.book.source.edit
 
 import android.app.Activity
 import android.content.Intent
-import android.os.Build
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
-import android.view.WindowInsets
-import android.view.WindowInsetsAnimation
 import android.widget.EditText
 import androidx.activity.viewModels
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.WindowInsetsCompat.toWindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.tabs.TabLayout
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel
 import io.legado.app.R
 import io.legado.app.base.VMBaseActivity
-import io.legado.app.constant.AppLog
 import io.legado.app.constant.BookSourceType
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.BookSource
@@ -50,16 +43,15 @@ import io.legado.app.ui.widget.keyboard.KeyboardToolPop
 import io.legado.app.ui.widget.recycler.NoChildScrollLinearLayoutManager
 import io.legado.app.ui.widget.text.EditEntity
 import io.legado.app.utils.GSON
-import io.legado.app.utils.imeHeight
 import io.legado.app.utils.isContentScheme
 import io.legado.app.utils.launch
+import io.legado.app.utils.scrollCursorIntoViewIfNeeded
 import io.legado.app.utils.sendToClip
 import io.legado.app.utils.setEdgeEffectColor
 import io.legado.app.utils.share
 import io.legado.app.utils.shareWithQr
 import io.legado.app.utils.showDialogFragment
 import io.legado.app.utils.startActivity
-import io.legado.app.utils.systemBarsHeight
 import io.legado.app.utils.viewbindingdelegate.viewBinding
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Job
@@ -108,19 +100,6 @@ class BookSourceEditActivity :
 
     private val softKeyboardTool by lazy {
         KeyboardToolPop(this, lifecycleScope, binding.root, this)
-    }
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        // 1. 先把窗口设为 EDGE-TO-EDGE，否则 ime insets 永远是 0
-        WindowCompat.setDecorFitsSystemWindows(window, false)
-        // 2. 再注册回调，一定要在 super.onCreate 之前 
-        ViewCompat.setOnApplyWindowInsetsListener(window.decorView) { v, insets ->
-            val ime = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom
-            val sys = insets.getInsets(WindowInsetsCompat.Type.systemBars()).bottom
-            AppLog.put("apply insets ime=$ime  sys=$sys")
-            ViewCompat.onApplyWindowInsets(v, insets)
-        }
-        super.onCreate(savedInstanceState)
     }
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
@@ -216,51 +195,18 @@ class BookSourceEditActivity :
 
         binding.recyclerView.layoutManager = layoutManager
 
-        binding.recyclerView.setOnApplyWindowInsetsListenerCompat { view, insets ->
-            val imeHeight = insets.imeHeight
-            AppLog.put("监听：imeHeight=$imeHeight")
-            layoutManager.keyboardHeight = imeHeight
-            softKeyboardTool.initialPadding = imeHeight
-            insets
-        }
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            binding.recyclerView.setWindowInsetsAnimationCallback(
-                object : WindowInsetsAnimation.Callback(WindowInsetsAnimation.Callback.DISPATCH_MODE_STOP) {
-                    private var lastIme = -1
-                    override fun onProgress(
-                        insets: WindowInsets,
-                        runningAnims: MutableList<WindowInsetsAnimation>
-                    ): WindowInsets {
-                        val insetsCompat = toWindowInsetsCompat(insets)
-                        val ime = insetsCompat.getInsets(WindowInsetsCompat.Type.ime()).bottom
-                        val sys = insetsCompat.getInsets(WindowInsetsCompat.Type.systemBars()).bottom
-                        val kHeight = (ime - sys).coerceAtLeast(0)
-                        AppLog.put("回调：ime=$ime  sys=$sys  kHeight=$kHeight")
-                        val imeHeight = insetsCompat.imeHeight
-                        if (imeHeight != lastIme) {
-                            lastIme = imeHeight
-                            layoutManager.keyboardHeight = imeHeight
-                            softKeyboardTool.initialPadding = imeHeight
-                        }
-                        return insets
-                    }
-                }
-            )
-        }
-
         binding.recyclerView.adapter = adapter
 
         // 设置 Adapter 的焦点监听器 - 使用Job管理，只有最新编辑框的才生效
         adapter.onFocusChangeListener = { view, hasFocus ->
             if (view is EditText) {
-                val layoutManager = binding.recyclerView.layoutManager as? NoChildScrollLinearLayoutManager
                 if (hasFocus) {
                     // 检查是否是同一个EditText
                     val isSameEditText = currentFocusedEditText == view
                     if (isSameEditText) {
                         // 同一个EditText，已经处理过，允许滚动
                         layoutManager?.allowFocusScroll = true
+                        scrollCursorIntoViewIfNeeded(binding.recyclerView)
                     } else {
                         currentFocusedEditText = view
                         // 新的EditText获得焦点，取消之前的Job
@@ -269,6 +215,7 @@ class BookSourceEditActivity :
                         focusScrollJob = lifecycleScope.launch {
                             // 暂时禁止自动滚动
                             layoutManager?.allowFocusScroll = false
+                            binding.recyclerView.scrollCursorIntoViewIfNeeded()
                             // 延迟恢复自动滚动
                             delay(200)
                             if (isActive) {
