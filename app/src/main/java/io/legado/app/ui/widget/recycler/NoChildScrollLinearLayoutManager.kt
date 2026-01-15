@@ -34,6 +34,8 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
     private val globalLayoutListener = ViewTreeObserver.OnGlobalLayoutListener {
         handleCursorIfNeeded()
     }
+    private val Int.dp: Int
+        get() = (this * mContext.resources.displayMetrics.density + 0.5f).toInt()
 
     override fun onAttachedToWindow(view: RecyclerView) {
         super.onAttachedToWindow(view)
@@ -71,6 +73,71 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
             rv.stopScroll()
             rv.post { rv.scrollTo(0, targetScrollY) }
         }
+    }
+
+    /**
+     * 判断子项是否可见
+     * @param parent RecyclerView父容器
+     * @param child 要判断的子项View
+     * @return true表示子项可见，false表示不可见
+     */
+    private fun isChildVisible(parent: RecyclerView, child: View): Boolean {
+        val childRect = Rect()
+        child.getDrawingRect(childRect)
+        parent.offsetDescendantRectToMyCoords(child, childRect)
+
+        val parentRect = Rect(
+            parent.paddingLeft,
+            parent.paddingTop,
+            parent.width - parent.paddingRight,
+            parent.height - parent.paddingBottom
+        )
+        parentRect.offset(-parent.scrollX, -parent.scrollY)
+
+        return parentRect.contains(childRect) || Rect.intersects(parentRect, childRect)
+    }
+
+    /**
+     * 判断子项的指定矩形区域是否可见
+     * @param parent RecyclerView父容器
+     * @param child 要判断的子项View
+     * @param rect 要判断的矩形区域（相对于子项的坐标）
+     * @return true表示矩形区域可见，false表示不可见
+     */
+    private fun isChildVisible(parent: RecyclerView, child: View, rect: Rect): Boolean {
+        val childRect = Rect()
+        child.getDrawingRect(childRect)
+        parent.offsetDescendantRectToMyCoords(child, childRect)
+
+        val targetRect = Rect(rect)
+        targetRect.offset(childRect.left, childRect.top)
+
+        val parentRect = Rect(
+            parent.paddingLeft,
+            parent.paddingTop,
+            parent.width - parent.paddingRight,
+            parent.height - parent.paddingBottom
+        )
+        parentRect.offset(-parent.scrollX, -parent.scrollY)
+
+        return parentRect.contains(targetRect) || Rect.intersects(parentRect, targetRect)
+    }
+
+    /**
+     * 请求将子项的指定矩形区域滚动到屏幕可见区域
+     * @param parent RecyclerView父容器
+     * @param child 要滚动的子项View
+     * @param rect 要滚动到可见区域的矩形区域（相对于子项的坐标）
+     * @param immediate 是否立即滚动，不使用平滑滚动动画
+     * @return true表示滚动已执行，false表示滚动未执行
+     */
+    override fun requestChildRectangleOnScreen(
+        parent: RecyclerView,
+        child: View,
+        rect: Rect,
+        immediate: Boolean
+    ): Boolean {
+        return requestChildRectangleOnScreen(parent, child, rect, immediate, false)
     }
 
     /**
