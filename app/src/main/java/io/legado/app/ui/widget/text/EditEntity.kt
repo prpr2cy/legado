@@ -6,7 +6,9 @@ data class EditEntity(
     var key: String,
     var value: String?,
     var hint: String,
-    val viewType: Int = 0
+    val viewType: Int = 0,
+    var scrollY: Int = 0,
+    var selection: Int = -1
 ) {
 
     constructor(
