@@ -205,8 +205,10 @@ class BookSourceEditActivity :
                     val isSameEditText = currentFocusedEditText == view
                     if (isSameEditText) {
                         // 同一个EditText，已经处理过，允许滚动
+                        layoutManager?.allowFocusScroll = false
+                        binding.recyclerView.scrollCursorIntoViewIfNeeded()
+                        delay(200)
                         layoutManager?.allowFocusScroll = true
-                        scrollCursorIntoViewIfNeeded(binding.recyclerView)
                     } else {
                         currentFocusedEditText = view
                         // 新的EditText获得焦点，取消之前的Job
