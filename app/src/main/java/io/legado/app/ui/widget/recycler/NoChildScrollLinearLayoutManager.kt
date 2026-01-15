@@ -48,13 +48,13 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
     }
 
     private fun handleCursorIfNeeded() {
-        val rv = recyclerView ?: return
+        val rv = recyclerViewRef ?: return
         val edit = rv.findFocus() as? EditText ?: return
         val layout = edit.layout ?: return
         val sel = edit.selectionStart.takeIf { it >= 0 } ?: return
         val line = layout.getLineForOffset(sel)
 
-        // 1. 光标矩形（相对 EditText）
+        /* 1. 光标矩形（相对 EditText） */
         val local = Rect(
             layout.getPrimaryHorizontal(sel).toInt() - 2,
             layout.getLineTop(line),
@@ -62,21 +62,18 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
             layout.getLineBottom(line)
         )
 
-        // 2. 屏幕坐标
-        val loc = IntArray(2)
-        edit.getLocationOnScreen(loc)
-        local.offset(loc[0], loc[1])
-
-        // 3. 可视区域（已减去键盘/导航栏）
-        //val visible = Rect()
-        //rv.getWindowVisibleDisplayFrame(visible)
+        /* 2. 转成相对 RV 的坐标 */
+        val editLoc = IntArray(2)
+        edit.getLocationInWindow(editLoc)
         val rvLoc = IntArray(2)
-        rv.getLocationOnScreen(rvLoc)
-        val rvBottom = rvLoc[1] + rv.height
+        rv.getLocationInWindow(rvLoc)
+        local.offset(editLoc[0] - rvLoc[0], editLoc[1] - rvLoc[1])
 
-        // 4. 滚动距离
-        //val overflow = local.bottom - visible.bottom
-        val overflow = local.bottom - rvBottom
+        /* 3. RV 可视矩形（0,0,width,height）*/
+        val rvRect = Rect(0, 0, rv.width, rv.height)
+
+        /* 4. 需要滚的距离 */
+        val overflow = local.bottom - rvRect.bottom
         if (overflow > 0) {
             rv.post { rv.scrollBy(0, overflow + 8.dp) }
         }
@@ -174,12 +171,12 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
             return false
         }
 
-        /** 如果子View已经在可见区域内，不需要滚动 */
+        /* 如果子View已经在可见区域内，不需要滚动 */
         if (isChildVisible(parent, child, rect)) {
             return false
         }
 
-        /** 否则调用父类方法进行滚动 */
+        /* 否则调用父类方法进行滚动 */
         return super.requestChildRectangleOnScreen(parent, child, rect, immediate, focusedChildVisible)
     }
 }
