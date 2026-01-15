@@ -53,7 +53,7 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
     }
 
     override fun onViewRecycled(holder: MyViewHolder) {
-        val pos = holder.absoluteAdapterPosition.takeIf { it >= 0 } ?: return
+        val pos = holder.bindingAdapterPosition.takeIf { it >= 0 } ?: return
         val item = editEntities.getOrNull(pos) ?: return
         item.scrollY = holder.editText.scrollY
     }

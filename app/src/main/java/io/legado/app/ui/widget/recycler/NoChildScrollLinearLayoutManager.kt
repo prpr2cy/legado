@@ -40,7 +40,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         get() = (this * mContext.resources.displayMetrics.density + 0.5f).toInt()
 
     private val layoutListener = ViewTreeObserver.OnGlobalLayoutListener {
-        if (android.os.Build.VERSION.SDK_INT >= 29) {
+        if (android.os.Build.VERSION.SDK_INT >= 999) {
             // 延迟 100ms 确保键盘完全弹出，且只执行一次
             pendingScroll?.let { handler.removeCallbacks(it) }
             pendingScroll = Runnable { scrollCursor() }
