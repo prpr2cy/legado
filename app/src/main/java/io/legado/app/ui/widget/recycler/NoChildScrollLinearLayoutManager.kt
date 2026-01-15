@@ -65,25 +65,34 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         val layout = edit.layout ?: return
         val sel = edit.selectionStart.takeIf { it >= 0 } ?: return
 
-        /* 1. 光标所在行的“行底边”相对 EditText 的坐标 */
+        /* 1. 当前行底边（相对于文字容器） */
         val line = layout.getLineForOffset(sel)
         val lineBottom = layout.getLineBottom(line)
 
-        /* 2. 转成窗口绝对坐标 */
-        val editLoc = IntArray(2)
-        edit.getLocationInWindow(editLoc)
-        val lineBottomInWindow = editLoc[1] + lineBottom
-
-        /* 3. 键盘/工具栏顶边 */
+        /* 2. 键盘/工具栏顶边（窗口坐标） */
         val visible = Rect()
         rv.getWindowVisibleDisplayFrame(visible)
         val keyboardTop = visible.bottom - KeyboardToolPop.toolbarHeight
 
-        /* 4. 要滚动的距离 */
-        val overflow = lineBottomInWindow - keyboardTop
-        if (overflow > 0) {
-            rv.stopScroll()
-            rv.scrollBy(0, overflow + 2.dp)
+        /* 3. 把“行底边”转成窗口坐标 */
+        val lineTopInWindow = IntArray(2).also { edit.getLocationInWindow(it) }[1] +
+                (lineBottom - edit.scrollY)   // 减掉内部已滚距离
+
+        /* 4. 内部滚动：先让 EditText 自己把文字滚出来 */
+        val overflowInternally = lineTopInWindow - keyboardTop
+        if (overflowInternally > 0) {
+            edit.scrollBy(0, overflowInternally + 2.dp)   // 内部滚动
+        }
+
+        /* 5. 外部滚动：如果整行 item 仍被盖住，再挪 RecyclerView */
+        rv.post {
+            val itemBottomInWindow = IntArray(2).also { edit.getLocationInWindow(it) }[1] +
+                    edit.height
+            val stillOverflow = itemBottomInWindow - keyboardTop
+            if (stillOverflow > 0) {
+                rv.stopScroll()
+                rv.scrollBy(0, stillOverflow + 2.dp)
+            }
         }
     }
 
