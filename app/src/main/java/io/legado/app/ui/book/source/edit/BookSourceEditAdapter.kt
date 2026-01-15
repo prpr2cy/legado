@@ -50,11 +50,12 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
     override fun getItemCount(): Int {
         return editEntities.size
     }
+
     override fun onViewRecycled(holder: MyViewHolder) {
         val pos = holder.bindingAdapterPosition.takeIf { it >= 0 } ?: return
-        val item = editEntities[pos]
-        val edit = holder.binding.editText
-        item.scrollY   = edit.scrollY
+        val item = editEntities.getOrNull(pos) ?: return
+        val edit = holder.editText
+        item.scrollY = edit.scrollY
     }
 
     inner class MyViewHolder(val binding: ItemSourceEditBinding) :
