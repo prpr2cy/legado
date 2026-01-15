@@ -266,9 +266,6 @@ class BookSourceEditActivity :
         softKeyboardTool.dismiss()
         layoutManager.allowFocusScroll = true
         adapter.onFocusChangeListener = null
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            binding.recyclerView.setWindowInsetsAnimationCallback(null)
-        }
     }
 
     private fun setEditEntities(tabPosition: Int?) {
