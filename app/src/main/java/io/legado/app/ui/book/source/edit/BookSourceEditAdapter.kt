@@ -6,6 +6,7 @@ import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.EditText
 import androidx.recyclerview.widget.RecyclerView
 import io.legado.app.R
 import io.legado.app.databinding.ItemSourceEditBinding
@@ -54,8 +55,7 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
     override fun onViewRecycled(holder: MyViewHolder) {
         val pos = holder.bindingAdapterPosition.takeIf { it >= 0 } ?: return
         val item = editEntities.getOrNull(pos) ?: return
-        val edit = holder.editText
-        item.scrollY = edit.scrollY
+        item.scrollY = holder.editText.scrollY
     }
 
     inner class MyViewHolder(val binding: ItemSourceEditBinding) :
