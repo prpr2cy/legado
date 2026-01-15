@@ -55,25 +55,21 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         val line = layout.getLineForOffset(sel)
 
         /* 1. 光标矩形（相对 EditText） */
-        val local = Rect(
+        val cursorRect = Rect(
             layout.getPrimaryHorizontal(sel).toInt() - 2,
             layout.getLineTop(line),
             layout.getPrimaryHorizontal(sel).toInt() + 2,
             layout.getLineBottom(line)
         )
 
-        /* 2. 转成相对 RV 的坐标 */
-        val editLoc = IntArray(2)
-        edit.getLocationInWindow(editLoc)
-        val rvLoc = IntArray(2)
-        rv.getLocationInWindow(rvLoc)
-        local.offset(editLoc[0] - rvLoc[0], editLoc[1] - rvLoc[1])
+        /* 2. 转成 RV 坐标系（已包含当前滚动量） */
+        rv.offsetDescendantRectToMyCoords(edit, cursorRect)
 
-        /* 3. RV 可视矩形（0,0,width,height）*/
+        /* 3. RV 可视区域 */
         val rvRect = Rect(0, 0, rv.width, rv.height)
 
-        /* 4. 需要滚的距离 */
-        val overflow = local.bottom - rvRect.bottom
+        /* 4. 需要滚动的距离 */
+        val overflow = cursorRect.bottom - rvRect.bottom
         if (overflow > 0) {
             rv.post { rv.scrollBy(0, overflow + 8.dp) }
         }

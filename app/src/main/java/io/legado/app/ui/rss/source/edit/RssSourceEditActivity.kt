@@ -7,6 +7,7 @@ import android.view.MenuItem
 import android.widget.EditText
 import androidx.activity.viewModels
 import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.tabs.TabLayout
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel
 import io.legado.app.R
@@ -27,6 +28,7 @@ import io.legado.app.ui.widget.dialog.TextDialog
 import io.legado.app.ui.widget.dialog.UrlOptionDialog
 import io.legado.app.ui.widget.dialog.VariableDialog
 import io.legado.app.ui.widget.keyboard.KeyboardToolPop
+import io.legado.app.ui.widget.recycler.NoChildScrollLinearLayoutManager
 import io.legado.app.ui.widget.text.EditEntity
 import io.legado.app.utils.GSON
 import io.legado.app.utils.isContentScheme
@@ -40,6 +42,9 @@ import io.legado.app.utils.showDialogFragment
 import io.legado.app.utils.startActivity
 import io.legado.app.utils.viewbindingdelegate.viewBinding
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -50,13 +55,26 @@ class RssSourceEditActivity :
 
     override val binding by viewBinding(ActivityRssSourceEditBinding::inflate)
     override val viewModel by viewModels<RssSourceEditViewModel>()
-    private val softKeyboardTool by lazy {
-        KeyboardToolPop(this, lifecycleScope, binding.root, this)
-    }
+
+    private val layoutManager by lazy { NoChildScrollLinearLayoutManager(this) }
+
     private val adapter by lazy { RssSourceEditAdapter() }
+
+    private var focusScrollJob: Job? = null
+    private var currentFocusedEditText: EditText? = null
+
     private val sourceEntities: ArrayList<EditEntity> = ArrayList()
     private val listEntities: ArrayList<EditEntity> = ArrayList()
     private val webViewEntities: ArrayList<EditEntity> = ArrayList()
+
+    private val qrCodeResult = registerForActivityResult(QrCodeResult()) {
+        it?.let {
+            viewModel.importSource(it) { source: RssSource ->
+                upSourceView(source)
+            }
+        }
+    }
+
     private val selectDoc = registerForActivityResult(HandleFileContract()) {
         it.uri?.let { uri ->
             if (uri.isContentScheme()) {
@@ -66,12 +84,9 @@ class RssSourceEditActivity :
             }
         }
     }
-    private val qrCodeResult = registerForActivityResult(QrCodeResult()) {
-        it?.let {
-            viewModel.importSource(it) { source: RssSource ->
-                upSourceView(source)
-            }
-        }
+
+    private val softKeyboardTool by lazy {
+        KeyboardToolPop(this, lifecycleScope, binding.root, this)
     }
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
@@ -91,7 +106,8 @@ class RssSourceEditActivity :
 
     override fun finish() {
         val source = getRssSource()
-        if (!source.equal(viewModel.rssSource ?: RssSource())) {
+        val originalSource = viewModel.rssSource ?: RssSource()
+        if (!source.equal(originalSource)) {
             alert(R.string.exit) {
                 setMessage(R.string.exit_no_save)
                 positiveButton(R.string.yes)
@@ -107,6 +123,8 @@ class RssSourceEditActivity :
     override fun onDestroy() {
         super.onDestroy()
         softKeyboardTool.dismiss()
+        layoutManager.allowFocusScroll = true
+        adapter.onFocusChangeListener = null
     }
 
     override fun onCompatCreateOptionsMenu(menu: Menu): Boolean {
@@ -169,17 +187,50 @@ class RssSourceEditActivity :
             text = "WEB_VIEW"
         })
         binding.recyclerView.setEdgeEffectColor(primaryColor)
+
+        binding.recyclerView.layoutManager = layoutManager
+
         binding.recyclerView.adapter = adapter
+
+        // 设置 Adapter 的焦点监听器 - 使用Job管理，只有最新编辑框的才生效
+        adapter.onFocusChangeListener = { view, hasFocus ->
+            if (view is EditText) {
+                if (hasFocus) {
+                    // 检查是否是同一个EditText
+                    val isSameEditText = currentFocusedEditText == view
+                    if (isSameEditText) {
+                        // 同一个EditText，已经处理过，允许滚动
+                        layoutManager?.allowFocusScroll = true
+                    } else {
+                        currentFocusedEditText = view
+                        // 新的EditText获得焦点，取消之前的Job
+                        focusScrollJob?.cancel()
+                        // 创建新的Job
+                        focusScrollJob = lifecycleScope.launch {
+                            // 暂时禁止自动滚动
+                            layoutManager?.allowFocusScroll = false
+                            // 延迟恢复自动滚动
+                            delay(200)
+                            if (isActive) {
+                                layoutManager?.allowFocusScroll = true
+                            }
+                        }
+                    }
+                } else {
+                    // 失去焦点时，如果是当前EditText，清除引用
+                    if (currentFocusedEditText == view) {
+                        currentFocusedEditText = null
+                    }
+                }
+            }
+        }
+
         binding.tabLayout.setBackgroundColor(backgroundColor)
         binding.tabLayout.setSelectedTabIndicatorColor(accentColor)
         binding.tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
-            override fun onTabReselected(tab: TabLayout.Tab?) {
+            override fun onTabReselected(tab: TabLayout.Tab?) {}
 
-            }
-
-            override fun onTabUnselected(tab: TabLayout.Tab?) {
-
-            }
+            override fun onTabUnselected(tab: TabLayout.Tab?) {}
 
             override fun onTabSelected(tab: TabLayout.Tab?) {
                 setEditEntities(tab?.position)
@@ -188,10 +239,10 @@ class RssSourceEditActivity :
     }
 
     private fun setEditEntities(tabPosition: Int?) {
-        when (tabPosition) {
-            1 -> adapter.editEntities = listEntities
-            2 -> adapter.editEntities = webViewEntities
-            else -> adapter.editEntities = sourceEntities
+        adapter.editEntities = when (tabPosition) {
+            1 -> listEntities
+            2 -> webViewEntities
+            else -> sourceEntities
         }
         binding.recyclerView.scrollToPosition(0)
     }
