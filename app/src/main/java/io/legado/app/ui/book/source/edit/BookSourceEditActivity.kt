@@ -250,7 +250,7 @@ class BookSourceEditActivity :
                             // 暂时禁止自动滚动
                             layoutManager?.allowFocusScroll = false
                             // 延迟恢复自动滚动
-                            delay(300)
+                            delay(200)
                             if (isActive) {
                                 layoutManager?.allowFocusScroll = true
                             }

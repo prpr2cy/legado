@@ -25,21 +25,6 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
     /** 是否允许因焦点变化产生的自动滚动 */
     var allowFocusScroll: Boolean = true
 
-    private val mContext = context
-
-    /** 屏幕高度（实时获取，兼容折叠屏） */
-    private val screenHeight: Int
-        get() = mContext.resources.displayMetrics.heightPixels
-
-    companion object {
-        /** 光标额外留白（dp） */
-        private const val EXTRA_SLACK_DP = 4f
-    }
-
-    private val extraSlackPx by lazy {
-        (EXTRA_SLACK_DP * context.resources.displayMetrics.density + 0.5f).toInt()
-    }
-
     /** 标记：下次 layout 时是否需要把光标滚出来 */
     private var pendingScrollToCursor = false 
 
@@ -67,57 +52,18 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
 
     override fun onLayoutChildren(recycler: RecyclerView.Recycler, state: RecyclerView.State) {
         super.onLayoutChildren(recycler, state)
+        AppLog.put("键盘高度=$keyboardHeight")
         if (!pendingScrollToCursor || keyboardHeight <= 0) return 
         pendingScrollToCursor = false 
  
         val rv = hostRecyclerView ?: return 
-        val focus = rv.findFocus() as? EditText ?: return 
-        val cursorY = getCursorScreenY(focus)
-        if (cursorY == -1 || !isCursorObscuredByKeyboard(cursorY)) return 
- 
-        val dy = calculateRemainScroll(cursorY)
-        AppLog.put("$dy")
-        if (dy > 0) {
-            // 使用 LayoutManager 自己的滚动接口，避开 adjustResize 冲突 
-            scrollVerticallyBy(dy, recycler, state)
+        val edit = rv.findFocus() as? EditText ?: return
+        AppLog.put("编辑框post")
+        edit.post {
+            val rect = Rect()
+            edit.getFocusedRect(rect)
+            edit.requestRectangleOnScreen(rect, false)
         }
-    }
-
-    /** 判断光标是否被键盘遮挡 */
-    private fun isCursorObscuredByKeyboard(cursorScreenY: Int): Boolean =
-        keyboardHeight > 0 && cursorScreenY > screenHeight - keyboardHeight
-
-    /** 获取 EditText 光标在屏幕上的 Y 坐标（包含 descent 留白） */
-    private fun getCursorScreenY(editText: EditText): Int {
-        if (!ViewCompat.isAttachedToWindow(editText)) return -1
-        val layout = editText.layout ?: return -1
-        val selection = editText.selectionStart.takeIf { it >= 0 } ?: return -1
-        val line = layout.getLineForOffset(selection)
-        val baseline = layout.getLineBaseline(line)
-        val descent = layout.getLineDescent(line)
-        val cursorHeight = descent + extraSlackPx
-        val cursorY = baseline + cursorHeight - editText.scrollY
-        val loc = IntArray(2)
-        editText.getLocationOnScreen(loc)
-        return loc[1] + cursorY
-    }
-
-    /** 计算“尚未滚动的距离”——正值表示需要再上滚多少像素 */
-    private fun calculateRemainScroll(cursorScreenY: Int): Int {
-        if (keyboardHeight <= 0) return 0
-        val visibleBottom = screenHeight - keyboardHeight
-        return (cursorScreenY - visibleBottom).coerceAtLeast(0)
-    }
-
-    /** 滚动光标到可见区；返回 true 表示确实滚动了 */
-    private fun scrollToCursorVisible(parent: RecyclerView, child: View): Boolean {
-        // OPT：真正持焦点的可能是任意后代
-        val focus = child.findFocus() as? EditText ?: return false
-        val cursorY = getCursorScreenY(focus)
-        if (cursorY == -1 || !isCursorObscuredByKeyboard(cursorY)) return false
-        val dy = calculateRemainScroll(cursorY)
-        if (dy > 0) parent.scrollBy(0, dy)
-        return dy > 0
     }
 
     /**
@@ -205,7 +151,6 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
          * 其它光标移动、键盘操作等场景不拦截，focusedChildVisible = false
          */
         if (!allowFocusScroll && focusedChildVisible) {
-            getCursorScreenY(child)
             return false
         }
 
@@ -213,10 +158,10 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
          * 也尝试手动滚一下光标（光标可能在矩形内但仍被键盘挡）
          */
         if (isChildVisible(parent, child, rect)) {
-            getCursorScreenY(child)
+            AppLog.put("没自动滚动")
             return false
         }
-        AppLog.put("系统自动处理滚动")
+        AppLog.put("自动滚动")
 
         /** 否则调用父类方法进行滚动 */
         return super.requestChildRectangleOnScreen(parent, child, rect, immediate, focusedChildVisible)
