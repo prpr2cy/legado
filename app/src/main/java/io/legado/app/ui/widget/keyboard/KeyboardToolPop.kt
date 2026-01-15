@@ -48,9 +48,11 @@ class KeyboardToolPop(
     private var mIsSoftKeyBoardShowing = false
     private var initialPadding = 0
 
-    @JvmStatic
-    var toolbarHeight: Int = 0
-        private set
+    companion object {
+        @JvmStatic
+        var toolbarHeight: Int = 0
+            internal set
+    }
 
     init {
         contentView = binding.root

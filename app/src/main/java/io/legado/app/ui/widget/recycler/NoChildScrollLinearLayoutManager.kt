@@ -75,10 +75,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         edit.getLocationInWindow(editLoc)
         cursorRect.offset(editLoc[0], editLoc[1])
 
-        /**
-         * 3. 用可见帧底部当键盘顶边
-         * 键盘顶边 = 窗口高度 - 键盘高度 - 工具栏高度
-         */
+        /* 3. 用可见帧底部当键盘顶边 */
         val visible = Rect()
         rv.getWindowVisibleDisplayFrame(visible)
         val keyboardTop = visible.bottom - KeyboardToolPop.toolbarHeight
