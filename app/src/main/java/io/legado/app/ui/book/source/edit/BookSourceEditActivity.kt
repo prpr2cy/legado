@@ -203,8 +203,6 @@ class BookSourceEditActivity :
 
         binding.recyclerView.layoutManager = layoutManager
 
-        WindowCompat.setDecorFitsSystemWindows(window, false)
-
         binding.recyclerView.setOnApplyWindowInsetsListenerCompat { view, insets ->
             val imeHeight = insets.imeHeight
             AppLog.put("监听：imeHeight=$imeHeight")
@@ -218,15 +216,14 @@ class BookSourceEditActivity :
                 object : WindowInsetsAnimation.Callback(WindowInsetsAnimation.Callback.DISPATCH_MODE_STOP) {
                     private var lastIme = -1
                     override fun onProgress(
-                        insets: WindowInsets,
+                        insets: WindowInsetsCompat,
                         runningAnims: MutableList<WindowInsetsAnimation>
                     ): WindowInsets {
-                        val insetsCompat = toWindowInsetsCompat(insets)
-                        val ime = insetsCompat.getInsets(WindowInsetsCompat.Type.ime()).bottom
-                        val sys = insetsCompat.getInsets(WindowInsetsCompat.Type.systemBars()).bottom
+                        val ime = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom
+                        val sys = insets.getInsets(WindowInsetsCompat.Type.systemBars()).bottom
                         val kHeight = (ime - sys).coerceAtLeast(0)
                         AppLog.put("回调：ime=$ime  sys=$sys  kHeight=$kHeight")
-                        val imeHeight = insetsCompat.imeHeight
+                        val imeHeight = insets.imeHeight
                         if (imeHeight != lastIme) {
                             lastIme = imeHeight
                             layoutManager.keyboardHeight = imeHeight
