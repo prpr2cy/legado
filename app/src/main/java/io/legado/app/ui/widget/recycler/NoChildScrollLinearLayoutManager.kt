@@ -48,7 +48,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
     }
 
     private fun handleCursorIfNeeded() {
-        val rv = recyclerViewRef ?: return
+        val rv = recyclerView ?: return
         val edit = rv.findFocus() as? EditText ?: return
         val layout = edit.layout ?: return
         val sel = edit.selectionStart.takeIf { it >= 0 } ?: return
@@ -165,7 +165,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
     ): Boolean {
         /**
          * 拦截初次焦点触发的自动滚动
-         * 后续光标移动、键盘操作等场景不拦截，focusedChildVisible = false
+         * 后续光标移动、键盘操作等场景不会拦截，因为 focusedChildVisible = false
          */
         if (!allowFocusScroll && focusedChildVisible) {
             return false
