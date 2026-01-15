@@ -77,14 +77,14 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
 
         /**
          * 3. 用可见帧底部当键盘顶边
-         * 键盘顶边 = 窗口高度 - 键盘高度
+         * 键盘顶边 = 窗口高度 - 键盘高度 - 工具栏高度
          */
         val visible = Rect()
         rv.getWindowVisibleDisplayFrame(visible)
-        val keyboardTop = visible.bottom + toolbarH
+        val keyboardTop = visible.bottom - KeyboardToolPop.toolbarHeight
 
         /* 4. 要滚动的距离 */
-        val overflow = cursorRect.bottom - keyboardTop.toolbarHeight
+        val overflow = cursorRect.bottom - keyboardTop
         if (overflow > 0) {
             /* 5. 增量滚动：当前滚动量 + 缺口 */
             val target = rv.scrollY + overflow + 8.dp
