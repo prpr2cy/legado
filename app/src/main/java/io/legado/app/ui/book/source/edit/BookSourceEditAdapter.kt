@@ -60,7 +60,8 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
 
     inner class MyViewHolder(val binding: ItemSourceEditBinding) :
         RecyclerView.ViewHolder(binding.root) {
-
+            val editText: EditText = binding.editText
+        }
         fun bind(editEntity: EditEntity) = binding.run {
             editText.setTag(R.id.tag, editEntity.key)
             editText.maxLines = editEntityMaxLine
