@@ -43,11 +43,14 @@ class KeyboardToolPop(
     ViewTreeObserver.OnGlobalLayoutListener {
 
     private val helpChar = "❓"
-
     private val binding = PopupKeyboardToolBinding.inflate(LayoutInflater.from(context))
     private val adapter = Adapter(context)
     private var mIsSoftKeyBoardShowing = false
-    var initialPadding = 0
+    private var initialPadding = 0
+
+    @JvmStatic
+    var toolbarHeight: Int = 0
+        private set
 
     init {
         contentView = binding.root
@@ -60,12 +63,21 @@ class KeyboardToolPop(
         upAdapterData()
     }
 
+    private fun updateHeight() {
+        toolbarHeight = if (isShowing) contentView.measuredHeight else 0
+    }
+
     fun attachToWindow(window: Window) {
+        initialPadding = rootView.paddingBottom
         window.decorView.viewTreeObserver.addOnGlobalLayoutListener(this)
         contentView.measure(
             View.MeasureSpec.UNSPECIFIED,
             View.MeasureSpec.UNSPECIFIED,
         )
+    }
+
+    fun detachFromWindow(window: Window) {
+        window.decorView.viewTreeObserver.removeOnGlobalLayoutListener(this)
     }
 
     override fun onGlobalLayout() {
@@ -81,11 +93,13 @@ class KeyboardToolPop(
             if (!isShowing) {
                 showAtLocation(rootView, Gravity.BOTTOM, 0, 0)
             }
+            updateHeight()
         } else {
             mIsSoftKeyBoardShowing = false
             rootView.setPadding(0, 0, 0, 0)
             if (preShowing) {
                 dismiss()
+                updateHeight()
             }
         }
     }

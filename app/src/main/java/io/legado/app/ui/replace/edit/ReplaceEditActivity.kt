@@ -84,6 +84,7 @@ class ReplaceEditActivity :
 
     override fun onDestroy() {
         super.onDestroy()
+        softKeyboardTool.detachFromWindow(window)
         softKeyboardTool.dismiss()
     }
 

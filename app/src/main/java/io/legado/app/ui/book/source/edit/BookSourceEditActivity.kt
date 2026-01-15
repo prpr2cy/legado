@@ -136,6 +136,7 @@ class BookSourceEditActivity :
 
     override fun onDestroy() {
         super.onDestroy()
+        softKeyboardTool.detachFromWindow(window)
         softKeyboardTool.dismiss()
         layoutManager.allowFocusScroll = true
         adapter.onFocusChangeListener = null

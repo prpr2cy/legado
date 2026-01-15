@@ -10,6 +10,7 @@ import android.view.ViewTreeObserver
 import android.widget.EditText
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import io.legado.app.ui.widget.keyboard.KeyboardToolPop
 
 /**
  * 禁止子项自动滚动的LinearLayoutManager
@@ -35,7 +36,6 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
     private var recyclerView: RecyclerView? = null
     private val handler = Handler(Looper.getMainLooper())
     private var pendingScroll: Runnable? = null
-
     private val Int.dp: Int
         get() = (this * mContext.resources.displayMetrics.density + 0.5f).toInt()
 
@@ -81,10 +81,10 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
          */
         val visible = Rect()
         rv.getWindowVisibleDisplayFrame(visible)
-        val keyboardTop = visible.bottom
+        val keyboardTop = visible.bottom + toolbarH
 
         /* 4. 要滚动的距离 */
-        val overflow = cursorRect.bottom - keyboardTop
+        val overflow = cursorRect.bottom - keyboardTop.toolbarHeight
         if (overflow > 0) {
             /* 5. 增量滚动：当前滚动量 + 缺口 */
             val target = rv.scrollY + overflow + 8.dp
