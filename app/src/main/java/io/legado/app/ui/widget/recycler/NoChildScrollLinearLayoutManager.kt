@@ -1,5 +1,7 @@
 package io.legado.app.ui.widget.recycler
 
+import android.os.Handler 
+import android.os.Looper
 import android.content.Context
 import android.graphics.Rect
 import android.util.AttributeSet
@@ -31,25 +33,33 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
      */
     private var mContext = context
     private var recyclerView: RecyclerView? = null
-    private val globalLayoutListener = ViewTreeObserver.OnGlobalLayoutListener {
-        handleCursorIfNeeded()
-    }
+    private val handler = Handler(Looper.getMainLooper())
+    private var pendingScroll: Runnable? = null
+
     private val Int.dp: Int
         get() = (this * mContext.resources.displayMetrics.density + 0.5f).toInt()
+
+    private val layoutListener = ViewTreeObserver.OnGlobalLayoutListener {
+        // 延迟 100ms 确保键盘完全弹出，且只执行一次
+        pendingScroll?.let { handler.removeCallbacks(it) }
+        pendingScroll = Runnable { scrollCursor() }
+        handler.postDelayed(pendingScroll!!, 100)
+    }
 
     override fun onAttachedToWindow(view: RecyclerView) {
         super.onAttachedToWindow(view)
         recyclerView = view
-        view.viewTreeObserver.addOnGlobalLayoutListener(globalLayoutListener)
+        view.viewTreeObserver.addOnGlobalLayoutListener(layoutListener)
     }
 
     override fun onDetachedFromWindow(view: RecyclerView, recycler: RecyclerView.Recycler) {
         super.onDetachedFromWindow(view, recycler)
-        view.viewTreeObserver.removeOnGlobalLayoutListener(globalLayoutListener)
+        pendingScroll?.let { handler.removeCallbacks(it) }
+        view.viewTreeObserver.removeOnGlobalLayoutListener(layoutListener)
         recyclerView = null
     }
 
-    private fun handleCursorIfNeeded() {
+    private fun scrollCursor() {
         val rv = recyclerView ?: return
         val edit = rv.findFocus() as? EditText ?: return
         val layout = edit.layout ?: return
@@ -57,10 +67,8 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         val line = layout.getLineForOffset(sel)
 
         /* 1. 光标矩形（相对 EditText） */
-        val cursorRect = Rect(
-            0, layout.getLineTop(line),
-            0, layout.getLineBottom(line)
-        )
+        val cursorRect = Rect()
+        edit.getFocusedRect(cursorRect)
 
         /* 2. 转成屏幕绝对坐标 */
         val loc = IntArray(2)
@@ -71,10 +79,10 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         val visible = Rect()
         rv.getWindowVisibleDisplayFrame(visible)
 
-        /* 4. 需要滚多少才能让光标下边缘 + 8 dp 留在键盘上方 */
+        /* 4. 需要滚动多少 */
         val overflow = cursorRect.bottom - visible.bottom
         if (overflow > 0) {
-            /* 5. 绝对滚动：当前滚动量 + 缺口 */
+            /* 5. 绝对滚动：当前 RV 滚动量 + 缺口 */
             val target = rv.scrollY + overflow + 8.dp
             rv.stopScroll()
             rv.post { rv.scrollTo(0, target) }
