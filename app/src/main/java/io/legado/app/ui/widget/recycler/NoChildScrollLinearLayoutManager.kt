@@ -64,29 +64,26 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         val edit = rv.findFocus() as? EditText ?: return
         val layout = edit.layout ?: return
         val sel = edit.selectionStart.takeIf { it >= 0 } ?: return
-        val line = layout.getLineForOffset(sel)
 
-        /* 1. 光标矩形（相对 EditText） */
-        val cursorRect = Rect()
-        edit.getFocusedRect(cursorRect)
+        /* 1. 光标所在行的“行底边”相对 EditText 的坐标 */
+        val line = layout.getLineForOffset(sel)
+        val lineBottom = layout.getLineBottom(line)
 
         /* 2. 转成窗口绝对坐标 */
         val editLoc = IntArray(2)
         edit.getLocationInWindow(editLoc)
-        cursorRect.offset(editLoc[0], editLoc[1])
+        val lineBottomInWindow = editLoc[1] + lineBottom
 
-        /* 3. 用可见帧底部当键盘顶边 */
+        /* 3. 键盘/工具栏顶边 */
         val visible = Rect()
         rv.getWindowVisibleDisplayFrame(visible)
         val keyboardTop = visible.bottom - KeyboardToolPop.toolbarHeight
 
         /* 4. 要滚动的距离 */
-        val overflow = cursorRect.bottom - keyboardTop
+        val overflow = lineBottomInWindow - keyboardTop
         if (overflow > 0) {
-            /* 5. 增量滚动：当前滚动量 + 缺口 */
-            val target = rv.scrollY + overflow + 8.dp
             rv.stopScroll()
-            rv.scrollBy(0, overflow + 8.dp)
+            rv.scrollBy(0, overflow + 2.dp)
         }
     }
 
