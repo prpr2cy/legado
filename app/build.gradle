@@ -200,20 +200,21 @@ dependencies {
     implementation("com.github.android:renderscript-intrinsics-replacement-toolkit:b6363490c3")
 
     //androidX
-    implementation("androidx.core:core-ktx:1.12.0")
-    implementation("androidx.appcompat:appcompat:1.6.1")
-    implementation("androidx.activity:activity-ktx:1.8.0")
-    implementation("androidx.fragment:fragment-ktx:1.6.1")
+    implementation("androidx.core:core-ktx:1.12.1")
+    implementation("androidx.appcompat:appcompat:1.6.2")
+    implementation("androidx.activity:activity-ktx:1.8.2")
+    implementation("androidx.fragment:fragment-ktx:1.6.2")
     implementation("androidx.preference:preference-ktx:1.2.1")
-    implementation("androidx.constraintlayout:constraintlayout:2.1.4")
-    implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
+    implementation("androidx.constraintlayout:constraintlayout:2.1.5")
+    implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.1")
+    implementation("androidx.recyclerview:recyclerview:1.2.1")
     implementation("androidx.viewpager2:viewpager2:1.0.0")
     implementation("androidx.webkit:webkit:1.10.0")
 
     //google
-    implementation("com.google.android.material:material:1.10.0")
+    implementation("com.google.android.material:material:1.10.1")
     implementation("com.google.android.flexbox:flexbox:3.0.0")
-    implementation("com.google.code.gson:gson:2.10.1")
+    implementation("com.google.code.gson:gson:2.11.0")
 
     //lifecycle
     implementation("androidx.lifecycle:lifecycle-common-java8:$lifecycle_version")
@@ -293,7 +294,7 @@ dependencies {
     implementation("io.noties.markwon:html:$markwonVersion")
 
     //转换繁体
-    implementation("com.github.liuyueyi.quick-chinese-transfer:quick-transfer-core:0.2.13")
+    implementation("com.github.liuyueyi.quick-chinese-transfer:quick-transfer-core:0.2.16")
 
     //加解密类库,有些书源使用
     //noinspection GradleDependency,GradlePackageUpdate
