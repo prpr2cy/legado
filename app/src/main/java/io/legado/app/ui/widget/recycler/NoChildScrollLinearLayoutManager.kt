@@ -60,6 +60,47 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
     }
 
     private fun scrollCursor() {
+        val rv  = recyclerView ?: return
+        val edit = rv.findFocus() as? EditText ?: return
+        val layout = edit.layout ?: return
+        val sel = edit.selectionStart.takeIf { it >= 0 } ?: return
+
+        /* 1. 光标行底边（相对于文字容器） */
+        val line = layout.getLineForOffset(sel)
+        val lineBottom = layout.getLineBottom(line)
+
+        /* 2. 键盘/工具栏顶边（窗口绝对坐标） */
+        val visible = Rect()
+        rv.getWindowVisibleDisplayFrame(visible)
+        val keyboardTop = visible.bottom - KeyboardToolPop.toolbarHeight
+
+        /* 3. 行底边 → 窗口坐标 */
+        val editLoc = IntArray(2).also { edit.getLocationInWindow(it) }
+        val lineBottomInWindow = editLoc[1] + lineBottom - edit.scrollY
+
+        /* 4. 先让 EditText 内部滚动，把文字露出来 */
+        val needInside = lineBottomInWindow - keyboardTop
+        if (needInside > 0) {
+            edit.scrollBy(0, needInside + 8.dp)
+        }
+
+        /* 5. 真正需要 RecyclerView 滚动的条件：
+         *    item 下沿仍被盖住，并且内部滚动已到底（scrollY 无法再变大）
+         */
+        rv.post {
+            val canScrollInside = edit.canScrollVertically(1)   // 是否还能往下滑
+            val itemBottomInWindow = editLoc[1] + edit.height
+            val needRv = itemBottomInWindow - keyboardTop
+
+            if (!canScrollInside && needRv > 0) {
+                // 只把 item 下沿刚好顶到键盘上沿，绝不多滚
+                rv.stopScroll()
+                rv.scrollBy(0, needRv + 8.dp)
+            }
+        }
+    }
+
+    private fun scrollCursor() {
         val rv = recyclerView ?: return
         val edit = rv.findFocus() as? EditText ?: return
         val layout = edit.layout ?: return
