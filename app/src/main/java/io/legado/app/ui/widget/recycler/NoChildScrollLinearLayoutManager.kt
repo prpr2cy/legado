@@ -40,12 +40,10 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         get() = (this * mContext.resources.displayMetrics.density + 0.5f).toInt()
 
     private val layoutListener = ViewTreeObserver.OnGlobalLayoutListener {
-        if (android.os.Build.VERSION.SDK_INT >= 29) {
-            // 延迟 100ms 确保键盘完全弹出，且只执行一次
-            pendingScroll?.let { handler.removeCallbacks(it) }
-            pendingScroll = Runnable { scrollCursor() }
-            handler.postDelayed(pendingScroll!!, 100)
-        }
+        // 延迟 100ms 确保键盘完全弹出，且只执行一次
+        pendingScroll?.let { handler.removeCallbacks(it) }
+        pendingScroll = Runnable { scrollCursor() }
+        handler.postDelayed(pendingScroll!!, 100)
     }
 
     override fun onAttachedToWindow(view: RecyclerView) {
@@ -72,9 +70,9 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         val lineBottom = layout.getLineBottom(line)
 
         /* 2. 键盘/工具栏顶边（窗口绝对坐标） */
-        val visible = Rect()
-        rv.getWindowVisibleDisplayFrame(visible)
-        val keyboardTop = visible.bottom - KeyboardToolPop.toolbarHeight
+        val parentRect = Rect()
+        rv.getWindowVisibleDisplayFrame(parentRect)
+        val keyboardTop = parentRect.bottom - KeyboardToolPop.toolbarHeight
 
         /* 3. 行底边 → 窗口坐标 */
         val editLoc = IntArray(2).also { edit.getLocationInWindow(it) }
@@ -144,10 +142,46 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
             parent.paddingTop,
             parent.width - parent.paddingRight,
             parent.height - parent.paddingBottom
-        )
-        parentRect.offset(-parent.scrollX, -parent.scrollY)
+        ).apply { offset(-parent.scrollX, -parent.scrollY) }
 
         return parentRect.contains(targetRect) || Rect.intersects(parentRect, targetRect)
+    }
+
+    /**
+     * 计算子项的指定矩形区域与父容器可见区域的重叠/偏移
+     * @param parent RecyclerView父容器
+     * @param child  要判断的子项View
+     * @param rect  要判断的矩形区域（相对于子项的坐标）
+     * @return dy > 0 往下滚，dy < 0 往上滚，dy = 0 无需滚动
+     */
+    private fun calcScrollDy(parent: RecyclerView, child: View, rect: Rect): Int {
+        // 目标矩形 → 父容器坐标
+        val targetRect = Rect(rect)
+        child.getDrawingRect(targetRect)
+        parent.offsetDescendantRectToMyCoords(child, targetRect)
+
+        // 父容器可见区域（已考虑 scroll 及 padding）
+        val parentRect = Rect(
+            parent.paddingLeft,
+            parent.paddingTop,
+            parent.width - parent.paddingRight,
+            parent.height - parent.paddingBottom
+        ).apply { offset(-parent.scrollX, -parent.scrollY) }
+
+        // 完全包含即认为“可见”
+        if (parentRect.contains(targetRect)) 0
+
+        // 计算最少的滚动距离”
+        val dy = when {
+            targetRect.bottom > parentRect.bottom -> {
+                targetRect.bottom - parentRect.bottom // 往下滚
+            }
+            targetRect.top < parentRect.top -> {
+                targetRect.top - parentRect.top // 往上滚
+            }
+            else -> 0
+        }
+        return dy
     }
 
     /**
@@ -183,20 +217,19 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         immediate: Boolean,
         focusedChildVisible: Boolean
     ): Boolean {
-        /**
-         * 拦截初次焦点触发的自动滚动
-         * 后续光标移动、键盘操作等场景不会拦截，因为 focusedChildVisible = false
-         */
+        // 拦截初次焦点触发的自动滚动
+        // 后续光标移动、键盘操作等场景不会拦截，因为 focusedChildVisible = false
         if (!allowFocusScroll && focusedChildVisible) {
             return false
         }
 
-        /* 如果子View已经在可见区域内，不需要滚动 */
-        if (isChildVisible(parent, child, rect)) {
-            return false
-        }
+        val dy = calcScrollDy(parent, child, rect)
 
-        /* 否则调用父类方法进行滚动 */
-        return super.requestChildRectangleOnScreen(parent, child, rect, immediate, focusedChildVisible)
+        // 如果子View已经完全在可见区域内，无需滚动
+        if (dy == 0) return false
+
+        // 部分可见或完全不可见，滚动到可见区域
+        parent.scrollBy(0, dy)
+        return true
     }
 }
