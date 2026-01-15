@@ -62,16 +62,22 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
             0, layout.getLineBottom(line)
         )
 
-        /* 2. 转成 RV 坐标系（含当前滚动量） */
-        rv.offsetDescendantRectToMyCoords(edit, cursorRect)
+        /* 2. 转成屏幕绝对坐标 */
+        val loc = IntArray(2)
+        edit.getLocationOnScreen(loc)
+        cursorRect.offset(loc[0], loc[1])
 
-        /* 3. 需要 RV 顶部距离光标底部 + 8 dp 留白 */
-        val targetScrollY = cursorRect.bottom + 8.dp - rv.height
+        /* 3. 窗口可视区域（已减去键盘）*/
+        val visible = Rect()
+        rv.getWindowVisibleDisplayFrame(visible)
 
-        /* 4. 只滚一次，不叠加 */
-        if (targetScrollY > rv.scrollY) {
+        /* 4. 需要滚多少才能让光标下边缘 + 8 dp 留在键盘上方 */
+        val overflow = cursorRect.bottom - visible.bottom
+        if (overflow > 0) {
+            /* 5. 绝对滚动：当前滚动量 + 缺口 */
+            val target = rv.scrollY + overflow + 8.dp
             rv.stopScroll()
-            rv.post { rv.scrollTo(0, targetScrollY) }
+            rv.post { rv.scrollTo(0, target) }
         }
     }
 
