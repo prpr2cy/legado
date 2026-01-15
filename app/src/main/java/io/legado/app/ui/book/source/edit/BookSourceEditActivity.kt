@@ -117,7 +117,7 @@ class BookSourceEditActivity :
         ViewCompat.setOnApplyWindowInsetsListener(window.decorView) { v, insets ->
             val ime = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom
             val sys = insets.getInsets(WindowInsetsCompat.Type.systemBars()).bottom
-            AppLog.put(""apply insets ime=$ime  sys=$sys")
+            AppLog.put("apply insets ime=$ime  sys=$sys")
             ViewCompat.onApplyWindowInsets(v, insets)
         }
         super.onCreate(savedInstanceState)
