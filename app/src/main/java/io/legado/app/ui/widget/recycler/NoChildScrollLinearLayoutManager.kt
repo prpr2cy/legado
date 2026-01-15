@@ -1,6 +1,6 @@
 package io.legado.app.ui.widget.recycler
 
-import android.os.Handler 
+import android.os.Handler
 import android.os.Looper
 import android.content.Context
 import android.graphics.Rect
@@ -70,22 +70,26 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         val cursorRect = Rect()
         edit.getFocusedRect(cursorRect)
 
-        /* 2. 转成屏幕绝对坐标 */
-        val loc = IntArray(2)
-        edit.getLocationOnScreen(loc)
-        cursorRect.offset(loc[0], loc[1])
+        /* 2. 转成窗口绝对坐标 */
+        val editLoc = IntArray(2)
+        edit.getLocationInWindow(editLoc)
+        cursorRect.offset(editLoc[0], editLoc[1])
 
-        /* 3. 窗口可视区域（已减去键盘）*/
+        /**
+         * 3. 用可见帧底部当键盘顶边
+         * 键盘顶边 = 窗口高度 - 键盘高度
+         */
         val visible = Rect()
         rv.getWindowVisibleDisplayFrame(visible)
+        val keyboardTop = visible.bottom
 
-        /* 4. 需要滚动多少 */
-        val overflow = cursorRect.bottom - visible.bottom
+        /* 4. 要滚动的距离 */
+        val overflow = cursorRect.bottom - keyboardTop
         if (overflow > 0) {
-            /* 5. 绝对滚动：当前 RV 滚动量 + 缺口 */
+            /* 5. 增量滚动：当前滚动量 + 缺口 */
             val target = rv.scrollY + overflow + 8.dp
             rv.stopScroll()
-            rv.post { rv.scrollTo(0, target) }
+            rv.scrollBy(0, overflow + 8.dp)
         }
     }
 
