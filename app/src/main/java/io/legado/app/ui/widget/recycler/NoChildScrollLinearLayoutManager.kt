@@ -26,6 +26,9 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
      */
     var allowFocusScroll: Boolean = true
 
+    /**
+     * 禁止自动滚动，光标被键盘遮挡时，需手动滚到可视区
+     */
     private var mContext = context
     private var recyclerView: RecyclerView? = null
     private val globalLayoutListener = ViewTreeObserver.OnGlobalLayoutListener {
@@ -65,11 +68,15 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         local.offset(loc[0], loc[1])
 
         // 3. 可视区域（已减去键盘/导航栏）
-        val visible = Rect()
-        rv.getWindowVisibleDisplayFrame(visible)
+        //val visible = Rect()
+        //rv.getWindowVisibleDisplayFrame(visible)
+        val rvLoc = IntArray(2)
+        rv.getLocationOnScreen(rvLoc)
+        val rvBottom = rvLoc[1] + rv.height
 
         // 4. 滚动距离
-        val overflow = local.bottom - visible.bottom
+        //val overflow = local.bottom - visible.bottom
+        val overflow = local.bottom - rvBottom
         if (overflow > 0) {
             rv.post { rv.scrollBy(0, overflow + 8.dp) }
         }
