@@ -8,8 +8,7 @@ import android.widget.EditText
 import androidx.core.view.ViewCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import io.legado.app.utils.imeHeight
-import androidx.core.view.WindowInsetsCompat
+import io.legado.app.constant.AppLog
 
 /**
  * 禁止子项自动滚动的 LinearLayoutManager
@@ -77,6 +76,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         if (cursorY == -1 || !isCursorObscuredByKeyboard(cursorY)) return 
  
         val dy = calculateRemainScroll(cursorY)
+        AppLog.put("$dy")
         if (dy > 0) {
             // 使用 LayoutManager 自己的滚动接口，避开 adjustResize 冲突 
             scrollVerticallyBy(dy, recycler, state)
@@ -216,6 +216,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
             getCursorScreenY(child)
             return false
         }
+        AppLog.put("系统自动处理滚动")
 
         /** 否则调用父类方法进行滚动 */
         return super.requestChildRectangleOnScreen(parent, child, rect, immediate, focusedChildVisible)
