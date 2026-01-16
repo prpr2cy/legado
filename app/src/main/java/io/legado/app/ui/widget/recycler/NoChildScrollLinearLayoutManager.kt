@@ -86,9 +86,6 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         val edit = rv.findFocus() as? EditText ?: return
         val layout = edit.layout ?: return
         val selection = edit.selectionStart.takeIf { it >= 0 } ?: return
-        val scrollRange = edit.scrollRange()
-        val scrollExtent = edit.scrollExtent()
-        val scrollOffset = edit.scrollOffset()
 
         // 获取窗口可视区域
         val windowRect = Rect()
@@ -108,14 +105,14 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         val editTopInWindow = editLoc[1]
 
         // 计算光标底部在窗口中的位置（考虑EditText的滚动偏移）
-        val cursorBottomInWindow = editTopInWindow + lineBottom - scrollOffset
+        val cursorBottomInWindow = editTopInWindow + lineBottom - edit.scrollY
 
         // 光标没有被遮挡，无需滚动
         if (cursorBottomInWindow <= keyboardTop) return
 
         // 计算EditText还能向下滚动的距离
-        val maxScrollY = scrollRange - scrollExtent
-        val remainingScrollY = maxScrollY - scrollOffset
+        val maxScrollY = edit.scrollRange - edit.scrollExtent
+        val remainingScrollY = maxScrollY - edit.scrollOffset
 
         // 计算EditText需要滚动的距离
         val neededScrollInside = cursorBottomInWindow - keyboardTop
