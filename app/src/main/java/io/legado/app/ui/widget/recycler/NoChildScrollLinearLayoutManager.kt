@@ -231,7 +231,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         if (dy == 0) return false
 
         // 部分可见或完全不可见，滚动到可见区域
-        parent.scrollBy(0, dy)
+        // parent.scrollBy(0, dy)
         return true
     }
 }
