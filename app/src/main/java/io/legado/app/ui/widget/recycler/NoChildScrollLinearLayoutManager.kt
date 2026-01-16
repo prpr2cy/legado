@@ -88,7 +88,6 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         edit.getLocationInWindow(editLoc)
         val editTopInWindow = editLoc[1]
         val editBottomInWindow = editLoc[1] + edit.height
-        val lineHeight = cursorBottomInEdit - cursorTopInEdit
 
         // 计算光标顶部/底部在窗口中的位置
         val cursorTopInwindow = editTopInWindow + cursorTopInEdit
@@ -105,15 +104,13 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         // 计算光标需要滚动的距离
         val neededScrollY = cursorBottomInWindow - keyboardTopInwindow
 
-        /*
         val originalScrollY = edit.scrollY
         edit.scrollTo(0, Int.MAX_VALUE)
         val maxScrollY = edit.scrollY
         edit.scrollTo(0, originalScrollY)
-        */
 
         // 计算EditText剩余的滚动空间
-        val remainingScrollY = layout.height - edit.scrollY
+        val remainingScrollY = maxScrollY - originalScrollY
 
         // 还有内部滚动空间，先滚动EditText
         if (remainingScrollY > 0) {
