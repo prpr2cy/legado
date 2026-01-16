@@ -34,6 +34,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
     private var recyclerView: RecyclerView? = null
     private var keyboardHeight: Int = 0
 
+    /*
     private val resetTapRunnable = Runnable { fromTap = false }
     private var fromTap: Boolean = false
         set(value) {
@@ -43,6 +44,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         }
 
     private val scrollRunnable = Runnable { scrollCursorToVisible() }
+    */
 
     private val Int.dp: Int
         get() = (this * mContext.resources.displayMetrics.density + 0.5f).toInt()
@@ -54,10 +56,9 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         val newH = rv.rootView.height - rect.bottom
         if (newH > keyboardHeight) {
             keyboardHeight = newH
-            fromTap = true
+            scrollCursorToVisible()
         } else if (newH < keyboardHeight) {
             keyboardHeight = 0
-            fromTap = false
         }
     }
 
@@ -75,12 +76,11 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         view.viewTreeObserver.removeOnGlobalLayoutListener(layoutListener)
     }
 
-    private fun scrollCursorToVisible(): Boolean {
-        //if (keyboardHeight == 0 || !fromTap) return false
-        val rv = recyclerView ?: return false
-        val edit = rv.findFocus() as? EditText ?: return false
-        val layout = edit.layout ?: return false
-        val selection = edit.selectionStart.takeIf { it >= 0 } ?: return false
+    private fun scrollCursorToVisible() {
+        val rv = recyclerView ?: return
+        val edit = rv.findFocus() as? EditText ?: return
+        val layout = edit.layout ?: return
+        val selection = edit.selectionStart.takeIf { it >= 0 } ?: return
 
         // 获取可视区域矩形
         val parentRect = Rect()
@@ -112,7 +112,6 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
                 rv.scrollBy(0, needRv + 8.dp)
             }
         }
-        return true
     }
 
     /**
@@ -197,21 +196,13 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
     ): Boolean {
         /**
          * 拦截初次点击产生焦点时触发的自动滚动
-         * 键盘遮挡光标时尝试手动滚动到可视区域
          * 后续移动光标、键盘操作等场景不会拦截，因为 focusedChildVisible = false
          * 如果子View已经在可见区域内，无需滚动
          * 否则调用父方法进行滚动
          */
         return when {
-            !allowFocusScroll && focusedChildVisible -> {
-                recyclerView?.removeCallbacks(scrollRunnable)
-                recyclerView?.postDelayed(scrollRunnable, 200)
-                false
-            }
-            isChildVisible(parent, child, rect) -> {
-                scrollCursorToVisible()
-                false
-            }
+            !allowFocusScroll && focusedChildVisible -> false
+            isChildVisible(parent, child, rect) -> false
             else -> super.requestChildRectangleOnScreen(parent, child, rect, immediate, focusedChildVisible)
         }
     }
