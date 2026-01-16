@@ -9,6 +9,7 @@ import android.widget.EditText
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import io.legado.app.ui.widget.keyboard.KeyboardToolPop
+import kotlin.math.max
 import kotlin.math.min
 
 /**
@@ -62,12 +63,15 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
 
     override fun onDetachedFromWindow(view: RecyclerView, recycler: RecyclerView.Recycler) {
         super.onDetachedFromWindow(view, recycler)
-        view.viewTreeObserver.removeOnGlobalLayoutListener(layoutListener)
         recyclerView = null
+        view.viewTreeObserver.removeOnGlobalLayoutListener(layoutListener)
     }
 
     /**
      * 禁止自动滚动时，光标被键盘遮挡，需手动滚到可视区
+     * 先滚动EditText内部，让光标尽可能在EditText可视区域内
+     * 如果内部滚动后光标仍然被键盘遮挡，再滚动RecyclerView
+     * 确保光标底部距离键盘顶部有留白
      */
     private fun scrollCursorToVisible() {
         val rv = recyclerView ?: return
@@ -79,19 +83,21 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         val windowRect = Rect()
         rv.getWindowVisibleDisplayFrame(windowRect)
 
-        // 键盘顶部位置（考虑工具栏和留白）
+        // 计算键盘顶部位置（考虑工具栏和留白）
         val keyboardTop = windowRect.bottom - KeyboardToolPop.toolbarHeight - keyboardMargin
+        if (keyboardTop <= 0) return
 
-        // 获取光标底部在EditText中的位置
+        // 获取光标底部在EditText中的绝对位置
         val line = layout.getLineForOffset(selection)
         val lineBottom = layout.getLineBottom(line)
 
         // 获取EditText在窗口中的位置
         val editLoc = IntArray(2)
         edit.getLocationInWindow(editLoc)
+        val editTopInWindow = editLoc[1]
 
         // 计算光标在窗口中的位置（考虑EditText的滚动偏移）
-        val cursorBottomInWindow = editLoc[1] + lineBottom - edit.scrollY
+        val cursorBottomInWindow = editTopInWindow + lineBottom - edit.scrollY
 
         // 光标没有被遮挡，无需滚动
         if (cursorBottomInWindow <= keyboardTop) return
@@ -99,20 +105,19 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         // 需要滚动的距离
         val needScrollInside = cursorBottomInWindow - keyboardTop
 
-        // 计算EditText还能向下滚动的剩余空间
-        val maxScrollY = layout.height - edit.height
-        val remainingScrollY = maxScrollY - edit.scrollY
-
+        // 计算EditText还能向下滚动的距离
+        val maxScrollY = max(0, layout.height - edit.height)
+        val remainingScrollY = max(0, maxScrollY - edit.scrollY)
+        val scrollY = min(needScrollInside, remainingScrollY)
+            
         // 还有内部滚动空间，先滚动EditText
         if (remainingScrollY > 0) {
-            val scrollY = min(needScrollInside, remainingScrollY)
             edit.scrollTo(0, edit.scrollY + scrollY)
         }
 
         // 内部滚动还不够，再滚动recyclerView
         if (needScrollInside > remainingScrollY) {
-            val editBottomInWindow = editLoc[1] + edit.height - edit.scrollY
-            val needScrollRv = editBottomInWindow - keyboardTop
+            val needScrollRv = needScrollInside - scrollY
             rv.stopScroll()
             rv.scrollBy(0, needScrollRv)
         }
