@@ -36,15 +36,6 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
     private val Int.dp: Int
         get() = (this * mContext.resources.displayMetrics.density + 0.5f).toInt()
 
-    private val EditText.scrollRange: Int
-        get() = (this as View).computeVerticalScrollRange()
-
-    private val EditText.scrollExtent: Int
-        get() = (this as View).computeVerticalScrollExtent()
-
-    private val EditText.scrollOffset: Int
-        get() = (this as View).computeVerticalScrollOffset()
-
     private val layoutListener = ViewTreeObserver.OnGlobalLayoutListener {
         val rv = recyclerView ?: return@OnGlobalLayoutListener
         val rect = Rect()
@@ -111,8 +102,11 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         if (cursorBottomInWindow <= keyboardTop) return
 
         // 计算EditText还能向下滚动的距离
-        val maxScrollY = edit.scrollRange - edit.scrollExtent
-        val remainingScrollY = maxScrollY - edit.scrollOffset
+        val originalScrollY = edit.scrollY
+        edit.scrollTo(0, Int.MAX_VALUE)
+        val maxScrollY = edit.scrollY
+        edit.scrollTo(0, originalScrollY)
+        val remainingScrollY = maxScrollY - edit.scrollY
 
         // 计算EditText需要滚动的距离
         val neededScrollInside = cursorBottomInWindow - keyboardTop
@@ -120,7 +114,6 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
 
         // 还有内部滚动空间，先滚动EditText
         if (scrollY > 0) {
-            rv.stopScroll()
             edit.scrollBy(0, scrollY)
         }
 
