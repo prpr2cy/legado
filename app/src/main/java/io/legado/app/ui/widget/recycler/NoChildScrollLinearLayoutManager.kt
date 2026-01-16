@@ -96,14 +96,17 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         val editTopInWindow = editLoc[1]
 
         // 计算光标底部在窗口中的位置（考虑EditText的滚动偏移）
-        var cursorBottomInWindow = editTopInWindow + lineBottom - edit.scrollY
+        val cursorBottomInWindow = editTopInWindow + lineBottom - edit.scrollY
 
         // 光标没有被遮挡，无需滚动
         if (cursorBottomInWindow <= keyboardTop) return
 
         // 计算EditText还能向下滚动的距离
-        val maxScrollY = max(0, layout.height - edit.height)
-        val remainingScrollY = max(0, maxScrollY - edit.scrollY)
+        val scrollRange = edit.computeVerticalScrollRange()
+        val scrollExtent = edit.computeVerticalScrollExtent()
+        val scrollOffset = edit.computeVerticalScrollOffset()
+        val maxScrollY = scrollRange - scrollExtent
+        val remainingScrollY = maxScrollY - scrollOffset
 
         // 计算EditText需要滚动的距离
         val neededScrollInside = cursorBottomInWindow - keyboardTop
@@ -113,14 +116,12 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         if (scrollY > 0) {
             rv.stopScroll()
             edit.scrollBy(0, scrollY)
-            // 更新光标底部在窗口的位置
-            cursorBottomInWindow -= scrollY
         }
 
         // 滚动完EditText后，再看是否需要滚动RecyclerView
-        if (cursorBottomInWindow > keyboardTop) {
+        if (neededScrollInside > remainingScrollY) {
             // 计算RecyclerView需要滚动的距离
-            val neededScrollRv = cursorBottomInWindow - keyboardTop
+            val neededScrollRv = neededScrollInside - remainingScrollY
             rv.stopScroll()
             rv.scrollBy(0, neededScrollRv)
         }
