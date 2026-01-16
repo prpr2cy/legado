@@ -96,7 +96,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         val lineBottomInWindow = editLoc[1] + lineBottom
 
         // 先让EditText内部滚动，把文字露出来
-        val needInside = lineBottomInWindow - edit.scrollY - keyboardTop
+        val needInside = lineBottomInWindow - keyboardTop
         if (needInside > 0) {
             edit.scrollBy(0, needInside + 8.dp)
         }
@@ -104,7 +104,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         // 仍被盖住，并且内部滚动已到低，再让RecyclerView滚动
         rv.post {
             val canScrollInside = edit.canScrollVertically(1)
-            val itemBottomInWindow = editLoc[1] + edit.height
+            val itemBottomInWindow = editLoc[1]
             val needRv = itemBottomInWindow - keyboardTop
 
             if (!canScrollInside && needRv > 0) {
