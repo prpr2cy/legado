@@ -26,13 +26,14 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
     var allowFocusScroll: Boolean = true
 
     private var recyclerView: RecyclerView? = null
-    //键盘高度
+    private val mContext: Context = context
+    // 键盘高度
     private var keyboardHeight: Int = 0
     // 键盘上方留白
     private val keyboardMargin = 8.dp
 
     private val Int.dp: Int
-        get() = (this * context.resources.displayMetrics.density + 0.5f).toInt()
+        get() = (this * mContext.resources.displayMetrics.density + 0.5f).toInt()
 
     private val layoutListener = ViewTreeObserver.OnGlobalLayoutListener {
         val rv = recyclerView ?: return@OnGlobalLayoutListener
@@ -110,7 +111,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
 
         // 内部滚动还不够，再滚动recyclerView
         if (needScrollInside > remainingScrollY) {
-            val editBottomInWindow = loc[1] + edit.height - edit.scrollY
+            val editBottomInWindow = editLoc[1] + edit.height - edit.scrollY
             val needScrollRv = editBottomInWindow - keyboardTop
             rv.stopScroll()
             rv.scrollBy(0, needScrollRv)
