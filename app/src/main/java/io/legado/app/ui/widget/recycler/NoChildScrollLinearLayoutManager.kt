@@ -36,6 +36,15 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
     private val Int.dp: Int
         get() = (this * mContext.resources.displayMetrics.density + 0.5f).toInt()
 
+    private val EditText.scrollRange: Int
+        get() = (this as View).computeVerticalScrollRange()
+
+    private val EditText.scrollExtent: Int
+        get() = (this as View).computeVerticalScrollExtent()
+
+    private val EditText.scrollOffset: Int
+        get() = (this as View).computeVerticalScrollOffset()
+
     private val layoutListener = ViewTreeObserver.OnGlobalLayoutListener {
         val rv = recyclerView ?: return@OnGlobalLayoutListener
         val rect = Rect()
@@ -77,6 +86,9 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         val edit = rv.findFocus() as? EditText ?: return
         val layout = edit.layout ?: return
         val selection = edit.selectionStart.takeIf { it >= 0 } ?: return
+        val scrollRange = edit.scrollRange()
+        val scrollExtent = edit.scrollExtent()
+        val scrollOffset = edit.scrollOffset()
 
         // 获取窗口可视区域
         val windowRect = Rect()
@@ -96,15 +108,12 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         val editTopInWindow = editLoc[1]
 
         // 计算光标底部在窗口中的位置（考虑EditText的滚动偏移）
-        val cursorBottomInWindow = editTopInWindow + lineBottom - edit.scrollY
+        val cursorBottomInWindow = editTopInWindow + lineBottom - scrollOffset
 
         // 光标没有被遮挡，无需滚动
         if (cursorBottomInWindow <= keyboardTop) return
 
         // 计算EditText还能向下滚动的距离
-        val scrollRange = edit.computeVerticalScrollRange()
-        val scrollExtent = edit.computeVerticalScrollExtent()
-        val scrollOffset = edit.computeVerticalScrollOffset()
         val maxScrollY = scrollRange - scrollExtent
         val remainingScrollY = maxScrollY - scrollOffset
 
