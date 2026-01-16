@@ -33,7 +33,14 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
     private var mContext = context
     private var recyclerView: RecyclerView? = null
     private var keyboardHeight: Int = 0
+
     private var fromTap: Boolean = false
+        set(value) {
+            field = value
+            if (value) recyclerView?.removeCallbacks(resetTapRunnable)
+            else recyclerView?.postDelayed(resetTapRunnable, 100)
+        }
+    private val resetTapRunnable = Runnable { fromTap = false }
 
     private val Int.dp: Int
         get() = (this * mContext.resources.displayMetrics.density + 0.5f).toInt()
@@ -46,9 +53,9 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         if (newH > keyboardHeight) {
             keyboardHeight = newH
             fromTap = true
-            rv.post { fromTap = false }
         } else if (newH < keyboardHeight) {
-            keyboardHeight = newH
+            keyboardHeight = 0
+            fromTap = false
         }
     }
 
@@ -82,7 +89,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         edit.getLocationInWindow(loc)
         val editLoc = IntArray(2).also { edit.getLocationInWindow(it) }
         val lineBottomInWindow = editLoc[1] + lineBottom
-        
+
         // 键盘/工具栏顶边的窗口坐标
         val keyboardTop = parentRect.bottom - KeyboardToolPop.toolbarHeight
 
@@ -196,9 +203,10 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         //if (isChildVisible(parent, child, rect)) {
         //    return false
         //}
-        if (scrollCursorToVisible()) return true
-
-        // 否则调用父类方法进行滚动
-        return super.requestChildRectangleOnScreen(parent, child, rect, immediate, focusedChildVisible)
+        return when {
+            scrollCursorToVisible() -> true
+            !allowFocusScroll && focusedChildVisible -> false
+            else -> super.requestChildRectangleOnScreen(parent, child, rect, immediate, focusedChildVisible)
+        }
     }
 }
