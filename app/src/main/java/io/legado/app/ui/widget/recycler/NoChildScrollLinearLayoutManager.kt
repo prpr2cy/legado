@@ -188,14 +188,15 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
     ): Boolean {
         // 拦截初次焦点触发的自动滚动
         // 后续光标移动、键盘操作等场景不会拦截，因为 focusedChildVisible = false
-        if (!allowFocusScroll && focusedChildVisible) {
-            return scrollCursorToVisible()
-        }
+        //if (!allowFocusScroll && focusedChildVisible) {
+        //    return scrollCursorToVisible(parent, child)
+        //}
 
         // 如果子View已经在可见区域内，无需滚动
-        if (isChildVisible(parent, child, rect)) {
-            return scrollCursorToVisible()
-        }
+        //if (isChildVisible(parent, child, rect)) {
+        //    return false
+        //}
+        if (scrollCursorToVisible()) return true
 
         // 否则调用父类方法进行滚动
         return super.requestChildRectangleOnScreen(parent, child, rect, immediate, focusedChildVisible)
