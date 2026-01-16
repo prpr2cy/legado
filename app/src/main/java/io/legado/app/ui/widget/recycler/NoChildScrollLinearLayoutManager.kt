@@ -1,8 +1,6 @@
 package io.legado.app.ui.widget.recycler
 
 import android.graphics.Rect
-import android.os.Handler
-import android.os.Looper
 import android.content.Context
 import android.util.AttributeSet
 import android.view.View
@@ -30,13 +28,12 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
     var allowFocusScroll: Boolean = true
 
     /**
-     * 禁止自动滚动时点击，光标被键盘遮挡，需手动滚到可视区
+     * 禁止自动滚动时，光标被键盘遮挡，需手动滚到可视区
      */
     private var mContext = context
     private var recyclerView: RecyclerView? = null
-    private var keyboardHeight = 0
-    private var fromTap = false
-    private val handler = Handler(Looper.getMainLooper())
+    private var keyboardHeight: Int = 0
+    private var fromTap: Boolean = false
 
     private val Int.dp: Int
         get() = (this * mContext.resources.displayMetrics.density + 0.5f).toInt()
@@ -69,11 +66,11 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
     }
 
     private fun scrollCursorToVisible() {
-        if (keyboardHeight == 0 || !formTap) return
-        val rv = recyclerView ?: return
-        val edit = rv.findFocus() as? EditText ?: return
-        val layout = edit.layout ?: return
-        val selection = edit.selectionStart.takeIf { it >= 0 } ?: return
+        if (keyboardHeight == 0 || !fromTap) return false
+        val rv = recyclerView ?: return false
+        val edit = rv.findFocus() as? EditText ?: return false
+        val layout = edit.layout ?: return false
+        val selection = edit.selectionStart.takeIf { it >= 0 } ?: return false
 
         // 获取可视区域矩形
         val parentRect = Rect()
@@ -107,6 +104,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
                 rv.scrollBy(0, needRv + 8.dp)
             }
         }
+        return true
     }
 
     /**
@@ -192,14 +190,12 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         // 拦截初次焦点触发的自动滚动
         // 后续光标移动、键盘操作等场景不会拦截，因为 focusedChildVisible = false
         if (!allowFocusScroll && focusedChildVisible) {
-            scrollCursorToVisible()
-            return false
+            return scrollCursorToVisible()
         }
 
         // 如果子View已经在可见区域内，无需滚动
         if (isChildVisible(parent, child, rect)) {
-            scrollCursorToVisible()
-            return false
+            return scrollCursorToVisible()
         }
 
         // 否则调用父类方法进行滚动
