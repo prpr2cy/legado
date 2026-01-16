@@ -71,7 +71,6 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
      * 禁止自动滚动时，光标被键盘遮挡，需手动滚到可视区
      * 先滚动EditText内部，让光标尽可能在EditText可视区域内
      * 如果内部滚动后光标仍然被键盘遮挡，再滚动RecyclerView
-     * 确保光标底部距离键盘顶部有留白
      */
     private fun scrollCursorToVisible() {
         val rv = recyclerView ?: return
@@ -106,19 +105,19 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         val maxScrollY = max(0, layout.height - edit.height)
         val remainingScrollY = max(0, maxScrollY - edit.scrollY)
 
-        // 计算需要滚动的距离
+        // 计算EditText需要滚动的距离
         val neededScrollInside = cursorBottomInWindow - keyboardTop
         val scrollY = min(neededScrollInside, remainingScrollY)
 
-
         // 还有内部滚动空间，先滚动EditText
         if (scrollY > 0) {
-            edit.scrollTo(0, edit.scrollY + scrollY)
-            // 更新光标底部在窗口位置
+            rv.stopScroll()
+            edit.scrollBy(0, scrollY)
+            // 更新光标底部在窗口的位置
             cursorBottomInWindow -= scrollY
         }
 
-        // 滚动完EditText后，计算是否需要RecyclerView
+        // 滚动完EditText后，再看是否需要滚动RecyclerView
         if (cursorBottomInWindow > keyboardTop) {
             // 计算RecyclerView需要滚动的距离
             val neededScrollRv = cursorBottomInWindow - keyboardTop
