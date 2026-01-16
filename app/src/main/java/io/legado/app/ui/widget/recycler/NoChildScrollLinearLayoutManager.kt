@@ -204,7 +204,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         //    return false
         //}
         return when {
-            scrollCursorToVisible() -> true
+            scrollCursorToVisible() -> false
             !allowFocusScroll && focusedChildVisible -> false
             else -> super.requestChildRectangleOnScreen(parent, child, rect, immediate, focusedChildVisible)
         }
