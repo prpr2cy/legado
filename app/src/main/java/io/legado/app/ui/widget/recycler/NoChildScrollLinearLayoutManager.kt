@@ -78,24 +78,24 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         val layout = edit.layout ?: return
         val selection = edit.selectionStart.takeIf { it >= 0 } ?: return
 
-        // 获取窗口可视区域
-        val windowRect = Rect()
-        rv.getWindowVisibleDisplayFrame(windowRect)
-
-        // 计算光标底部在EditText中的位置
+        // 计算光标相对EditText的顶部/底部位置
         val line = layout.getLineForOffset(selection)
-        val lineBottom = layout.getLineBottom(line)
+        val cursorTopInEdit = layout.getLineTop(line) - edit.scrollY
+        val cursorBottomInEdit = layout.getLineBottom(line) - edit.scrollY
 
         // 计算EditText顶部和底部在窗口中的位置
         val editLoc = IntArray(2)
         edit.getLocationInWindow(editLoc)
         val editTopInWindow = editLoc[1]
         val editBottomInWindow = editLoc[1] + edit.height
+        val lineHeight = cursorBottomInEdit - cursorTopInEdit
 
         // 计算光标底部在窗口中的位置（考虑EditText的滚动偏移）
-        val cursorBottomInWindow = editTopInWindow + lineBottom - edit.scrollY
+        val cursorBottomInWindow = editTopInWindow + cursorBottomInEdit
 
         // 计算键盘顶部在窗口的位置（考虑工具栏和留白）
+        val windowRect = Rect()
+        rv.getWindowVisibleDisplayFrame(windowRect)
         val keyboardTop = windowRect.bottom - keyboardMargin
 
         // 光标没有被遮挡，无需滚动
@@ -111,10 +111,17 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         edit.scrollTo(0, originalScrollY)
         */
 
-        // 计算EditText需要滚动的距离
-        val remainingScrollY = edit.height - edit.scrollY
-        val neededScrollInside = min(scrollY, remainingScrollY)
+        // 计算EditText剩余的滚动空间
+        val remainingScrollY = layout.height - edit.scrollY
 
+        // 内部有足够空间滚动，且编辑框顶部不会被键盘遮挡
+        if (editTopInWindow + lineHeight < keyboardTop && scrollY > remainingScrollY) {
+            edit.scrollBy(0, scrollY)
+            return
+        }
+
+        // 内部无足够空间，或者编辑框会被遮挡
+        val neededScrollInside = min(scrollY, remainingScrollY)
         // 还有内部滚动空间，先滚动EditText
         if (neededScrollInside > 0) {
             edit.scrollBy(0, neededScrollInside)
