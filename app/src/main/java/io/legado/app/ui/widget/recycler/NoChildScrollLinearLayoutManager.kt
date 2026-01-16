@@ -118,8 +118,10 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         // 内部滚动还不够，再滚动recyclerView
         if (needScrollInside > remainingScrollY) {
             val needScrollRv = needScrollInside - scrollY
-            rv.stopScroll()
-            rv.scrollBy(0, needScrollRv)
+            edit.post {
+                rv.stopScroll()
+                rv.scrollBy(0, needScrollRv)
+            }
         }
     }
 
