@@ -70,8 +70,8 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
 
     override fun onDetachedFromWindow(view: RecyclerView, recycler: RecyclerView.Recycler) {
         super.onDetachedFromWindow(view, recycler)
-        recyclerView?.removeCallbacks(resetTapRunnable)
-        recyclerView?.removeCallbacks(scrollRunnable)
+        //recyclerView?.removeCallbacks(resetTapRunnable)
+        //recyclerView?.removeCallbacks(scrollRunnable)
         recyclerView = null
         view.viewTreeObserver.removeOnGlobalLayoutListener(layoutListener)
     }
