@@ -42,7 +42,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
             else recyclerView?.postDelayed(resetTapRunnable, 100)
         }
 
-        private val scrollRunnable = Runnable { scrollCursorToVisible() }
+    private val scrollRunnable = Runnable { scrollCursorToVisible() }
 
     private val Int.dp: Int
         get() = (this * mContext.resources.displayMetrics.density + 0.5f).toInt()
@@ -76,7 +76,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
     }
 
     private fun scrollCursorToVisible(): Boolean {
-        if (keyboardHeight == 0 || !fromTap) return false
+        //if (keyboardHeight == 0 || !fromTap) return false
         val rv = recyclerView ?: return false
         val edit = rv.findFocus() as? EditText ?: return false
         val layout = edit.layout ?: return false
@@ -86,16 +86,14 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         val parentRect = Rect()
         rv.getWindowVisibleDisplayFrame(parentRect)
 
+        // 键盘/工具栏顶边的窗口坐标
+        val keyboardTop = parentRect.bottom - KeyboardToolPop.toolbarHeight
+
         // 计算光标行底边的窗口坐标
         val line = layout.getLineForOffset(selection)
         val lineBottom = layout.getLineBottom(line)
-        val loc = IntArray(2)
-        edit.getLocationInWindow(loc)
         val editLoc = IntArray(2).also { edit.getLocationInWindow(it) }
         val lineBottomInWindow = editLoc[1] + lineBottom
-
-        // 键盘/工具栏顶边的窗口坐标
-        val keyboardTop = parentRect.bottom - KeyboardToolPop.toolbarHeight
 
         // 先让EditText内部滚动，把文字露出来
         val needInside = lineBottomInWindow - edit.scrollY - keyboardTop
@@ -212,6 +210,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
             }
             isChildVisible(parent, child, rect) -> {
                 scrollCursorToVisible()
+                false
             }
             else -> super.requestChildRectangleOnScreen(parent, child, rect, immediate, focusedChildVisible)
         }
