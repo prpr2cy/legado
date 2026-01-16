@@ -34,13 +34,15 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
     private var recyclerView: RecyclerView? = null
     private var keyboardHeight: Int = 0
 
+    private val resetTapRunnable = Runnable { fromTap = false }
     private var fromTap: Boolean = false
         set(value) {
             field = value
             if (value) recyclerView?.removeCallbacks(resetTapRunnable)
             else recyclerView?.postDelayed(resetTapRunnable, 100)
         }
-    private val resetTapRunnable = Runnable { fromTap = false }
+
+        private val scrollRunnable = Runnable { scrollCursorToVisible() }
 
     private val Int.dp: Int
         get() = (this * mContext.resources.displayMetrics.density + 0.5f).toInt()
@@ -67,6 +69,8 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
 
     override fun onDetachedFromWindow(view: RecyclerView, recycler: RecyclerView.Recycler) {
         super.onDetachedFromWindow(view, recycler)
+        recyclerView?.removeCallbacks(resetTapRunnable)
+        recyclerView?.removeCallbacks(scrollRunnable)
         recyclerView = null
         view.viewTreeObserver.removeOnGlobalLayoutListener(layoutListener)
     }
@@ -193,19 +197,22 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         immediate: Boolean,
         focusedChildVisible: Boolean
     ): Boolean {
-        // 拦截初次焦点触发的自动滚动
-        // 后续光标移动、键盘操作等场景不会拦截，因为 focusedChildVisible = false
-        //if (!allowFocusScroll && focusedChildVisible) {
-        //    return scrollCursorToVisible(parent, child)
-        //}
-
-        // 如果子View已经在可见区域内，无需滚动
-        //if (isChildVisible(parent, child, rect)) {
-        //    return false
-        //}
+        /**
+         * 拦截初次点击产生焦点时触发的自动滚动
+         * 键盘遮挡光标时尝试手动滚动到可视区域
+         * 后续移动光标、键盘操作等场景不会拦截，因为 focusedChildVisible = false
+         * 如果子View已经在可见区域内，无需滚动
+         * 否则调用父方法进行滚动
+         */
         return when {
-            scrollCursorToVisible() -> false
-            !allowFocusScroll && focusedChildVisible -> false
+            !allowFocusScroll && focusedChildVisible -> {
+                recyclerView?.removeCallbacks(scrollRunnable)
+                recyclerView?.postDelayed(scrollRunnable, 200)
+                false
+            }
+            isChildVisible(parent, child, rect) -> {
+                scrollCursorToVisible()
+            }
             else -> super.requestChildRectangleOnScreen(parent, child, rect, immediate, focusedChildVisible)
         }
     }
