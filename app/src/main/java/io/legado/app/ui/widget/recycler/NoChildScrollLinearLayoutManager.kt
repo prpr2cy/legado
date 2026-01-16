@@ -62,10 +62,9 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         super.onDetachedFromWindow(view, recycler)
         recyclerView = null
         view.viewTreeObserver.removeOnGlobalLayoutListener(layoutListener)
-        handler.removeCallbacksAndMessages(null)
     }
 
-    private fun scrollCursorToVisible() {
+    private fun scrollCursorToVisible(): Boolean {
         if (keyboardHeight == 0 || !fromTap) return false
         val rv = recyclerView ?: return false
         val edit = rv.findFocus() as? EditText ?: return false
