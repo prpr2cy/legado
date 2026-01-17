@@ -2,11 +2,12 @@ package io.legado.app.ui.widget.recycler
 
 import android.content.Context
 import android.graphics.Rect
-import androidx.lifecycle.lifecycleScope
 import android.util.AttributeSet
 import android.view.View
 import android.view.ViewTreeObserver
 import android.widget.EditText
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.findViewTreeLifecycleOwner
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import io.legado.app.ui.widget.keyboard.KeyboardToolPop
@@ -30,6 +31,8 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
 
     // 是否允许因焦点变化产生的自动滚动，默认允许
     var allowFocusScroll: Boolean = true
+    private var lifecycleOwner: LifecycleOwner? = null
+    private var focusScrollJob: Job? = null
     // 记录当前的RecyclerView
     private var recyclerView: RecyclerView? = null
     // 记录获得焦点的EditText
@@ -57,7 +60,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
             if (showing) {
                 allowFocusScroll = false
                 focusScrollJob?.cancel()
-                focusScrollJob = lifecycleScope.launch {
+                focusScrollJob = lifecycleOwner.launch {
                     delay(500)
                     if (isActive) {
                         allowFocusScroll = true
@@ -75,6 +78,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
     override fun onAttachedToWindow(view: RecyclerView) {
         super.onAttachedToWindow(view)
         recyclerView = view
+        lifecycleOwner = view.findViewTreeLifecycleOwner()
         view.viewTreeObserver.addOnPreDrawListener(keyboardListener)
     }
 
@@ -82,6 +86,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         super.onDetachedFromWindow(view, recycler)
         recyclerView = null
         editText = null
+        lifecycleOwner = null
         view.viewTreeObserver.removeOnPreDrawListener(keyboardListener)
     }
 
@@ -235,7 +240,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
             editText = child
             allowFocusScroll = false
             focusScrollJob?.cancel()
-            focusScrollJob = lifecycleScope.launch {
+            focusScrollJob = lifecycleOwner.launch {
                 delay(500)
                 if (isActive) {
                     allowFocusScroll = true
