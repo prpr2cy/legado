@@ -85,6 +85,8 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         val edit = rv.findFocus() as? EditText ?: return
         val layout = edit.layout ?: return
         val selection = edit.selectionStart.takeIf { it >= 0 } ?: return
+        rv.stopScroll()
+        rv.scrollToPosition(0)
 
         // 计算光标顶部/底部相对EditText的位置
         val line = layout.getLineForOffset(selection)
