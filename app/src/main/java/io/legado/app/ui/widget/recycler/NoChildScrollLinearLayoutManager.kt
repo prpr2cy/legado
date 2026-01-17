@@ -43,7 +43,11 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
     private val Int.dp: Int
         get() = (this * mContext.resources.displayMetrics.density + 0.5f).toInt()
 
+    // 记录键盘的弹起状态
     private var isKeyboardShowing: Boolean = false
+
+    // 记录键盘弹起前的RecyclerView滚动距离
+    private var scrollBeforeResize: Int = 0
 
     private val keyboardListener = ViewTreeObserver.OnPreDrawListener {
         val root = recyclerView?.rootView ?: return@OnPreDrawListener true
@@ -53,8 +57,13 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         val showing = visibleHeight < root.height * 0.80f
         if (showing != isKeyboardShowing) {
             isKeyboardShowing = showing
-            // 只有当键盘弹出时才处理
-            if (showing) scrollCursorToVisible()
+            if (showing) {
+                recyclerView?.scrollBy(0, -scrollBeforeResize)
+                scrollBeforeResize = 0
+                scrollCursorToVisible()
+            } else {
+                scrollBeforeResize = recyclerView?.computeVerticalScrollOffset() ?: 0
+            }
         }
         true
     }
@@ -85,8 +94,6 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         val edit = rv.findFocus() as? EditText ?: return
         val layout = edit.layout ?: return
         val selection = edit.selectionStart.takeIf { it >= 0 } ?: return
-        rv.stopScroll()
-        rv.scrollToPosition(0)
 
         // 计算光标顶部/底部相对EditText的位置
         val line = layout.getLineForOffset(selection)
