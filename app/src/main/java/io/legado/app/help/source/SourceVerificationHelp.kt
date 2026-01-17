@@ -19,9 +19,9 @@ import kotlin.time.Duration.Companion.minutes
  */
 object SourceVerificationHelp {
 
-    private val mainHandler = Handler(Looper.getMainLooper())
-
     private val waitTime = 1.minutes.inWholeNanoseconds
+
+    private val mainHandler = Handler(Looper.getMainLooper())
 
     private fun getKey(source: BaseSource) = getKey(source.getKey())
 

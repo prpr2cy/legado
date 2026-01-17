@@ -23,6 +23,12 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
     defStyleRes: Int = 0
 ) : LinearLayoutManager(context, attrs, defStyleAttr, defStyleRes) {
 
+    private var imeTarget: EditText? = null
+
+    fun updateImeTarget(newTarget: EditText?) {
+        imeTarget = newTarget
+    }
+
     // 是否允许因焦点变化产生的自动滚动，默认允许
     var allowFocusScroll: Boolean = true
 
@@ -59,10 +65,14 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         view.viewTreeObserver.addOnPreDrawListener(keyboardListener)
     }
 
-    override fun onDetachedFromWindow(view: RecyclerView, recycler: RecyclerView.Recycler) {
-        super.onDetachedFromWindow(view, recycler)
-        recyclerView = null
-        view.viewTreeObserver.removeOnPreDrawListener(keyboardListener)
+    override fun onRequestChildFocus(
+        parent: RecyclerView,
+        state: RecyclerView.State,
+        child: View,
+        focused: View?
+    ): Boolean {
+        if (focused === imeTarget) return false
+        return focused is EditText
     }
 
     /**
