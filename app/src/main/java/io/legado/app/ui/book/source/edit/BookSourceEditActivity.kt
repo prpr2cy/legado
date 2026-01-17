@@ -62,8 +62,7 @@ class BookSourceEditActivity :
     VariableDialog.Callback {
 
     override val binding by viewBinding(ActivityBookSourceEditBinding::inflate)
-    override val viewModel by viewModels<BookSourceEditViewModel>()
-    private val layoutManager by lazy { NoChildScrollLinearLayoutManager(this) }
+    override val viewModel by viewModels<BookSourceEditViewModel>()l
     private val adapter by lazy { BookSourceEditAdapter() }
     private val sourceEntities: ArrayList<EditEntity> = ArrayList()
     private val searchEntities: ArrayList<EditEntity> = ArrayList()
@@ -206,7 +205,7 @@ class BookSourceEditActivity :
             setText(R.string.source_tab_content)
         })
         binding.recyclerView.setEdgeEffectColor(primaryColor)
-        binding.recyclerView.layoutManager = layoutManager
+        binding.recyclerView.layoutManager = NoChildScrollLinearLayoutManager(this)
         binding.recyclerView.adapter = adapter
         binding.tabLayout.setBackgroundColor(backgroundColor)
         binding.tabLayout.setSelectedTabIndicatorColor(accentColor)
