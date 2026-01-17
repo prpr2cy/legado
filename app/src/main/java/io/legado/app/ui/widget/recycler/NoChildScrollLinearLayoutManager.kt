@@ -123,7 +123,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
                 val maxCanScroll = max(0, editTopInWindow - rv.computeVerticalScrollOffset())
 
                 // 光标在EditText实际可以滚动的距离
-                val actualCanScroll = min(neededScrollY, maxCanScroll)
+                val actualCanScroll = min(remainingScrollY, maxCanScroll)
 
                 rv.stopScroll()
                 rv.scrollBy(0, actualCanScroll)
