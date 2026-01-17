@@ -31,20 +31,20 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
     // 键盘高度
     private var keyboardHeight: Int = 0
     // 键盘上方工具栏+留白高度
-    private val keyboardMargin: Int = KeyboardToolPop.toolbarHeight + 8.dp
+    private val keyboardMargin: Int = 8.dp
+
+    private val toolbarHeight: Int
+        get() = KeyboardToolPop.toolbarHeight
 
     private val Int.dp: Int
         get() = (this * mContext.resources.displayMetrics.density + 0.5f).toInt()
 
     private val layoutListener = ViewTreeObserver.OnGlobalLayoutListener {
         val rv = recyclerView ?: return@OnGlobalLayoutListener
-        val rect = Rect()
-        rv.getWindowVisibleDisplayFrame(rect)
-
         // 计算键盘高度
-        val screenHeight = rv.rootView.height
-        val visibleHeight = rect.bottom - rect.top
-        val newKeyboardHeight = screenHeight - visibleHeight
+        val windowRect = Rect()
+        rv.getWindowVisibleDisplayFrame(windowRect)
+        val newKeyboardHeight = windowRect.bottom
 
         // 只有当键盘弹出时才处理
         if (newKeyboardHeight > 100 && newKeyboardHeight != keyboardHeight) {
@@ -96,7 +96,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         // 计算键盘顶部在窗口的位置（考虑工具栏和留白）
         val windowRect = Rect()
         rv.getWindowVisibleDisplayFrame(windowRect)
-        val keyboardTopInwindow = windowRect.bottom - keyboardMargin
+        val keyboardTopInwindow = windowRect.bottom - toolbarHeight - keyboardMargin
 
         // 光标没有被遮挡，无需滚动
         if (cursorBottomInWindow <= keyboardTopInwindow) return
