@@ -6,6 +6,7 @@ import android.util.AttributeSet
 import android.view.View
 import android.view.ViewTreeObserver
 import android.widget.EditText
+import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.findViewTreeLifecycleOwner
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -60,7 +61,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
             if (showing) {
                 allowFocusScroll = false
                 focusScrollJob?.cancel()
-                focusScrollJob = lifecycleOwner.launch {
+                focusScrollJob = lifecycleOwner?.lifecycleScope?.launch {
                     delay(500)
                     if (isActive) {
                         allowFocusScroll = true
@@ -239,7 +240,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
             editText = child
             allowFocusScroll = false
             focusScrollJob?.cancel()
-            focusScrollJob = lifecycleOwner.launch {
+            focusScrollJob = lifecycleOwner?.lifecycleScope?.launch {
                 delay(500)
                 if (isActive) {
                     allowFocusScroll = true
