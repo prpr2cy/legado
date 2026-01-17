@@ -52,12 +52,6 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
             scrollCursorToVisible()
         } else if (newKeyboardHeight < 100 && keyboardHeight > 0) {
             keyboardHeight = 0
-            rv.setPadding(
-                rv.paddingLeft,
-                rv.paddingTop,
-                rv.paddingRight,
-                0
-            )
         }
     }
 
@@ -110,28 +104,29 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         // 计算光标需要的滚动距离
         val neededScrollY = cursorBottomInWindow - keyboardTopInwindow
 
-        // 计算当前的EditText顶部允许再向上滚多少
-        val maxCanScroll = max(0, editTopInWindow - rv.computeVerticalScrollOffset())
-
-        // 光标在EditText实际可以滚动的距离
-        val actualCanScroll = min(neededScrollY, maxCanScroll)
-
         // 记录EditText当前的已滚动距离
         val oldScrollY = edit.scrollY
 
         // 先尝试滚动EditText
-        edit.scrollBy(0, actualCanScroll)
+        edit.scrollBy(0, remainingScrollY)
 
         // EditText实际的滚动距离
         val actualScrollY = edit.scrollY - oldScrollY
 
         edit.post {
+            // 计算光标剩下的滚动距离
+            val remainingScrollY = neededScrollY - actualScrollY
+
             // 滚动完EditText后，还被遮挡再滚动RecyclerView
-            if (actualScrollY < neededScrollY) {
-                // 计算光标剩下的滚动距离
-                val remainingScrollY = neededScrollY - actualScrollY
+            if (remainingScrollY > 0) {
+                // 计算当前的EditText顶部允许再向上滚多少
+                val maxCanScroll = max(0, editTopInWindow - rv.computeVerticalScrollOffset())
+
+                // 光标在EditText实际可以滚动的距离
+                val actualCanScroll = min(neededScrollY, maxCanScroll)
+
                 rv.stopScroll()
-                rv.scrollBy(0, remainingScrollY)
+                rv.scrollBy(0, actualCanScroll)
             }
         }
     }
