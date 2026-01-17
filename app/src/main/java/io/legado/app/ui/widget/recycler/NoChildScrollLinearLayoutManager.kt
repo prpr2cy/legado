@@ -79,6 +79,8 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         super.onDetachedFromWindow(view, recycler)
         view.viewTreeObserver.removeOnPreDrawListener(keyboardListener)
         recyclerView = null
+        focusScrollJob?.cancel()
+        focusScrollJob = null
     }
 
     /**

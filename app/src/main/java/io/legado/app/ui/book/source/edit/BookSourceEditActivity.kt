@@ -109,30 +109,6 @@ class BookSourceEditActivity :
         }
     }
 
-    override fun finish() {
-        val source = getSource()
-        val originalSource = viewModel.bookSource ?: BookSource()
-        if (!source.equal(originalSource)) {
-            alert(R.string.exit) {
-                setMessage(R.string.exit_no_save)
-                positiveButton(R.string.yes)
-                negativeButton(R.string.no) {
-                    super.finish()
-                }
-            }
-        } else {
-            super.finish()
-        }
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        softKeyboardTool.detachFromWindow(window)
-        softKeyboardTool.dismiss()
-        layoutManager.allowFocusScroll = true
-        adapter.onFocusChangeListener = null
-    }
-
     override fun onCompatCreateOptionsMenu(menu: Menu): Boolean {
         menuInflater.inflate(R.menu.source_edit, menu)
         return super.onCompatCreateOptionsMenu(menu)
@@ -186,6 +162,28 @@ class BookSourceEditActivity :
 
         }
         return super.onCompatOptionsItemSelected(item)
+    }
+
+    override fun finish() {
+        val source = getSource()
+        val originalSource = viewModel.bookSource ?: BookSource()
+        if (!source.equal(originalSource)) {
+            alert(R.string.exit) {
+                setMessage(R.string.exit_no_save)
+                positiveButton(R.string.yes)
+                negativeButton(R.string.no) {
+                    super.finish()
+                }
+            }
+        } else {
+            super.finish()
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        softKeyboardTool.detachFromWindow(window)
+        softKeyboardTool.dismiss()
     }
 
     private fun initView() {
