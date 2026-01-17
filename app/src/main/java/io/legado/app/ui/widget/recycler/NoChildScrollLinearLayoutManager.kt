@@ -102,31 +102,31 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         if (cursorBottomInWindow <= keyboardTopInwindow) return
 
         // 计算光标需要的滚动距离
-        val neededScroll = cursorBottomInWindow - keyboardTopInwindow
+        val neededScrollY = cursorBottomInWindow - keyboardTopInwindow
 
         // 记录EditText当前的已滚动距离
         val oldScrollY = edit.scrollY
 
         // 先尝试滚动EditText
-        edit.scrollBy(0, neededScroll)
+        edit.scrollBy(0, neededScrollY)
 
         // EditText实际的滚动距离
-        val actualScroll = edit.scrollY - oldScrollY
+        val actualScrollY = edit.scrollY - oldScrollY
 
         edit.post {
             // 计算光标剩下的滚动距离
-            val remainingScroll = neededScrollY - actualScroll
+            val remainingScrollY = neededScrollY - actualScrollY
 
             // 滚动完EditText后还被遮挡，再滚动RecyclerView
-            if (remainingScroll > 0) {
+            if (remainingScrollY > 0) {
                 // 计算RecyclerView可滚动的最大距离，避免滚动过度
-                val maxCanScroll = rv.computeVerticalScrollRange() - rv.computeVerticalScrollExtent() - rv.scrollY
+                val maxCanScrollY = rv.computeVerticalScrollRange() - rv.computeVerticalScrollExtent() - rv.scrollY
 
                 // RecyclerView实际可以滚动的距离
-                val actualCanScroll = min(remainingScroll, maxCanScroll)
+                val actualCanScrollY = min(remainingScrollY, maxCanScrollY)
 
                 rv.stopScroll()
-                rv.scrollBy(0, actualCanScroll)
+                rv.scrollBy(0, actualCanScrollY)
             }
         }
     }
