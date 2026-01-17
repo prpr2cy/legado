@@ -232,9 +232,6 @@ class BookSourceEditActivity :
         adapter.onFocusChangeListener = { view, hasFocus ->
             if (view is EditText) {
                 if (hasFocus) {
-                    layoutManager?.let {
-                        it.scrollBeforeResize = it.computeVerticalScrollOffset()
-                    }
                     // 检查是否是同一个EditText
                     val isSameEditText = currentFocusedEditText == view
                     if (isSameEditText) {
