@@ -221,7 +221,7 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-service:$lifecycle_version")
 
     //media
-    implementation("androidx.media:media:1.7.1")
+    implementation("androidx.media:media:$media_version")
     // For media playback using ExoPlayer
     implementation "androidx.media3:media3-exoplayer:$media3_version"
     // For loading data using the OkHttp network stack
@@ -259,9 +259,9 @@ dependencies {
     implementation "com.google.protobuf:protobuf-javalite:3.25.3"
 
     //Glide
-    implementation("com.github.bumptech.glide:glide:$glideVersion")
-    //kapt("com.github.bumptech.glide:compiler:$glideVersion")
-    ksp("com.github.bumptech.glide:ksp:$glideVersion")
+    implementation("com.github.bumptech.glide:glide:$glide_version")
+    //kapt("com.github.bumptech.glide:compiler:$glide_version")
+    ksp("com.github.bumptech.glide:ksp:$glide_version")
 
     //Svg
     implementation("com.caverock:androidsvg-aar:1.4")
@@ -271,8 +271,8 @@ dependencies {
     }
 
     //webServer
-    implementation("org.nanohttpd:nanohttpd:$nanoHttpdVersion")
-    implementation("org.nanohttpd:nanohttpd-websocket:$nanoHttpdVersion")
+    implementation("org.nanohttpd:nanohttpd:$nanoHttpd_version")
+    implementation("org.nanohttpd:nanohttpd-websocket:$nanoHttpd_version")
 
     //二维码
     //noinspection GradleDependency
@@ -288,10 +288,10 @@ dependencies {
     implementation("org.apache.commons:commons-text:1.12.0")
 
     //MarkDown
-    implementation("io.noties.markwon:core:$markwonVersion")
-    implementation("io.noties.markwon:image-glide:$markwonVersion")
-    implementation("io.noties.markwon:ext-tables:$markwonVersion")
-    implementation("io.noties.markwon:html:$markwonVersion")
+    implementation("io.noties.markwon:core:$markwon_version")
+    implementation("io.noties.markwon:image-glide:$markwon_version")
+    implementation("io.noties.markwon:ext-tables:$markwon_version")
+    implementation("io.noties.markwon:html:$markwon_version")
 
     //转换繁体
     implementation("com.github.liuyueyi.quick-chinese-transfer:quick-transfer-core:0.2.16")
