@@ -12,6 +12,10 @@ import androidx.recyclerview.widget.RecyclerView
 import io.legado.app.ui.widget.keyboard.KeyboardToolPop
 import kotlin.math.max
 import kotlin.math.min
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 
 /**
  * 禁止子项自动滚动的LinearLayoutManager
@@ -26,24 +30,21 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
 
     // 是否允许因焦点变化产生的自动滚动，默认允许
     var allowFocusScroll: Boolean = true
-
+    // 记录当前的RecyclerView
     private var recyclerView: RecyclerView? = null
-
     // 记录获得焦点的EditText
     private var editText: EditText? = null
-
-    private val mContext: Context = context
+    // 记录键盘的弹起状态
+    private var isKeyboardShowing: Boolean = false
     // 留白高度
     private val keyboardMargin: Int = 8.dp
     // 工具栏高度
     private val toolbarHeight: Int
         get() = KeyboardToolPop.toolbarHeight
 
+    private val mContext: Context = context
     private val Int.dp: Int
         get() = (this * mContext.resources.displayMetrics.density + 0.5f).toInt()
-
-    // 记录键盘的弹起状态
-    private var isKeyboardShowing: Boolean = false
 
     private val keyboardListener = ViewTreeObserver.OnPreDrawListener {
         val root = recyclerView?.rootView ?: return@OnPreDrawListener true
@@ -137,7 +138,6 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
 
                 rv.stopScroll()
                 rv.scrollBy(0, actualCanScrollY)
-                rv.post{ allowFocusScroll = true }
             }
         }
     }
@@ -225,6 +225,13 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         if (focusedChildVisible && child is EditText) {
             editText = child
             allowFocusScroll = false
+            focusScrollJob?.cancel()
+            focusScrollJob = lifecycleScope.launch {
+                delay(200)
+                if (isActive) {
+                    allowFocusScroll = true
+                }
+            }
         }
         
         /**
@@ -234,10 +241,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
          * 否则调用父方法进行滚动
          */
         return when {
-            !allowFocusScroll -> {
-                child.postDelayed({ scrollCursorToVisible() }, 200)
-                false
-            }
+            !allowFocusScroll -> false
             isChildVisible(parent, child, rect) -> false
             else -> super.requestChildRectangleOnScreen(parent, child, rect, immediate, focusedChildVisible)
         }
