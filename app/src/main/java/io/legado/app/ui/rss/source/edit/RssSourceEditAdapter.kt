@@ -32,7 +32,6 @@ class RssSourceEditAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
     // 添加焦点变化监听器
     var onFocusChangeListener: ((View, Boolean) -> Unit)? = null
 
-
     override fun getItemViewType(position: Int): Int {
         val item = editEntities[position]
         return item.viewType
