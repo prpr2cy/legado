@@ -28,8 +28,6 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
 
     private var recyclerView: RecyclerView? = null
     private val mContext: Context = context
-    // 键盘高度
-    private var keyboardHeight: Int = 0
     // 留白高度
     private val keyboardMargin: Int = 8.dp
     // 工具栏高度
@@ -39,32 +37,32 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
     private val Int.dp: Int
         get() = (this * mContext.resources.displayMetrics.density + 0.5f).toInt()
 
-    private val layoutListener = ViewTreeObserver.OnGlobalLayoutListener {
-        val rv = recyclerView ?: return@OnGlobalLayoutListener
-        // 计算键盘高度
-        val windowRect = Rect()
-        rv.getWindowVisibleDisplayFrame(windowRect)
-        val newKeyboardHeight = rv.rootView.height - windowRect.bottom
+    private var isKeyboardShowing: Boolean = false
 
-        // 只有当键盘弹出时才处理
-        if (newKeyboardHeight > 100 && newKeyboardHeight != keyboardHeight) {
-            keyboardHeight = newKeyboardHeight
-            scrollCursorToVisible()
-        } else if (newKeyboardHeight < 100 && keyboardHeight > 0) {
-            keyboardHeight = 0
+    private val keyboardListener = ViewTreeObserver.OnPreDrawListener {
+        val root = recyclerView?.rootView ?: return@OnPreDrawListener true
+        val visibleHeight = Rect().apply {
+            root.getWindowVisibleDisplayFrame(this)
+        }.height()
+        val showing = visibleHeight < root.height * 0.80f
+        if (showing != isKeyboardShowing) {
+            isKeyboardShowing = showing
+            // 只有当键盘弹出时才处理
+            if (showing) scrollCursorToVisible()
         }
+        true
     }
 
     override fun onAttachedToWindow(view: RecyclerView) {
         super.onAttachedToWindow(view)
         recyclerView = view
-        view.viewTreeObserver.addOnGlobalLayoutListener(layoutListener)
+        view.viewTreeObserver.addOnPreDrawListener(keyboardListener)
     }
 
     override fun onDetachedFromWindow(view: RecyclerView, recycler: RecyclerView.Recycler) {
         super.onDetachedFromWindow(view, recycler)
         recyclerView = null
-        view.viewTreeObserver.removeOnGlobalLayoutListener(layoutListener)
+        view.viewTreeObserver.removeOnPreDrawListener(keyboardListener)
     }
 
     /**
@@ -104,28 +102,28 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         if (cursorBottomInWindow <= keyboardTopInwindow) return
 
         // 计算光标需要的滚动距离
-        val neededScrollY = cursorBottomInWindow - keyboardTopInwindow
+        val neededScroll = cursorBottomInWindow - keyboardTopInwindow
 
         // 记录EditText当前的已滚动距离
         val oldScrollY = edit.scrollY
 
         // 先尝试滚动EditText
-        edit.scrollBy(0, neededScrollY)
+        edit.scrollBy(0, neededScroll)
 
         // EditText实际的滚动距离
-        val actualScrollY = edit.scrollY - oldScrollY
+        val actualScroll = edit.scrollY - oldScrollY
 
         edit.post {
             // 计算光标剩下的滚动距离
-            val remainingScrollY = neededScrollY - actualScrollY
+            val remainingScroll = neededScrollY - actualScroll
 
-            // 滚动完EditText后，还被遮挡再滚动RecyclerView
-            if (remainingScrollY > 0) {
+            // 滚动完EditText后还被遮挡，再滚动RecyclerView
+            if (remainingScroll > 0) {
                 // 计算RecyclerView可滚动的最大距离，避免滚动过度
                 val maxCanScroll = rv.computeVerticalScrollRange() - rv.computeVerticalScrollExtent() - rv.scrollY
 
                 // RecyclerView实际可以滚动的距离
-                val actualCanScroll = min(remainingScrollY, maxCanScroll)
+                val actualCanScroll = min(remainingScroll, maxCanScroll)
 
                 rv.stopScroll()
                 rv.scrollBy(0, actualCanScroll)
