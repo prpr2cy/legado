@@ -27,9 +27,6 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
             notifyDataSetChanged()
         }
 
-    // 添加焦点变化监听器
-    var onFocusChangeListener: ((View, Boolean) -> Unit)? = null
-
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MyViewHolder {
         val binding = ItemSourceEditBinding.inflate(
             LayoutInflater.from(parent.context),
@@ -66,15 +63,6 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
         fun bind(editEntity: EditEntity) = binding.run {
             editText.setTag(R.id.tag, editEntity.key)
             editText.maxLines = editEntityMaxLine
-
-            // 设置焦点监听器
-            if (editText.onFocusChangeListener != onFocusChangeListener) {
-                editText.onFocusChangeListener = onFocusChangeListener?.let { listener ->
-                    View.OnFocusChangeListener { view, hasFocus ->
-                        listener(view, hasFocus)
-                    }
-                } ?: null
-            }
 
             if (editText.getTag(R.id.tag1) == null) {
                 val listener = object : View.OnAttachStateChangeListener {

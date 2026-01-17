@@ -1,7 +1,8 @@
 package io.legado.app.ui.widget.recycler
 
-import android.graphics.Rect
 import android.content.Context
+import android.graphics.Rect
+import androidx.lifecycle.lifecycleScope
 import android.util.AttributeSet
 import android.view.View
 import android.view.ViewTreeObserver
@@ -9,6 +10,11 @@ import android.widget.EditText
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import io.legado.app.ui.widget.keyboard.KeyboardToolPop
+import java.lang.ref.WeakReference
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import kotlin.math.max
 import kotlin.math.min
 
@@ -26,7 +32,13 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
     // 是否允许因焦点变化产生的自动滚动，默认允许
     var allowFocusScroll: Boolean = true
 
-    private var recyclerView: RecyclerView? = null
+    private var recyclerView: WeakReference<RecyclerView>? = null
+
+    // 记录获得焦点的EditText
+    private var editText: WeakReference<EditText>? = null
+
+    private var focusScrollJob: Job? = null
+
     private val mContext: Context = context
     // 留白高度
     private val keyboardMargin: Int = 8.dp
@@ -59,14 +71,14 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
 
     override fun onAttachedToWindow(view: RecyclerView) {
         super.onAttachedToWindow(view)
-        recyclerView = view
         view.viewTreeObserver.addOnPreDrawListener(keyboardListener)
+        recyclerView = view
     }
 
     override fun onDetachedFromWindow(view: RecyclerView, recycler: RecyclerView.Recycler) {
         super.onDetachedFromWindow(view, recycler)
-        recyclerView = null
         view.viewTreeObserver.removeOnPreDrawListener(keyboardListener)
+        recyclerView = null
     }
 
     /**
@@ -76,7 +88,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
      */
     private fun scrollCursorToVisible() {
         val rv = recyclerView ?: return
-        val edit = rv.findFocus() as? EditText ?: return
+        val edit = editText ?: return
         val layout = edit.layout ?: return
         val selection = edit.selectionStart.takeIf { it >= 0 } ?: return
 
@@ -216,6 +228,11 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         immediate: Boolean,
         focusedChildVisible: Boolean
     ): Boolean {
+        if (focusedChildVisible && child is EditText) {
+            editText = child
+            allowFocusScroll = false
+        }
+        
         /**
          * 拦截初次点击产生焦点时触发的自动滚动
          * 后续移动光标、键盘操作等场景不会拦截，因为 focusedChildVisible = false
@@ -223,9 +240,14 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
          * 否则调用父方法进行滚动
          */
         return when {
-            !allowFocusScroll && focusedChildVisible -> false
-            !allowFocusScroll && isKeyboardShowing -> {
-                postDelayed({ scrollCursorToVisible() }, 200)
+            !allowFocusScroll -> {
+                focusScrollJob?.cancel()
+                focusScrollJob = lifecycleScope.launch {
+                    delay(200)
+                    if (isActive) {
+                        scrollCursorToVisible()
+                    }
+                }
                 false
             }
             isChildVisible(parent, child, rect) -> false
