@@ -30,7 +30,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
     private val mContext: Context = context
     // 键盘高度
     private var keyboardHeight: Int = 0
-    // 键盘上方留白高度
+    // 留白高度
     private val keyboardMargin: Int = 8.dp
     // 工具栏高度
     private val toolbarHeight: Int
