@@ -69,7 +69,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         recyclerView = view
         view.viewTreeObserver.addOnPreDrawListener(keyboardListener)
     }
-/*
+
     override fun onRequestChildFocus(
         parent: RecyclerView,
         state: RecyclerView.State,
@@ -79,7 +79,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         if (focused === imeTarget) return false
         return focused is EditText
     }
-*/
+
     /**
      * 禁止自动滚动时，光标被键盘遮挡，需手动滚到可视区
      * 先滚动EditText内部，让光标尽可能在EditText可视区域内
@@ -142,7 +142,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
 
                 rv.stopScroll()
                 rv.scrollBy(0, actualCanScrollY)
-                rv.post { allowFocusScroll = true }
+                rv.postDelayed({ allowFocusScroll = true }, 200)
             }
         }
     }
