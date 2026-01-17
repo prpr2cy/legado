@@ -32,8 +32,6 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
     // 记录获得焦点的EditText
     private var editText: EditText? = null
 
-    private var focusScrollJob: Job? = null
-
     private val mContext: Context = context
     // 留白高度
     private val keyboardMargin: Int = 8.dp
@@ -237,7 +235,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
          */
         return when {
             !allowFocusScroll -> {
-                postDelayed({ scrollCursorToVisible() }, 200)
+                child.postDelayed({ scrollCursorToVisible() }, 200)
                 false
             }
             isChildVisible(parent, child, rect) -> false
