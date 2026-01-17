@@ -74,8 +74,16 @@ class RssSourceEditAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
         return editEntities.size
     }
 
+    override fun onViewRecycled(holder: MyViewHolder) {
+        val pos = holder.bindingAdapterPosition.takeIf { it >= 0 } ?: return
+        val item = editEntities.getOrNull(pos) ?: return
+        item.scrollY = holder.editText.scrollY
+    }
+
     inner class EditTextViewHolder(val binding: ItemSourceEditBinding) :
         RecyclerView.ViewHolder(binding.root) {
+
+        val editText: EditText = binding.editText
 
         fun bind(editEntity: EditEntity) = binding.run {
             editText.maxLines = editEntityMaxLine
@@ -142,6 +150,10 @@ class RssSourceEditAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
             }
             editText.addTextChangedListener(textWatcher)
             editText.setTag(R.id.tag2, textWatcher)
+
+            editText.post {
+                if (editEntity.scrollY != 0) editText.scrollTo(0, editEntity.scrollY)
+            }
         }
     }
 
