@@ -30,9 +30,9 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
     private val mContext: Context = context
     // 键盘高度
     private var keyboardHeight: Int = 0
-    // 键盘上方工具栏+留白高度
+    // 键盘上方留白高度
     private val keyboardMargin: Int = 8.dp
-
+    // 工具栏高度
     private val toolbarHeight: Int
         get() = KeyboardToolPop.toolbarHeight
 
@@ -117,10 +117,8 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
             // 滚动完EditText后，还被遮挡再滚动RecyclerView
             if (actualScrollY < neededScrollY) {
                 val remainingScrollY = neededScrollY - actualScrollY
-                if (remainingScrollY > 0) {
-                    rv.stopScroll()
-                    rv.scrollBy(0, -remainingScrollY)
-                }
+                rv.stopScroll()
+                rv.scrollBy(0, -remainingScrollY)
             }
         }
     }
