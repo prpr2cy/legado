@@ -222,12 +222,6 @@ class BookSourceEditActivity :
 
         binding.recyclerView.adapter = adapter
 
-        adapter.registerAdapterDataObserver(object : RecyclerView.AdapterDataObserver() {
-            override fun onChanged() {
-                layoutManager?.updateImeTarget(null)
-            }
-        })
-
         // 设置 Adapter 的焦点监听器 - 使用Job管理，只有最新编辑框的才生效
         adapter.onFocusChangeListener = { view, hasFocus ->
             if (view is EditText) {
@@ -238,7 +232,6 @@ class BookSourceEditActivity :
                         // 同一个EditText，已经处理过，允许滚动
                         layoutManager?.allowFocusScroll = true
                     } else {
-                        layoutManager?.updateImeTarget(view)
                         currentFocusedEditText = view
                         // 新的EditText获得焦点，取消之前的Job
                         focusScrollJob?.cancel()
@@ -256,7 +249,6 @@ class BookSourceEditActivity :
                 } else {
                     // 失去焦点时，如果是当前EditText，清除引用
                     if (currentFocusedEditText == view) {
-                        layoutManager?.updateImeTarget(null)
                         currentFocusedEditText = null
                     }
                 }

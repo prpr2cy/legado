@@ -23,12 +23,6 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
     defStyleRes: Int = 0
 ) : LinearLayoutManager(context, attrs, defStyleAttr, defStyleRes) {
 
-    private var imeTarget: EditText? = null
-
-    fun updateImeTarget(newTarget: EditText?) {
-        imeTarget = newTarget
-    }
-
     // 是否允许因焦点变化产生的自动滚动，默认允许
     var allowFocusScroll: Boolean = true
 
@@ -56,7 +50,6 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
             isKeyboardShowing = showing
             if (showing) {
                 allowFocusScroll = false
-                scrollCursorToVisible()
             } else {
                 allowFocusScroll = true
             }
@@ -70,14 +63,10 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         view.viewTreeObserver.addOnPreDrawListener(keyboardListener)
     }
 
-    override fun onRequestChildFocus(
-        parent: RecyclerView,
-        state: RecyclerView.State,
-        child: View,
-        focused: View?
-    ): Boolean {
-        if (focused === imeTarget) return false
-        return focused is EditText
+    override fun onDetachedFromWindow(view: RecyclerView, recycler: RecyclerView.Recycler) {
+        super.onDetachedFromWindow(view, recycler)
+        recyclerView = null
+        view.viewTreeObserver.removeOnPreDrawListener(keyboardListener)
     }
 
     /**
@@ -142,7 +131,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
 
                 rv.stopScroll()
                 rv.scrollBy(0, actualCanScrollY)
-                rv.postDelayed({ allowFocusScroll = true }, 200)
+                rv.post{ allowFocusScroll = true }
             }
         }
     }
@@ -235,7 +224,10 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
          */
         return when {
             !allowFocusScroll && focusedChildVisible -> false
-            !allowFocusScroll && isKeyboardShowing -> false
+            !allowFocusScroll && isKeyboardShowing -> {
+                postDelayed({ scrollCursorToVisible() }, 200)
+                false
+            }
             isChildVisible(parent, child, rect) -> false
             else -> super.requestChildRectangleOnScreen(parent, child, rect, immediate, focusedChildVisible)
         }
