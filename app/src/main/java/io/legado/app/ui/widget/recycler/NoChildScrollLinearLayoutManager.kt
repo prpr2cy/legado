@@ -44,7 +44,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         // 计算键盘高度
         val windowRect = Rect()
         rv.getWindowVisibleDisplayFrame(windowRect)
-        val newKeyboardHeight = windowRect.bottom
+        val newKeyboardHeight = rv.rootView.height - windowRect.bottom
 
         // 只有当键盘弹出时才处理
         if (newKeyboardHeight > 100 && newKeyboardHeight != keyboardHeight) {
@@ -90,13 +90,15 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         val editBottomInWindow = editLoc[1] + edit.height
 
         // 计算光标顶部/底部在窗口中的位置
-        val cursorTopInwindow = editTopInWindow + cursorTopInEdit
         val cursorBottomInWindow = editTopInWindow + cursorBottomInEdit
 
         // 计算键盘顶部在窗口的位置（考虑工具栏和留白）
         val windowRect = Rect()
         rv.getWindowVisibleDisplayFrame(windowRect)
         val keyboardTopInwindow = windowRect.bottom - toolbarHeight - keyboardMargin
+
+        // 键盘高度计算错误时不处理
+        if (keyboardTopInwindow <= 0) return
 
         // 光标没有被遮挡，无需滚动
         if (cursorBottomInWindow <= keyboardTopInwindow) return
@@ -108,7 +110,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         val oldScrollY = edit.scrollY
 
         // 先尝试滚动EditText
-        edit.scrollBy(0, remainingScrollY)
+        edit.scrollBy(0, neededScrollY)
 
         // EditText实际的滚动距离
         val actualScrollY = edit.scrollY - oldScrollY
@@ -119,10 +121,10 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
 
             // 滚动完EditText后，还被遮挡再滚动RecyclerView
             if (remainingScrollY > 0) {
-                // 计算当前的EditText顶部允许再向上滚多少
-                val maxCanScroll = max(0, editTopInWindow - rv.computeVerticalScrollOffset())
+                // 计算RecyclerView可滚动的最大距离，避免滚动过度
+                val maxCanScroll = rv.computeVerticalScrollRange() - rv.computeVerticalScrollExtent() - rv.scrollY
 
-                // 光标在EditText实际可以滚动的距离
+                // RecyclerView实际可以滚动的距离
                 val actualCanScroll = min(remainingScrollY, maxCanScroll)
 
                 rv.stopScroll()
