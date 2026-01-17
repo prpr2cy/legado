@@ -117,8 +117,10 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
             // 滚动完EditText后，还被遮挡再滚动RecyclerView
             if (actualScrollY < neededScrollY) {
                 val remainingScrollY = neededScrollY - actualScrollY
-                rv.stopScroll()
-                rv.scrollBy(0, -remainingScrollY)
+                if (remainingScrollY > 0) {
+                    rv.stopScroll()
+                    rv.scrollBy(0, -remainingScrollY)
+                }
             }
         }
     }
