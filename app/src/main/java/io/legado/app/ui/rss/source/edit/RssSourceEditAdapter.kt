@@ -74,7 +74,7 @@ class RssSourceEditAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
         return editEntities.size
     }
 
-    override fun onViewRecycled(holder: MyViewHolder) {
+    override fun onViewRecycled(holder: EditTextViewHolder) {
         val pos = holder.bindingAdapterPosition.takeIf { it >= 0 } ?: return
         val item = editEntities.getOrNull(pos) ?: return
         item.scrollY = holder.editText.scrollY

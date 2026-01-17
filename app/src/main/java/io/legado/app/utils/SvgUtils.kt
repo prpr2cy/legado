@@ -15,7 +15,6 @@ object SvgUtils {
     /**
      * 从Svg中解码bitmap
      */
-    
     fun createBitmap(filePath: String, width: Int, height: Int? = null): Bitmap? {
         return kotlin.runCatching {
             val inputStream = FileInputStream(filePath)
@@ -79,7 +78,7 @@ object SvgUtils {
             ?: (svg.documentViewBox.right - svg.documentViewBox.left).toInt()
         val height = svg.documentHeight.toInt().takeIf { it > 0 }
             ?: (svg.documentViewBox.bottom - svg.documentViewBox.top).toInt()
-        return Size(width, height)      
+        return Size(width, height)
     }
 
 }

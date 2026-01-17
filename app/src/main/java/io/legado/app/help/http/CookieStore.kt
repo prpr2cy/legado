@@ -23,7 +23,7 @@ object CookieStore : CookieManagerInterface {
     private val webCookieManager: android.webkit.CookieManager by lazy {
         android.webkit.CookieManager.getInstance()
     }
- 
+
     /**
      *保存cookie到数据库，会自动识别url的二级域名
      */

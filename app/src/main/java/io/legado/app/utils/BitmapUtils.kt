@@ -59,7 +59,7 @@ object BitmapUtils {
         if (srcW <= dstW && srcH <= dstH) {
             return 1
         }
-    
+
         while (srcW / sample >= dstW && srcH / sample >= dstH) {
             sample = sample shl 1 // *=2
         }

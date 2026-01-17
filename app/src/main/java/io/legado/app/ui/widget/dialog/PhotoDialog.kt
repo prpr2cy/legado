@@ -37,7 +37,7 @@ class PhotoDialog() : BaseDialogFragment(R.layout.dialog_photo_view) {
 
     @SuppressLint("CheckResult")
     override fun onFragmentCreated(view: View, savedInstanceState: Bundle?) {
-        val arguments = arguments ?: return 
+        val arguments = arguments ?: return
         arguments.getString("src")?.let { src ->
             ImageProvider.get(src)?.let { bmp ->
                 binding.photoView.setImageBitmap(bmp)

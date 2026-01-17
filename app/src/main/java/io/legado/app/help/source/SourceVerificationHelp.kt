@@ -1,6 +1,6 @@
 package io.legado.app.help.source
 
-import android.os.Handler 
+import android.os.Handler
 import android.os.Looper
 import io.legado.app.constant.AppLog
 import io.legado.app.data.entities.BaseSource

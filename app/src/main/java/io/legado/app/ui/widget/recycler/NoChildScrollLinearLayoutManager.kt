@@ -111,7 +111,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         edit.scrollBy(0, neededScrollY)
 
         // EditText实际的滚动量
-        val actualScrollY = edit.scrollY - oldScrollY 
+        val actualScrollY = edit.scrollY - oldScrollY
 
         edit.post {
             // 滚动完EditText后，还被遮挡再滚动RecyclerView

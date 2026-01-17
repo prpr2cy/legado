@@ -1226,14 +1226,14 @@ class PhotoView @JvmOverloads constructor(
             mTranslateX = 0
             mTranslateY = 0
             if (abs(mScale - 1f) <= 0.01f) {
-                from = 1f 
+                from = 1f
                 to = mDoubleTapMaxScale
-                mScaleCenter[e.x] = e.y 
+                mScaleCenter[e.x] = e.y
                 isZoomUp = true
             } else {
-                from = mScale 
+                from = mScale
                 to = 1f
-                isZoomUp = false 
+                isZoomUp = false
             }
             mTmpMatrix.reset()
             mTmpMatrix.postTranslate(-mBaseRect.left, -mBaseRect.top)
@@ -1257,7 +1257,7 @@ class PhotoView @JvmOverloads constructor(
 
             // 计算新的缩放比例
             val newScale = (mScale * scaleFactor).coerceIn(0.5f, mMaxScale)
-            val actualScaleFactor = newScale / mScale 
+            val actualScaleFactor = newScale / mScale
             mScale = newScale
             mAnimMatrix.postScale(
                 actualScaleFactor,

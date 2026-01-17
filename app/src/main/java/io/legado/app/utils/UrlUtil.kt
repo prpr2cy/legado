@@ -134,7 +134,7 @@ object UrlUtil {
             null
         }
     }
-    
+
     private fun getFileNameFromPath(fileUrl: URL): String? {
         val path = fileUrl.path ?: return null
         val suffix = getSuffix(path, "")
