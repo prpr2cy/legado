@@ -56,6 +56,15 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
             isKeyboardShowing = showing
             if (showing) {
                 allowFocusScroll = false
+                focusScrollJob?.cancel()
+                focusScrollJob = lifecycleScope.launch {
+                    delay(500)
+                    if (isActive) {
+                        allowFocusScroll = true
+                    }
+                }
+                recyclerView.bottomPadding = 0
+                scrollCursorToVisible()
             } else {
                 allowFocusScroll = true
             }
@@ -65,15 +74,15 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
 
     override fun onAttachedToWindow(view: RecyclerView) {
         super.onAttachedToWindow(view)
-        view.viewTreeObserver.addOnPreDrawListener(keyboardListener)
         recyclerView = view
+        view.viewTreeObserver.addOnPreDrawListener(keyboardListener)
     }
 
     override fun onDetachedFromWindow(view: RecyclerView, recycler: RecyclerView.Recycler) {
         super.onDetachedFromWindow(view, recycler)
-        view.viewTreeObserver.removeOnPreDrawListener(keyboardListener)
         recyclerView = null
         editText = null
+        view.viewTreeObserver.removeOnPreDrawListener(keyboardListener)
     }
 
     /**
@@ -227,13 +236,12 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
             allowFocusScroll = false
             focusScrollJob?.cancel()
             focusScrollJob = lifecycleScope.launch {
-                delay(200)
+                delay(500)
                 if (isActive) {
                     allowFocusScroll = true
                 }
             }
         }
-        
         /**
          * 拦截初次点击产生焦点时触发的自动滚动
          * 后续移动光标、键盘操作等场景不会拦截，因为 focusedChildVisible = false
