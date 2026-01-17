@@ -104,18 +104,23 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         // 计算光标需要滚动的距离
         val neededScrollY = cursorBottomInWindow - keyboardTopInwindow
 
-        // 先尝试滚动EditText
+        // 记录EditText当前滚动量
         val oldScrollY = edit.scrollY
-        edit.scrollBy(0, neededScrollY)
-        // EditText实际滚动的的距离
-        val alreadyScrolled = edit.scrollY - oldScrollY 
 
-        // 滚动完EditText后，还被遮挡再滚动RecyclerView
-        if (neededScrollY > alreadyScrolled) {
-            val neededScrollRv = editBottomInWindow - keyboardTopInwindow
-            if (neededScrollRv > 0) {
-                rv.stopScroll()
-                rv.scrollBy(0, neededScrollRv)
+        // 先尝试滚动EditText
+        edit.scrollBy(0, neededScrollY)
+
+        // EditText实际的滚动量
+        val actualScrollY = edit.scrollY - oldScrollY 
+
+        edit.post {
+            // 滚动完EditText后，还被遮挡再滚动RecyclerView
+            if (actualScrollY < neededScrollY) {
+                val neededScrollRv = neededScrollY - actualScrollY
+                if (neededScrollRv > 0) {
+                    rv.stopScroll()
+                    rv.scrollBy(0, neededScrollRv)
+                }
             }
         }
     }
