@@ -55,7 +55,6 @@ class RssSourceEditActivity :
 
     override val binding by viewBinding(ActivityRssSourceEditBinding::inflate)
     override val viewModel by viewModels<RssSourceEditViewModel>()
-
     private val layoutManager by lazy { NoChildScrollLinearLayoutManager(this) }
     private val adapter by lazy { RssSourceEditAdapter() }
     private var focusScrollJob: Job? = null

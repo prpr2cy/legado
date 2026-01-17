@@ -10,10 +10,6 @@ import android.widget.EditText
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import io.legado.app.ui.widget.keyboard.KeyboardToolPop
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
 import kotlin.math.max
 import kotlin.math.min
 
@@ -241,13 +237,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
          */
         return when {
             !allowFocusScroll -> {
-                focusScrollJob?.cancel()
-                focusScrollJob = lifecycleScope.launch {
-                    delay(200)
-                    if (isActive) {
-                        scrollCursorToVisible()
-                    }
-                }
+                postDelayed({ scrollCursorToVisible() }, 200)
                 false
             }
             isChildVisible(parent, child, rect) -> false
