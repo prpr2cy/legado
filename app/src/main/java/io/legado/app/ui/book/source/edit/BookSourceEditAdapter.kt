@@ -115,6 +115,7 @@ class BookSourceEditAdapter : RecyclerView.Adapter<BookSourceEditAdapter.MyViewH
                     editEntity.value = (s?.toString())
                 }
             }
+
             editText.addTextChangedListener(textWatcher)
             editText.setTag(R.id.tag2, textWatcher)
 

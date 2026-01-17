@@ -10,7 +10,6 @@ import android.widget.EditText
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import io.legado.app.ui.widget.keyboard.KeyboardToolPop
-import java.lang.ref.WeakReference
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -32,10 +31,10 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
     // 是否允许因焦点变化产生的自动滚动，默认允许
     var allowFocusScroll: Boolean = true
 
-    private var recyclerView: WeakReference<RecyclerView>? = null
+    private var recyclerView: RecyclerView? = null
 
     // 记录获得焦点的EditText
-    private var editText: WeakReference<EditText>? = null
+    private var editText: EditText? = null
 
     private var focusScrollJob: Job? = null
 
@@ -79,8 +78,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         super.onDetachedFromWindow(view, recycler)
         view.viewTreeObserver.removeOnPreDrawListener(keyboardListener)
         recyclerView = null
-        focusScrollJob?.cancel()
-        focusScrollJob = null
+        editText = null
     }
 
     /**

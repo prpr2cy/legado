@@ -57,12 +57,9 @@ class RssSourceEditActivity :
     override val viewModel by viewModels<RssSourceEditViewModel>()
 
     private val layoutManager by lazy { NoChildScrollLinearLayoutManager(this) }
-
     private val adapter by lazy { RssSourceEditAdapter() }
-
     private var focusScrollJob: Job? = null
     private var currentFocusedEditText: EditText? = null
-
     private val sourceEntities: ArrayList<EditEntity> = ArrayList()
     private val listEntities: ArrayList<EditEntity> = ArrayList()
     private val webViewEntities: ArrayList<EditEntity> = ArrayList()
@@ -102,30 +99,6 @@ class RssSourceEditActivity :
         if (!LocalConfig.ruleHelpVersionIsLast) {
             showHelp("ruleHelp")
         }
-    }
-
-    override fun finish() {
-        val source = getRssSource()
-        val originalSource = viewModel.rssSource ?: RssSource()
-        if (!source.equal(originalSource)) {
-            alert(R.string.exit) {
-                setMessage(R.string.exit_no_save)
-                positiveButton(R.string.yes)
-                negativeButton(R.string.no) {
-                    super.finish()
-                }
-            }
-        } else {
-            super.finish()
-        }
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        softKeyboardTool.detachFromWindow(window)
-        softKeyboardTool.dismiss()
-        layoutManager.allowFocusScroll = true
-        adapter.onFocusChangeListener = null
     }
 
     override fun onCompatCreateOptionsMenu(menu: Menu): Boolean {
@@ -175,6 +148,30 @@ class RssSourceEditActivity :
             R.id.menu_help -> showHelp("ruleHelp")
         }
         return super.onCompatOptionsItemSelected(item)
+    }
+
+    override fun finish() {
+        val source = getRssSource()
+        val originalSource = viewModel.rssSource ?: RssSource()
+        if (!source.equal(originalSource)) {
+            alert(R.string.exit) {
+                setMessage(R.string.exit_no_save)
+                positiveButton(R.string.yes)
+                negativeButton(R.string.no) {
+                    super.finish()
+                }
+            }
+        } else {
+            super.finish()
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        softKeyboardTool.detachFromWindow(window)
+        softKeyboardTool.dismiss()
+        layoutManager.allowFocusScroll = true
+        adapter.onFocusChangeListener = null
     }
 
     private fun initView() {

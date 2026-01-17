@@ -149,6 +149,7 @@ class RssSourceEditAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
                     editEntity.value = (s?.toString())
                 }
             }
+
             editText.addTextChangedListener(textWatcher)
             editText.setTag(R.id.tag2, textWatcher)
 
