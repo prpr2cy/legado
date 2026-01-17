@@ -62,7 +62,7 @@ class BookSourceEditActivity :
     VariableDialog.Callback {
 
     override val binding by viewBinding(ActivityBookSourceEditBinding::inflate)
-    override val viewModel by viewModels<BookSourceEditViewModel>()l
+    override val viewModel by viewModels<BookSourceEditViewModel>()
     private val adapter by lazy { BookSourceEditAdapter() }
     private val sourceEntities: ArrayList<EditEntity> = ArrayList()
     private val searchEntities: ArrayList<EditEntity> = ArrayList()
