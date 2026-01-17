@@ -66,7 +66,6 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
                         allowFocusScroll = true
                     }
                 }
-                recyclerView.bottomPadding = 0
                 scrollCursorToVisible()
             } else {
                 allowFocusScroll = true
