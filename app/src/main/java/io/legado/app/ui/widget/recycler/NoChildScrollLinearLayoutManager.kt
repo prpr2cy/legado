@@ -51,7 +51,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         if (showing != isKeyboardShowing) {
             isKeyboardShowing = showing
             if (showing) {
-                //scrollCursorToVisible()
+                scrollCursorToVisible()
             }
         }
         true

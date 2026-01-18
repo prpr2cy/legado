@@ -54,6 +54,7 @@ class RssSourceEditActivity :
     override val viewModel by viewModels<RssSourceEditViewModel>()
     private val layoutManager by lazy { NoChildScrollLinearLayoutManager(this) }
     private val adapter by lazy { RssSourceEditAdapter() }
+    private var currentFocusedEditText: EditText? = null
     private val sourceEntities: ArrayList<EditEntity> = ArrayList()
     private val listEntities: ArrayList<EditEntity> = ArrayList()
     private val webViewEntities: ArrayList<EditEntity> = ArrayList()
@@ -164,6 +165,7 @@ class RssSourceEditActivity :
         super.onDestroy()
         softKeyboardTool.detachFromWindow(window)
         softKeyboardTool.dismiss()
+        adapter.onFocusChangeListener = null
     }
 
     private fun initView() {
@@ -179,6 +181,24 @@ class RssSourceEditActivity :
         binding.recyclerView.setEdgeEffectColor(primaryColor)
         binding.recyclerView.layoutManager = layoutManager
         binding.recyclerView.adapter = adapter
+
+        // 设置焦点监听器
+        adapter.onFocusChangeListener = { view, hasFocus ->
+            if (view is EditText) {
+                if (hasFocus) {
+                    if (currentFocusedEditText != view) {
+                        currentFocusedEditText = view
+                        // 把当前EditText传递到NoChildScrollLinearLayoutManagerl
+                        layoutManager?.setFocusedEditText(view)
+                    }
+                } else {
+                    if (currentFocusedEditText == view) {
+                        currentFocusedEditText = null
+                    }
+                }
+            }
+        }
+
         binding.tabLayout.setBackgroundColor(backgroundColor)
         binding.tabLayout.setSelectedTabIndicatorColor(accentColor)
         binding.tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {

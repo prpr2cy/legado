@@ -29,6 +29,9 @@ class RssSourceEditAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
             notifyDataSetChanged()
         }
 
+    // 添加焦点变化监听器
+    var onFocusChangeListener: ((View, Boolean) -> Unit)? = null
+
     override fun getItemViewType(position: Int): Int {
         val item = editEntities[position]
         return item.viewType
@@ -85,6 +88,15 @@ class RssSourceEditAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
         fun bind(editEntity: EditEntity) = binding.run {
             editText.maxLines = editEntityMaxLine
+
+            // 设置焦点监听器
+            if (editText.onFocusChangeListener != onFocusChangeListener) {
+                editText.onFocusChangeListener = onFocusChangeListener?.let { listener ->
+                    View.OnFocusChangeListener { view, hasFocus ->
+                        listener(view, hasFocus)
+                    }
+                } ?: null
+            }
 
             if (editText.getTag(R.id.tag1) == null) {
                 val listener = object : View.OnAttachStateChangeListener {

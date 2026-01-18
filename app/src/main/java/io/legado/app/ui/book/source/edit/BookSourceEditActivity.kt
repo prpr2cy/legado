@@ -212,11 +212,13 @@ class BookSourceEditActivity :
         binding.recyclerView.layoutManager = layoutManager
         binding.recyclerView.adapter = adapter
 
+        // 设置焦点监听器
         adapter.onFocusChangeListener = { view, hasFocus ->
             if (view is EditText) {
                 if (hasFocus) {
                     if (currentFocusedEditText != view) {
                         currentFocusedEditText = view
+                        // 把当前EditText传递到NoChildScrollLinearLayoutManagerl
                         layoutManager?.setFocusedEditText(view)
                     }
                 } else {
