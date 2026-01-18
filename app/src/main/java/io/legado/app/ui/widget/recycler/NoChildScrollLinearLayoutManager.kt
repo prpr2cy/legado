@@ -2,7 +2,6 @@ package io.legado.app.ui.widget.recycler
 
 import android.content.Context
 import android.graphics.Rect
-import android.os.Build
 import android.util.AttributeSet
 import android.view.View
 import android.view.ViewGroup
@@ -51,8 +50,8 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         val showing = visibleHeight < root.height * 0.80f
         if (showing != isKeyboardShowing) {
             isKeyboardShowing = showing
-            if (showing && Build.VERSION.SDK_INT > 10) {
-                scrollCursorToVisible()
+            if (showing) {
+                //scrollCursorToVisible()
             }
         }
         true
@@ -150,8 +149,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
             parent.paddingTop,
             parent.width - parent.paddingRight,
             parent.height - parent.paddingBottom
-        )
-        parentRect.offset(-parent.scrollX, -parent.scrollY)
+        ).apply{ offset(-parent.scrollX, -parent.scrollY) }
 
         return parentRect.contains(childRect) || Rect.intersects(parentRect, childRect)
     }
