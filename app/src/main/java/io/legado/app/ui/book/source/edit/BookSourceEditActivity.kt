@@ -135,6 +135,20 @@ class BookSourceEditActivity :
                 }
             }
 
+            R.id.menu_login -> viewModel.save(getSource()) { source ->
+                startActivity<SourceLoginActivity> {
+                    putExtra("type", "bookSource")
+                    putExtra("key", source.bookSourceUrl)
+                }
+            }
+
+            R.id.menu_search -> viewModel.save(getSource()) { source ->
+                startActivity<SearchActivity> {
+                    putExtra("searchScope", SearchScope(source).toString())
+                }
+            }
+
+            R.id.menu_set_source_variable -> setSourceVariable()
             R.id.menu_clear_cookie -> viewModel.clearCookie(getSource().bookSourceUrl)
             R.id.menu_auto_complete -> viewModel.autoComplete = !viewModel.autoComplete
             R.id.menu_copy_source -> sendToClip(GSON.toJson(getSource()))
@@ -146,24 +160,8 @@ class BookSourceEditActivity :
                 getString(R.string.share_book_source),
                 ErrorCorrectionLevel.L
             )
-
             R.id.menu_help -> showHelp("ruleHelp")
-            R.id.menu_login -> viewModel.save(getSource()) { source ->
-                startActivity<SourceLoginActivity> {
-                    putExtra("type", "bookSource")
-                    putExtra("key", source.bookSourceUrl)
-                }
-            }
-
-            R.id.menu_set_source_variable -> setSourceVariable()
-            R.id.menu_search -> viewModel.save(getSource()) { source ->
-                startActivity<SearchActivity> {
-                    putExtra("searchScope", SearchScope(source).toString())
-                }
-            }
-
             R.id.menu_log -> showDialogFragment<AppLogDialog>()
-
         }
         return super.onCompatOptionsItemSelected(item)
     }
