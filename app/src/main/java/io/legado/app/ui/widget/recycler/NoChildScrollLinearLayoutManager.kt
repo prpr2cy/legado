@@ -40,15 +40,11 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
     private var editText: EditText? = null
     // 记录键盘的弹起状态
     private var isKeyboardShowing: Boolean = false
-    // 留白高度
-    private val keyboardMargin: Int = 8.dp
     // 工具栏高度
     private val toolbarHeight: Int
         get() = KeyboardToolPop.toolbarHeight
-
-    private val mContext: Context = context
-    private val Int.dp: Int
-        get() = (this * mContext.resources.displayMetrics.density + 0.5f).toInt()
+    // 留白高度
+    private val keyboardMargin: Int = (8 * context.resources.displayMetrics.density + 0.5f).toInt()
 
     private val keyboardListener = ViewTreeObserver.OnPreDrawListener {
         val root = recyclerView?.rootView ?: return@OnPreDrawListener true
