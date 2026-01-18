@@ -36,14 +36,8 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
     // 工具栏高度
     private val toolbarHeight: Int
         get() = KeyboardToolPop.toolbarHeight
-    private val resources = context.resources
     // 留白高度
-    private val keyboardMargin: Int = (8 * resources.displayMetrics.density + 0.5f).toInt()
-    private val resourceId = resources.getIdentifier("navigation_bar_height", "dimen", "android")
-    // 导航栏高度
-    private val navigationBarHeight: Int = if (resourceId > 0 && Build.VERSION.SDK_INT <= 10) {
-        resources.getDimensionPixelSize(resourceId)
-    } else 0
+    private val keyboardMargin: Int = (8 * context.resources.displayMetrics.density + 0.5f).toInt()
 
     fun setFocusedEditText(view: EditText?) {
         editText = view
@@ -83,6 +77,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
      * 如果内部滚动后光标仍然被键盘遮挡，再滚动RecyclerView
      */
     private fun scrollCursorToVisible() {
+        if (Build.VERSION.SDK_INT <= 10) return
         val rv = recyclerView ?: return
         val edit = editText ?: return
         val layout = edit.layout ?: return
