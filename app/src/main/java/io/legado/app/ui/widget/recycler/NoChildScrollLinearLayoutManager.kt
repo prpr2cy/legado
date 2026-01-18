@@ -51,12 +51,9 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         if (showing != isKeyboardShowing) {
             isKeyboardShowing = showing
             if (showing) {
-                lockFocus(true)
-                recyclerView?.postDelayed({
-                    allowFocusScroll = true
-                    lockFocus(false)
-                }, 3000)
+                allowFocusScroll = false
                 scrollCursorToVisible()
+                recyclerView?.postDelayed({ allowFocusScroll = true }, 1000)
             }
         }
         true
@@ -73,30 +70,6 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         recyclerView = null
         editText = null
         view.viewTreeObserver.removeOnPreDrawListener(keyboardListener)
-    }
-
-    private fun lockFocus(lock: Boolean) {
-        recyclerView?.let { rv ->
-            for (i in 0 until rv.childCount) {
-                val itemView = rv.getChildAt(i)
-                val queue = ArrayDeque<View>().apply { add(itemView) }
-
-                while (queue.isNotEmpty()) {
-                    val view = queue.removeFirst()
-
-                    if (view is EditText && view !== editText) {
-                        view.isFocusable = !lock
-                        view.isFocusableInTouchMode = !lock
-                    }
-
-                    if (view is ViewGroup) {
-                        for (j in 0 until view.childCount) {
-                            queue.add(view.getChildAt(j))
-                        }
-                    }
-                }
-            }
-        }
     }
 
     /**
@@ -247,11 +220,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
     ): Boolean {
         if (focusedChildVisible && child is EditText) {
             allowFocusScroll = false
-            lockFocus(true)
-            parent?.postDelayed({
-                allowFocusScroll = true
-                lockFocus(false)
-            }, 3000)
+            parent?.postDelayed({ allowFocusScroll = true }, 1000)
         }
         /**
          * 拦截初次点击产生焦点时触发的自动滚动
