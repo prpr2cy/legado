@@ -60,10 +60,12 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         if (showing != isKeyboardShowing) {
             isKeyboardShowing = showing
             if (showing) {
-                editText?.requestFocus()
-                lockFocus(true)
+                editText?.let {
+                    it.requestFocus()
+                    lockFocus(true)
+                    recyclerView?.postDelayed({ lockFocus(false) }, 300)
+                }
                 scrollCursorToVisible()
-                recyclerView.postDelayed({ lockFocus(false) }, 300)
             }
         }
         true
@@ -257,7 +259,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         if (focusedChildVisible && child is EditText) {
             allowFocusScroll = false
             lockFocus(true)
-            parent.postDelayed({
+            parent?.postDelayed({
                 allowFocusScroll = true
                 lockFocus(false)
             }, 300)
