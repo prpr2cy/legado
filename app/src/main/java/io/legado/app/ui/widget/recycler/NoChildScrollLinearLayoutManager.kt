@@ -51,9 +51,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         if (showing != isKeyboardShowing) {
             isKeyboardShowing = showing
             if (showing) {
-                allowFocusScroll = false
-                scrollCursorToVisible()
-                recyclerView?.postDelayed({ allowFocusScroll = true }, 1000)
+                //scrollCursorToVisible()
             }
         }
         true
@@ -218,9 +216,9 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         immediate: Boolean,
         focusedChildVisible: Boolean
     ): Boolean {
-        if (focusedChildVisible && child is EditText) {
+        if (focusedChildVisible) {
             allowFocusScroll = false
-            parent?.postDelayed({ allowFocusScroll = true }, 1000)
+            parent?.postDelayed({ allowFocusScroll = true }, 200)
         }
         /**
          * 拦截初次点击产生焦点时触发的自动滚动
