@@ -55,17 +55,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         if (showing != isKeyboardShowing) {
             isKeyboardShowing = showing
             if (showing) {
-                allowFocusScroll = false
-                focusScrollJob?.cancel()
-                focusScrollJob = lifecycleOwner?.lifecycleScope?.launch {
-                    delay(500)
-                    if (isActive) {
-                        allowFocusScroll = true
-                    }
-                }
                 scrollCursorToVisible()
-            } else {
-                allowFocusScroll = true
             }
         }
         true
@@ -131,7 +121,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         // 先尝试滚动EditText
         edit.scrollBy(0, neededScrollY)
 
-        // EditText实际的滚动距离
+        /*// EditText实际的滚动距离
         val actualScrollY = edit.scrollY - oldScrollY
 
         edit.post {
@@ -149,7 +139,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
                 rv.stopScroll()
                 rv.scrollBy(0, actualCanScrollY)
             }
-        }
+        }*/
     }
 
     /**
@@ -237,7 +227,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
             allowFocusScroll = false
             focusScrollJob?.cancel()
             focusScrollJob = lifecycleOwner?.lifecycleScope?.launch {
-                delay(500)
+                delay(200)
                 if (isActive) {
                     allowFocusScroll = true
                 }
