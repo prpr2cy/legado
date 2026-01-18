@@ -2,6 +2,7 @@ package io.legado.app.ui.widget.recycler
 
 import android.content.Context
 import android.graphics.Rect
+import android.os.Build
 import android.util.AttributeSet
 import android.view.View
 import android.view.ViewGroup
@@ -35,8 +36,14 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
     // 工具栏高度
     private val toolbarHeight: Int
         get() = KeyboardToolPop.toolbarHeight
+    private val resources = context.resources
     // 留白高度
-    private val keyboardMargin: Int = (8 * context.resources.displayMetrics.density + 0.5f).toInt()
+    private val keyboardMargin: Int = (8 * resources.displayMetrics.density + 0.5f).toInt()
+    // 导航栏高度
+    private val resourceId = resources.getIdentifier("navigation_bar_height", "dimen", "android")
+    private val navigationBarHeight: Int = if (resourceId > 0 && Build.VERSION.SDK_INT <= 10) {
+        resources.getDimensionPixelSize(resourceId)
+    } else 0
 
     fun setFocusedEditText(view: EditText?) {
         editText = view
@@ -98,10 +105,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         // 计算键盘顶部在窗口的位置（考虑工具栏和留白）
         val windowRect = Rect()
         rv.getWindowVisibleDisplayFrame(windowRect)
-        val keyboardTopInwindow = windowRect.bottom - toolbarHeight - keyboardMargin
-
-        // 键盘高度计算错误时不处理
-        if (keyboardTopInwindow <= 0) return
+        val keyboardTopInwindow = max(0, windowRect.bottom - toolbarHeight - keyboardMargin + navigationBarHeight)
 
         // 光标没有被遮挡，无需滚动
         if (cursorBottomInWindow <= keyboardTopInwindow) return
