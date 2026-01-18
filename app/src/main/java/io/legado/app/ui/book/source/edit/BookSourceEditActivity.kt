@@ -216,7 +216,6 @@ class BookSourceEditActivity :
             if (view is EditText) {
                 if (hasFocus) {
                     if (currentFocusedEditText != view) {
-                        currentFocusedEditText?.clearFocus()
                         currentFocusedEditText = view
                         layoutManager?.setFocusedEditText(view)
                     }

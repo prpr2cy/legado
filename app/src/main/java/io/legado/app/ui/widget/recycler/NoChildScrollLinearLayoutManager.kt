@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Rect
 import android.util.AttributeSet
 import android.view.View
+import android.view.ViewGroup
 import android.view.ViewTreeObserver
 import android.widget.EditText
 import androidx.lifecycle.lifecycleScope
@@ -60,7 +61,9 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
             isKeyboardShowing = showing
             if (showing) {
                 editText?.requestFocus()
+                lockFocus(true)
                 scrollCursorToVisible()
+                recyclerView.postDelayed({ lockFocus(false) }, 300)
             }
         }
         true
@@ -79,6 +82,30 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         editText = null
         lifecycleOwner = null
         view.viewTreeObserver.removeOnPreDrawListener(keyboardListener)
+    }
+
+    private fun lockFocus(lock: Boolean) {
+        recyclerView?.let { rv ->
+            for (i in 0 until rv.childCount) {
+                val itemView = rv.getChildAt(i)
+                val queue = ArrayDeque<View>().apply { add(itemView) }
+
+                while (queue.isNotEmpty()) {
+                    val view = queue.removeFirst()
+
+                    if (view is EditText && view !== editText) {
+                        view.isFocusable = !lock
+                        view.isFocusableInTouchMode = !lock
+                    }
+
+                    if (view is ViewGroup) {
+                        for (j in 0 until view.childCount) {
+                            queue.add(view.getChildAt(j))
+                        }
+                    }
+                }
+            }
+        }
     }
 
     /**
@@ -229,13 +256,11 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
     ): Boolean {
         if (focusedChildVisible && child is EditText) {
             allowFocusScroll = false
-            focusScrollJob?.cancel()
-            focusScrollJob = lifecycleOwner?.lifecycleScope?.launch {
-                delay(200)
-                if (isActive) {
-                    allowFocusScroll = true
-                }
-            }
+            lockFocus(true)
+            parent.postDelayed({
+                allowFocusScroll = true
+                lockFocus(false)
+            }, 300)
         }
         /**
          * 拦截初次点击产生焦点时触发的自动滚动
