@@ -7,18 +7,11 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.ViewTreeObserver
 import android.widget.EditText
-import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.LifecycleOwner
-import androidx.lifecycle.findViewTreeLifecycleOwner
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import io.legado.app.ui.widget.keyboard.KeyboardToolPop
 import kotlin.math.max
 import kotlin.math.min
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
 
 /**
  * 禁止子项自动滚动的LinearLayoutManager
@@ -33,8 +26,6 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
 
     // 是否允许因焦点变化产生的自动滚动，默认允许
     private var allowFocusScroll: Boolean = true
-    private var lifecycleOwner: LifecycleOwner? = null
-    private var focusScrollJob: Job? = null
     // 记录当前的RecyclerView
     private var recyclerView: RecyclerView? = null
     // 记录获得焦点的EditText
@@ -60,11 +51,11 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         if (showing != isKeyboardShowing) {
             isKeyboardShowing = showing
             if (showing) {
-                editText?.let {
-                    it.requestFocus()
-                    lockFocus(true)
-                    recyclerView?.postDelayed({ lockFocus(false) }, 300)
-                }
+                lockFocus(true)
+                recyclerView?.postDelayed({
+                    allowFocusScroll = true
+                    lockFocus(false)
+                }, 3000)
                 scrollCursorToVisible()
             }
         }
@@ -74,7 +65,6 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
     override fun onAttachedToWindow(view: RecyclerView) {
         super.onAttachedToWindow(view)
         recyclerView = view
-        lifecycleOwner = view.findViewTreeLifecycleOwner()
         view.viewTreeObserver.addOnPreDrawListener(keyboardListener)
     }
 
@@ -82,7 +72,6 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         super.onDetachedFromWindow(view, recycler)
         recyclerView = null
         editText = null
-        lifecycleOwner = null
         view.viewTreeObserver.removeOnPreDrawListener(keyboardListener)
     }
 
@@ -262,7 +251,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
             parent?.postDelayed({
                 allowFocusScroll = true
                 lockFocus(false)
-            }, 300)
+            }, 3000)
         }
         /**
          * 拦截初次点击产生焦点时触发的自动滚动
