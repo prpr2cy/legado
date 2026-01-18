@@ -185,6 +185,7 @@ class BookSourceEditActivity :
         super.onDestroy()
         softKeyboardTool.detachFromWindow(window)
         softKeyboardTool.dismiss()
+        currentFocusedEditText = null
         adapter.onFocusChangeListener = null
     }
 
@@ -215,6 +216,7 @@ class BookSourceEditActivity :
             if (view is EditText) {
                 if (hasFocus) {
                     if (currentFocusedEditText != view) {
+                        currentFocusedEditText?.clearFocus()
                         currentFocusedEditText = view
                         layoutManager?.setFocusedEditText(view)
                     }
