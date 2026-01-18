@@ -38,6 +38,10 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
     // 留白高度
     private val keyboardMargin: Int = (8 * context.resources.displayMetrics.density + 0.5f).toInt()
 
+    fun setFocusedEditText(view: EditText?) {
+        editText = view
+    }
+
     private val keyboardListener = ViewTreeObserver.OnPreDrawListener {
         val root = recyclerView?.rootView ?: return@OnPreDrawListener true
         val visible = Rect().apply {
