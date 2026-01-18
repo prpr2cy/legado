@@ -39,8 +39,8 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
     private val resources = context.resources
     // 留白高度
     private val keyboardMargin: Int = (8 * resources.displayMetrics.density + 0.5f).toInt()
-    // 导航栏高度
     private val resourceId = resources.getIdentifier("navigation_bar_height", "dimen", "android")
+    // 导航栏高度
     private val navigationBarHeight: Int = if (resourceId > 0 && Build.VERSION.SDK_INT <= 10) {
         resources.getDimensionPixelSize(resourceId)
     } else 0
