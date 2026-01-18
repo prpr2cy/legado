@@ -42,9 +42,6 @@ import io.legado.app.utils.showDialogFragment
 import io.legado.app.utils.startActivity
 import io.legado.app.utils.viewbindingdelegate.viewBinding
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -57,8 +54,6 @@ class RssSourceEditActivity :
     override val viewModel by viewModels<RssSourceEditViewModel>()
     private val layoutManager by lazy { NoChildScrollLinearLayoutManager(this) }
     private val adapter by lazy { RssSourceEditAdapter() }
-    private var focusScrollJob: Job? = null
-    private var currentFocusedEditText: EditText? = null
     private val sourceEntities: ArrayList<EditEntity> = ArrayList()
     private val listEntities: ArrayList<EditEntity> = ArrayList()
     private val webViewEntities: ArrayList<EditEntity> = ArrayList()
@@ -169,8 +164,6 @@ class RssSourceEditActivity :
         super.onDestroy()
         softKeyboardTool.detachFromWindow(window)
         softKeyboardTool.dismiss()
-        layoutManager.allowFocusScroll = true
-        adapter.onFocusChangeListener = null
     }
 
     private fun initView() {
@@ -184,50 +177,18 @@ class RssSourceEditActivity :
             text = "WEB_VIEW"
         })
         binding.recyclerView.setEdgeEffectColor(primaryColor)
-
         binding.recyclerView.layoutManager = layoutManager
-
         binding.recyclerView.adapter = adapter
-
-        // 设置 Adapter 的焦点监听器 - 使用Job管理，只有最新编辑框的才生效
-        adapter.onFocusChangeListener = { view, hasFocus ->
-            if (view is EditText) {
-                if (hasFocus) {
-                    // 检查是否是同一个EditText
-                    val isSameEditText = currentFocusedEditText == view
-                    if (isSameEditText) {
-                        // 同一个EditText，已经处理过，允许滚动
-                        layoutManager?.allowFocusScroll = true
-                    } else {
-                        currentFocusedEditText = view
-                        // 新的EditText获得焦点，取消之前的Job
-                        focusScrollJob?.cancel()
-                        // 创建新的Job
-                        focusScrollJob = lifecycleScope.launch {
-                            // 暂时禁止自动滚动
-                            layoutManager?.allowFocusScroll = false
-                            // 延迟恢复自动滚动
-                            delay(200)
-                            if (isActive) {
-                                layoutManager?.allowFocusScroll = true
-                            }
-                        }
-                    }
-                } else {
-                    // 失去焦点时，如果是当前EditText，清除引用
-                    if (currentFocusedEditText == view) {
-                        currentFocusedEditText = null
-                    }
-                }
-            }
-        }
-
         binding.tabLayout.setBackgroundColor(backgroundColor)
         binding.tabLayout.setSelectedTabIndicatorColor(accentColor)
         binding.tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
-            override fun onTabReselected(tab: TabLayout.Tab?) {}
+            override fun onTabReselected(tab: TabLayout.Tab?) {
 
-            override fun onTabUnselected(tab: TabLayout.Tab?) {}
+            }
+
+            override fun onTabUnselected(tab: TabLayout.Tab?) {
+
+            }
 
             override fun onTabSelected(tab: TabLayout.Tab?) {
                 setEditEntities(tab?.position)

@@ -211,9 +211,13 @@ class BookSourceEditActivity :
         binding.tabLayout.setBackgroundColor(backgroundColor)
         binding.tabLayout.setSelectedTabIndicatorColor(accentColor)
         binding.tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
-            override fun onTabReselected(tab: TabLayout.Tab?) {}
+            override fun onTabReselected(tab: TabLayout.Tab?) {
 
-            override fun onTabUnselected(tab: TabLayout.Tab?) {}
+            }
+
+            override fun onTabUnselected(tab: TabLayout.Tab?) {
+
+            }
 
             override fun onTabSelected(tab: TabLayout.Tab?) {
                 setEditEntities(tab?.position)

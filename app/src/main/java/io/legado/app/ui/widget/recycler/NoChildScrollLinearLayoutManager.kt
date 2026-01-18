@@ -55,6 +55,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         if (showing != isKeyboardShowing) {
             isKeyboardShowing = showing
             if (showing) {
+                editText?.requestFocus()
                 scrollCursorToVisible()
             }
         }
@@ -121,7 +122,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         // 先尝试滚动EditText
         edit.scrollBy(0, neededScrollY)
 
-        /*// EditText实际的滚动距离
+        // EditText实际的滚动距离
         val actualScrollY = edit.scrollY - oldScrollY
 
         edit.post {
@@ -139,7 +140,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
                 rv.stopScroll()
                 rv.scrollBy(0, actualCanScrollY)
             }
-        }*/
+        }
     }
 
     /**
