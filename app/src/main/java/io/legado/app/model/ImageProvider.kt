@@ -88,15 +88,16 @@ object ImageProvider {
     }
 
     fun resize(size: Int) {
-        val newSize = if (size + maxSize > 2048 * M || size + maxSize > cacheSize * 10) {
+        val sumSize = size + maxSize
+        val newSize = if (sumSize > 2048 * M || sumSize > cacheSize * 10) {
             bitmapLruCache.evictAll()
-            AppLog.put("图片缓存超过2048M或10倍设置容量，已自动重置")
+            AppLog.put("图片缓存后容量${(sumSize / 1024 / 1024)}MB，将超过2048M或10倍设置容量，已自动重置")
             max(size + 50 * M, cacheSize)
         } else {
             size + 50 * M
         }
         bitmapLruCache.resize(newSize)
-        AppLog.put("图片缓存不够大，自动扩增至${(newSize / 1024 / 1024)}MB。")
+        AppLog.put("图片缓存容量不够大，自动扩增至${(newSize / 1024 / 1024)}MB。")
     }
 
 
