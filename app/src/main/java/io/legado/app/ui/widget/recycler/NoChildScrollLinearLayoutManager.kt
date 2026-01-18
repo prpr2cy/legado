@@ -51,7 +51,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         val showing = visibleHeight < root.height * 0.80f
         if (showing != isKeyboardShowing) {
             isKeyboardShowing = showing
-            if (showing) {
+            if (showing && Build.VERSION.SDK_INT > 10) {
                 scrollCursorToVisible()
             }
         }
@@ -77,7 +77,6 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
      * 如果内部滚动后光标仍然被键盘遮挡，再滚动RecyclerView
      */
     private fun scrollCursorToVisible() {
-        if (Build.VERSION.SDK_INT <= 10) return
         val rv = recyclerView ?: return
         val edit = editText ?: return
         val layout = edit.layout ?: return
@@ -100,7 +99,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         // 计算键盘顶部在窗口的位置（考虑工具栏和留白）
         val windowRect = Rect()
         rv.getWindowVisibleDisplayFrame(windowRect)
-        val keyboardTopInwindow = max(0, windowRect.bottom - toolbarHeight - keyboardMargin + navigationBarHeight)
+        val keyboardTopInwindow = max(0, windowRect.bottom - toolbarHeight - keyboardMargin)
 
         // 光标没有被遮挡，无需滚动
         if (cursorBottomInWindow <= keyboardTopInwindow) return
