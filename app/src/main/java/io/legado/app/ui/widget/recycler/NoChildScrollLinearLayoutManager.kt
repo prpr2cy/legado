@@ -12,6 +12,7 @@ import androidx.recyclerview.widget.RecyclerView
 import io.legado.app.ui.widget.keyboard.KeyboardToolPop
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.abs
 
 /**
  * 禁止子项自动滚动的LinearLayoutManager
@@ -33,25 +34,20 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
     // 记录键盘的弹起状态
     private var isKeyboardShowing: Boolean = false
     // 工具栏高度
-    private val toolbarHeight: Int
-        get() = KeyboardToolPop.toolbarHeight
+    private val toolbarHeight: Int get() = KeyboardToolPop.toolbarHeight
     // 留白高度
     private val keyboardMargin: Int = (8 * context.resources.displayMetrics.density + 0.5f).toInt()
 
-    fun setFocusedEditText(view: EditText?) {
-        editText = view
-    }
-
     private val keyboardListener = ViewTreeObserver.OnPreDrawListener {
         val root = recyclerView?.rootView ?: return@OnPreDrawListener true
-        val visibleHeight = Rect().apply {
+        val visible = Rect().apply {
             root.getWindowVisibleDisplayFrame(this)
-        }.height()
-        val showing = visibleHeight < root.height * 0.80f
+        }
+        val showing = visible.height() < root.height * 0.8f
         if (showing != isKeyboardShowing) {
             isKeyboardShowing = showing
             if (showing) {
-                //scrollCursorToVisible()
+                scrollCursorToVisible()
             }
         }
         true
@@ -77,6 +73,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
      */
     private fun scrollCursorToVisible() {
         val rv = recyclerView ?: return
+        val root = recyclerView?.rootView ?: return
         val edit = editText ?: return
         val layout = edit.layout ?: return
         val selection = edit.selectionStart.takeIf { it >= 0 } ?: return
@@ -103,8 +100,17 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         // 光标没有被遮挡，无需滚动
         if (cursorBottomInWindow <= keyboardTopInwindow) return
 
+        // 计算页面容器高度
+        val contentHeight: Int = (rv.parent as? View)?.let {
+            val loc = intArrayOf(0, 0)
+            it.getLocationOnScreen(loc)
+            loc[1] + it.height
+        } ?: root.height
+
         // 计算光标需要的滚动距离
-        val neededScrollY = cursorBottomInWindow - keyboardTopInwindow
+        val neededScrollY = if (contentHeight > root.height * 0.8f) {
+            cursorBottomInWindow - keyboardTopInwindow
+        } else toolbarHeight
 
         // 记录EditText当前的已滚动距离
         val oldScrollY = edit.scrollY
@@ -166,8 +172,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         child.getDrawingRect(childRect)
         parent.offsetDescendantRectToMyCoords(child, childRect)
 
-        val targetRect = Rect(rect)
-        targetRect.offset(childRect.left, childRect.top)
+        val targetRect = Rect(rect).apply{ offset(childRect.left, childRect.top) }
 
         val parentRect = Rect(
             parent.paddingLeft,
