@@ -31,7 +31,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
 ) : LinearLayoutManager(context, attrs, defStyleAttr, defStyleRes) {
 
     // 是否允许因焦点变化产生的自动滚动，默认允许
-    var allowFocusScroll: Boolean = true
+    private var allowFocusScroll: Boolean = true
     private var lifecycleOwner: LifecycleOwner? = null
     private var focusScrollJob: Job? = null
     // 记录当前的RecyclerView
@@ -45,6 +45,10 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         get() = KeyboardToolPop.toolbarHeight
     // 留白高度
     private val keyboardMargin: Int = (8 * context.resources.displayMetrics.density + 0.5f).toInt()
+
+    fun setFocusedEditText(view: EditText?) {
+        editText = view
+    }
 
     private val keyboardListener = ViewTreeObserver.OnPreDrawListener {
         val root = recyclerView?.rootView ?: return@OnPreDrawListener true
@@ -224,7 +228,6 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         focusedChildVisible: Boolean
     ): Boolean {
         if (focusedChildVisible && child is EditText) {
-            editText = child
             allowFocusScroll = false
             focusScrollJob?.cancel()
             focusScrollJob = lifecycleOwner?.lifecycleScope?.launch {

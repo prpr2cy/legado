@@ -65,6 +65,7 @@ class BookSourceEditActivity :
     override val viewModel by viewModels<BookSourceEditViewModel>()
     private val layoutManager by lazy { NoChildScrollLinearLayoutManager(this) }
     private val adapter by lazy { BookSourceEditAdapter() }
+    private var currentFocusedEditText: EditText? = null
     private val sourceEntities: ArrayList<EditEntity> = ArrayList()
     private val searchEntities: ArrayList<EditEntity> = ArrayList()
     private val exploreEntities: ArrayList<EditEntity> = ArrayList()
@@ -184,6 +185,7 @@ class BookSourceEditActivity :
         super.onDestroy()
         softKeyboardTool.detachFromWindow(window)
         softKeyboardTool.dismiss()
+        adapter.onFocusChangeListener = null
     }
 
     private fun initView() {
@@ -208,6 +210,22 @@ class BookSourceEditActivity :
         binding.recyclerView.setEdgeEffectColor(primaryColor)
         binding.recyclerView.layoutManager = layoutManager
         binding.recyclerView.adapter = adapter
+
+        adapter.onFocusChangeListener = { view, hasFocus ->
+            if (view is EditText) {
+                if (hasFocus) {
+                    if (currentFocusedEditText != view) {
+                        currentFocusedEditText = view
+                        layoutManager?.setFocusedEditText(view)
+                    }
+                } else {
+                    if (currentFocusedEditText == view) {
+                        currentFocusedEditText = null
+                    }
+                }
+            }
+        }
+
         binding.tabLayout.setBackgroundColor(backgroundColor)
         binding.tabLayout.setSelectedTabIndicatorColor(accentColor)
         binding.tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
