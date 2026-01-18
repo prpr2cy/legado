@@ -140,8 +140,8 @@ class RssSourceEditActivity :
                 getString(R.string.share_rss_source),
                 ErrorCorrectionLevel.L
             )
-            R.id.menu_help -> showHelp("ruleHelp")
             R.id.menu_log -> showDialogFragment<AppLogDialog>()
+            R.id.menu_help -> showHelp("ruleHelp")
         }
         return super.onCompatOptionsItemSelected(item)
     }
