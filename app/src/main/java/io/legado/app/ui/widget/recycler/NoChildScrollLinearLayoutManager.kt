@@ -121,7 +121,6 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         val actualScrollY = edit.scrollY - oldScrollY
 
         edit.post {
-            if (rv.scrollY - recyclerViewScrollY > keyboardMargin) return
             // 计算光标剩下的滚动距离
             val remainingScrollY = neededScrollY - actualScrollY
 
