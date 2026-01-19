@@ -6,14 +6,19 @@ import android.util.AttributeSet
 import android.view.View
 import android.view.ViewGroup
 import android.view.ViewTreeObserver
+import androidx.lifecycle.findViewTreeLifecycleOwner
+import androidx.lifecycle.lifecycleScope
 import android.widget.EditText
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import io.legado.app.constant.AppLog
 import io.legado.app.ui.widget.keyboard.KeyboardToolPop
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.math.max
 import kotlin.math.min
-import kotlin.math.abs
 
 /**
  * 禁止子项自动滚动的LinearLayoutManager
@@ -33,7 +38,15 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
     // 记录获得焦点的EditText
     private var editText: EditText? = null
     // 记录系统是否自动滚动
-    private var isSystemScroll: Boolean = false
+    private var isSystemScroll = false
+    // scrollCursorToVisible任务
+    private var cursorScrollJob: Job? = null
+    private var cursorScope: lifecycleScope? = null
+    private var cursorScrollLatch = CompletableDeferred<Boolean>()
+       private set(value) {
+           if (!field.isCompleted) field.complete(false)
+           field = value 
+       }
     // 记录键盘是否弹起
     private var isKeyboardShowing: Boolean = false
     // 工具栏高度
@@ -55,10 +68,32 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         if (showing != isKeyboardShowing) {
             isKeyboardShowing = showing
             if (showing) {
-                rv.postDelayed({ scrollCursorToVisible() }, 200)
+                cursorScrollJob?.cancel()
+                cursorScope = rv.findViewTreeLifecycleOwner()?.lifecycleScope
+                cursorScrollJob = cursorScope?.launch {
+                    val latch = CompletableDeferred<Boolean>()
+                    cursorScrollLatch = latch
+                    val allow = withTimeoutOrNull(200) {
+                        latch.await()
+                    } ?: false
+                    if (allow) scrollCursorToVisible()
+                } ?: run {
+                    rv.postDelayed({ scrollCursorToVisible() }, 200)
+                }
+            } else {
+                resetCursorScrollLatch()
+                cursorScrollJob?.cancel()
+                cursorScrollJob = null 
+                isSystemScroll = false
             }
         }
         true
+    }
+
+    private fun resetCursorScrollLatch() {
+        if (!cursorScrollLatch.isCompleted) {
+            cursorScrollLatch.complete(false)
+        }
     }
 
     override fun onAttachedToWindow(view: RecyclerView) {
@@ -69,6 +104,10 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
 
     override fun onDetachedFromWindow(view: RecyclerView, recycler: RecyclerView.Recycler) {
         super.onDetachedFromWindow(view, recycler)
+        resetCursorScrollLatch()
+        cursorScrollJob?.cancel()
+        cursorScrollJob = null
+        cursorScope = null
         recyclerView = null
         editText = null
         view.viewTreeObserver.removeOnPreDrawListener(keyboardListener)
@@ -81,7 +120,6 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
      */
     private fun scrollCursorToVisible() {
         val rv = recyclerView ?: return
-        val root = recyclerView?.rootView ?: return
         val edit = editText ?: return
         val layout = edit.layout ?: return
         val selection = edit.selectionStart.takeIf { it >= 0 } ?: return
@@ -103,15 +141,15 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         // 计算键盘顶部在窗口的位置（考虑工具栏和留白）
         val windowRect = Rect()
         rv.getWindowVisibleDisplayFrame(windowRect)
-        val keyboardTopInwindow = windowRect.bottom - toolbarHeight - keyboardMargin
+        val keyboardTopInWindow = windowRect.bottom - toolbarHeight - keyboardMargin
 
         // 光标没有被遮挡，无需滚动
-        if (cursorBottomInWindow <= keyboardTopInwindow) return
+        if (cursorBottomInWindow <= keyboardTopInWindow) return
 
         // 计算光标需要的滚动距离
         val neededScrollY = if (!isSystemScroll) {
-            cursorBottomInWindow - keyboardTopInwindow
-        } else toolbarHeight
+            cursorBottomInWindow - keyboardTopInWindow
+        } else toolbarHeight + keyboardMargin
         AppLog.put("isSystemScroll=${isSystemScroll}, neededScrollY=${neededScrollY}, toolbarHeight=${toolbarHeight}")
 
         // 记录EditText当前的已滚动距离
@@ -123,21 +161,19 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         // EditText实际的滚动距离
         val actualScrollY = edit.scrollY - prevScrollY
 
-        edit.post {
-            // 计算光标剩下的滚动距离
-            val remainingScrollY = neededScrollY - actualScrollY
+        // 计算光标剩下的滚动距离
+        val remainingScrollY = neededScrollY - actualScrollY
 
-            // 滚动完EditText后还被遮挡，再滚动RecyclerView
-            if (remainingScrollY > 0) {
-                // 计算RecyclerView可滚动的最大距离，避免滚动过度
-                val maxCanScrollY = rv.computeVerticalScrollRange() - rv.computeVerticalScrollExtent() - rv.scrollY
+        // 滚动完EditText后还被遮挡，再滚动RecyclerView
+        if (remainingScrollY > 0) {
+            // 计算RecyclerView可滚动的最大距离，避免滚动过度
+            val maxCanScrollY = rv.computeVerticalScrollRange() - rv.computeVerticalScrollExtent() - rv.scrollY
 
-                // RecyclerView实际可以滚动的距离
-                val actualCanScrollY = min(remainingScrollY, maxCanScrollY)
+            // RecyclerView实际可以滚动的距离
+            val actualCanScrollY = min(remainingScrollY, maxCanScrollY)
 
-                rv.stopScroll()
-                rv.scrollBy(0, actualCanScrollY)
-            }
+            rv.stopScroll()
+            rv.scrollBy(0, actualCanScrollY)
         }
     }
 
@@ -234,13 +270,20 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
          * 如果子View已经在可见区域内，无需滚动
          * 否则调用父方法进行滚动
          */
-        isSystemScroll = false
         return when {
-            !allowFocusScroll -> false
-            isChildVisible(parent, child, rect) -> false
+            !allowFocusScroll -> {
+                isSystemScroll = false
+                cursorScrollLatch.complete(true)
+                false
+            }
+            isChildVisible(parent, child, rect) -> {
+                isSystemScroll = false
+                cursorScrollLatch.complete(true)
+                false
+            }
             else -> {
                 isSystemScroll = true
-                AppLog.put("isSystemScroll=${isSystemScroll}")
+                cursorScrollLatch.complete(true)
                 super.requestChildRectangleOnScreen(parent, child, rect, immediate, focusedChildVisible)
             }
         }
