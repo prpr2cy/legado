@@ -182,6 +182,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
             parent.width - parent.paddingRight,
             parent.height - parent.paddingBottom
         ).apply { offset(-parent.scrollX, -parent.scrollY) }
+        AppLog.put("4: ${System.currentTimeMillis()}")
 
         return parentRect.contains(targetRect) || Rect.intersects(parentRect, targetRect)
     }
