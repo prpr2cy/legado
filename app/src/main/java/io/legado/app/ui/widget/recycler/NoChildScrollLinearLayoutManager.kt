@@ -29,6 +29,8 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
     private var allowFocusScroll: Boolean = true
     // 记录当前的RecyclerView
     private var recyclerView: RecyclerView? = null
+    // 记录RecyclerView的已滚动距离
+    private var recyclerViewScrollY: Int = 0
     // 记录获得焦点的EditText
     private var editText: EditText? = null
     // 记录键盘的弹起状态
@@ -43,7 +45,8 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
     }
 
     private val keyboardListener = ViewTreeObserver.OnPreDrawListener {
-        val root = recyclerView?.rootView ?: return@OnPreDrawListener true
+        val rv = recyclerView ?: return@OnPreDrawListener true
+        val root = rv.rootView ?: return@OnPreDrawListener true
         val visible = Rect().apply {
             root.getWindowVisibleDisplayFrame(this)
         }
@@ -51,6 +54,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         if (showing != isKeyboardShowing) {
             isKeyboardShowing = showing
             if (showing) {
+                recyclerViewScrollY = rv.scrollY
                 scrollCursorToVisible()
             }
         }
@@ -99,7 +103,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         // 计算键盘顶部在窗口的位置（考虑工具栏和留白）
         val windowRect = Rect()
         rv.getWindowVisibleDisplayFrame(windowRect)
-        val keyboardTopInwindow = max(0, windowRect.bottom - toolbarHeight - keyboardMargin)
+        val keyboardTopInwindow = windowRect.bottom - toolbarHeight - keyboardMargin
 
         // 光标没有被遮挡，无需滚动
         if (cursorBottomInWindow <= keyboardTopInwindow) return
@@ -117,6 +121,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         val actualScrollY = edit.scrollY - oldScrollY
 
         edit.post {
+            if (rv.scrollY - recyclerViewScrollY > keyboardMargin) return
             // 计算光标剩下的滚动距离
             val remainingScrollY = neededScrollY - actualScrollY
 
