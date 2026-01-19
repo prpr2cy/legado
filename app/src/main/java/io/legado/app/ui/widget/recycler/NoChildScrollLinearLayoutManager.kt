@@ -32,6 +32,8 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
     private var recyclerView: RecyclerView? = null
     // 记录获得焦点的EditText
     private var editText: EditText? = null
+    // 系统是否已自动滚动
+    private var isSystemScroll: Boolean = false
     // 记录键盘的弹起状态
     private var isKeyboardShowing: Boolean = false
     // 工具栏高度
@@ -107,16 +109,18 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         if (cursorBottomInWindow <= keyboardTopInwindow) return
 
         // 计算光标需要的滚动距离
-        val neededScrollY = cursorBottomInWindow - keyboardTopInwindow
+        val neededScrollY = if (!isSystemScroll) {
+            cursorBottomInWindow - keyboardTopInwindow
+        } else toolbarHeight
 
         // 记录EditText当前的已滚动距离
-        val oldScrollY = edit.scrollY
+        val prevScrollY = edit.scrollY
 
         // 先尝试滚动EditText
         edit.scrollBy(0, neededScrollY)
 
         // EditText实际的滚动距离
-        val actualScrollY = edit.scrollY - oldScrollY
+        val actualScrollY = edit.scrollY - prevScrollY
 
         edit.post {
             // 计算光标剩下的滚动距离
@@ -244,7 +248,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
     ): Boolean {
         if (focusedChildVisible) {
             allowFocusScroll = false
-            parent?.postDelayed({ allowFocusScroll = true }, 200)
+            parent.postDelayed({ allowFocusScroll = true }, 200)
         }
         /**
          * 拦截初次点击产生焦点时触发的自动滚动
@@ -255,7 +259,17 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         return when {
             !allowFocusScroll -> false
             isChildVisible(parent, child, rect) -> false
-            else -> super.requestChildRectangleOnScreen(parent, child, rect, immediate, focusedChildVisible)
+            else -> {
+                val prevOffset = parent.computeVerticalScrollOffset()
+                val prevScrollY = (child as? EditText)?.scrollY ?: 0
+                super.requestChildRectangleOnScreen(parent, child, rect, immediate, focusedChildVisible)
+                parent.post {
+                    val currentOffset = parent.computeVerticalScrollOffset()
+                    val currentScrollY = (child as? EditText)?.scrollY ?: 0
+                    isSystemScroll = if (currentOffset > prevOffset || currentScrollY > prevScrollY) true else false
+                }
+                isSystemScroll
+            }
         }
     }
 }
