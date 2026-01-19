@@ -51,6 +51,8 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         if (showing != isKeyboardShowing) {
             isKeyboardShowing = showing
             if (showing) {
+                allowFocusScroll = true
+                recyclerView?.postDelayed({ allowFocusScroll = true }, 1000)
                 scrollCursorToVisible()
             }
         }
@@ -104,17 +106,8 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         // 光标没有被遮挡，无需滚动
         if (cursorBottomInWindow <= keyboardTopInwindow) return
 
-        // 计算页面容器高度
-        val contentHeight: Int = (rv.parent as? View)?.let {
-            val loc = intArrayOf(0, 0)
-            it.getLocationOnScreen(loc)
-            loc[1] + it.height
-        } ?: root.height
-
         // 计算光标需要的滚动距离
-        val neededScrollY = if (contentHeight > root.height * 0.8f) {
-            cursorBottomInWindow - keyboardTopInwindow
-        } else toolbarHeight
+        val neededScrollY = cursorBottomInWindow - keyboardTopInwindow
 
         // 记录EditText当前的已滚动距离
         val oldScrollY = edit.scrollY
