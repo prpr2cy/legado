@@ -55,7 +55,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         if (showing != isKeyboardShowing) {
             isKeyboardShowing = showing
             if (showing) {
-                scrollCursorToVisible()
+                rv.postDelayed({ scrollCursorToVisible() }, 200)
             }
         }
         true
@@ -240,6 +240,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
             isChildVisible(parent, child, rect) -> false
             else -> {
                 isSystemScroll = true
+                AppLog.put("isSystemScroll=${isSystemScroll}")
                 super.requestChildRectangleOnScreen(parent, child, rect, immediate, focusedChildVisible)
             }
         }
