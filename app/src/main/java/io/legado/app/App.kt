@@ -174,7 +174,7 @@ class App : Application() {
 
         } catch (e: Exception) {
             // 修复失败不影响应用运行，记录详细的错误信息
-            AppLog.putDebug("Failed to install Android 8.0 selection fix", e)
+            AppLog.putDebug("Failed to install Android 8.0-8.1 selection fix", e)
         }
     }
 
@@ -267,7 +267,7 @@ class SafeEditText @JvmOverloads constructor(
     /**
      * 检查当前是否有选区
      */
-    private fun hasSelection(): Boolean {
+    private fun hasActiveSelection(): Boolean {
         return selectionStart != selectionEnd
     }
 
@@ -289,7 +289,7 @@ class SafeEditText @JvmOverloads constructor(
                     // 16ms 确保系统 IME 事件处理完成，但又足够快
                     postDelayed({
                         // 只有在仍有选区时才清除
-                        if (hasSelection()) {
+                        if (hasActiveSelection()) {
                             try {
                                 setSelection(selectionEnd)
                             } catch (e: Exception) {
