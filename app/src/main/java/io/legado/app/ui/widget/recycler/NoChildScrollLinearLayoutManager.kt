@@ -148,8 +148,9 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
 
         windowRect.offset(-rvLoc[0], -rvLoc[1])
         windowRect.offset(-parent.scrollX, -parent.scrollY)
+        windowRect.bottom -= (toolbarHeight + keyboardMargin)
 
-        return windowRect - (toolbarHeight + keyboardMargin)
+        return windowRect
     }
 
     /**
