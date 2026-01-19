@@ -7,6 +7,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.ViewTreeObserver
 import androidx.lifecycle.findViewTreeLifecycleOwner
+import androidx.lifecycle.LifecycleCoroutineScope
 import androidx.lifecycle.lifecycleScope
 import android.widget.EditText
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -41,9 +42,9 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
     private var isSystemScroll = false
     // scrollCursorToVisible任务
     private var cursorScrollJob: Job? = null
-    private var cursorScope: lifecycleScope? = null
+    private var cursorScope: LifecycleCoroutineScope? = null
     private var cursorScrollLatch = CompletableDeferred<Boolean>()
-       private set(value) {
+       set(value) {
            if (!field.isCompleted) field.complete(false)
            field = value 
        }
@@ -77,11 +78,9 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
                         latch.await()
                     } ?: false
                     if (allow) scrollCursorToVisible()
-                } ?: run {
-                    rv.postDelayed({ scrollCursorToVisible() }, 200)
                 }
             } else {
-                resetCursorScrollLatch()
+                resetScrollLatch()
                 cursorScrollJob?.cancel()
                 cursorScrollJob = null 
                 isSystemScroll = false
@@ -90,7 +89,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         true
     }
 
-    private fun resetCursorScrollLatch() {
+    private fun resetScrollLatch() {
         if (!cursorScrollLatch.isCompleted) {
             cursorScrollLatch.complete(false)
         }
@@ -104,7 +103,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
 
     override fun onDetachedFromWindow(view: RecyclerView, recycler: RecyclerView.Recycler) {
         super.onDetachedFromWindow(view, recycler)
-        resetCursorScrollLatch()
+        resetScrollLatch()
         cursorScrollJob?.cancel()
         cursorScrollJob = null
         cursorScope = null
