@@ -256,6 +256,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
          * 如果子View已经在可见区域内，无需滚动
          * 否则调用父方法进行滚动
          */
+        isSystemScroll = false
         return when {
             !allowFocusScroll -> false
             isChildVisible(parent, child, rect) -> false
@@ -266,7 +267,9 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
                 parent.post {
                     val currentOffset = parent.computeVerticalScrollOffset()
                     val currentScrollY = (child as? EditText)?.scrollY ?: 0
-                    isSystemScroll = if (currentOffset > prevOffset || currentScrollY > prevScrollY) true else false
+                    if (currentOffset > prevOffset || currentScrollY > prevScrollY) {
+                        isSystemScroll = true
+                    }
                 }
                 isSystemScroll
             }
