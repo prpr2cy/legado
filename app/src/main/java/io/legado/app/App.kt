@@ -51,6 +51,12 @@ class App : Application() {
 
     private lateinit var oldConfig: Configuration
 
+    // GMS Provider 安装标记的键名
+    private companion object {
+        private const val PREF_GMS_PROVIDER_INSTALLED = "gms_provider_installed"
+        private const val PREF_LAST_ATTEMPTED_VERSION = "last_attempted_version"
+    }
+
     override fun onCreate() {
         super.onCreate()
         oldConfig = Configuration(resources.configuration)
@@ -81,7 +87,7 @@ class App : Application() {
                 }
 
                 // 2. 安装 GMS TLS Provider
-                installGmsTlsProvider(appCtx)
+                installGmsTlsProviderIfNeeded(appCtx)
 
                 // 3. 初始化封面
                 BookCover.toString()
@@ -144,6 +150,11 @@ class App : Application() {
                     context: Context,
                     attrs: AttributeSet
                 ): View? {
+                    // 同时兼容系统 EditText 和 appcompat 版
+                    // XML中的tag可能是：
+                    // 1. "EditText" (在某些情况下)
+                    // 2. "android.widget.EditText" (系统原生)
+                    // 3. "androidx.appcompat.widget.AppCompatEditText" (AppCompat版本)
                     if (name == "EditText" ||
                         name == "android.widget.EditText" ||
                         name == "androidx.appcompat.widget.AppCompatEditText") {
@@ -185,22 +196,58 @@ class App : Application() {
      * https://f-droid.org/zh_Hans/2020/05/29/android-updates-and-tls-connections.html
      * https://developer.android.google.cn/reference/javax/net/ssl/SSLSocket
      *
+     * 优化：只在应用安装后或版本更新后首次启动时尝试
      * @param context
      * @return
      */
-    private fun installGmsTlsProvider(context: Context) {
+    private fun installGmsTlsProviderIfNeeded(context: Context) {
+        val prefs = defaultSharedPreferences
+        val currentVersion = BuildConfig.VERSION_CODE
+
+        // 获取上次尝试的版本号
+        val lastAttemptedVersion = prefs.getInt(PREF_LAST_ATTEMPTED_VERSION, -1)
+
+        // 如果已经尝试过当前版本，直接跳过
+        if (lastAttemptedVersion == currentVersion) {
+            AppLog.putDebug("GMS provider installation already attempted for version $currentVersion, skipping")
+            return
+        }
+
+        // 尝试安装 GMS Provider
         try {
             val gms = context.createPackageContext(
                 "com.google.android.gms",
                 CONTEXT_INCLUDE_CODE or CONTEXT_IGNORE_SECURITY
             )
-            gms.classLoader
+            val result = gms.classLoader
                 .loadClass("com.google.android.gms.common.security.ProviderInstallerImpl")
                 .getMethod("insertProvider", Context::class.java)
-                .invoke(null, gms)
+                .invoke(null, gms) as Int
+
+            if (result > 0) {
+                AppLog.put("Conscrypt provider inserted at position: $result")
+                // 标记为已安装
+                prefs.edit().putBoolean(PREF_GMS_PROVIDER_INSTALLED, true).apply()
+            }
         } catch (e: Exception) {
-            AppLog.put("GMS provider not available", e)
+            // 预期行为：无GMS的设备会抛出异常
+            // 只记录一次日志，避免重复记录
+            if (lastAttemptedVersion != currentVersion) {
+                AppLog.put("GMS provider not available", e)
+            }
+        } finally {
+            // 无论成功与否，都记录已经尝试过当前版本
+            prefs.edit().putInt(PREF_LAST_ATTEMPTED_VERSION, currentVersion).apply()
         }
+    }
+
+    /**
+     * 旧版本的 installGmsTlsProvider 方法，保持兼容性
+     * 但实际不再使用，由 installGmsTlsProviderIfNeeded 替代
+     */
+    @Deprecated("Use installGmsTlsProviderIfNeeded instead", ReplaceWith("installGmsTlsProviderIfNeeded(context)"))
+    private fun installGmsTlsProvider(context: Context) {
+        installGmsTlsProviderIfNeeded(context)
     }
 
     /**
