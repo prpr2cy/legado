@@ -32,13 +32,13 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
     private var recyclerView: RecyclerView? = null
     // 记录获得焦点的EditText
     private var editText: EditText? = null
-    // 系统是否已自动滚动
+    // 记录系统是否自动滚动
     private var isSystemScroll: Boolean = false
-    // 记录键盘的弹起状态
+    // 记录键盘是否弹起
     private var isKeyboardShowing: Boolean = false
     // 工具栏高度
     private val toolbarHeight: Int get() = KeyboardToolPop.toolbarHeight
-    // 留白高度
+    // 键盘上方留白高度
     private val keyboardMargin: Int = (8 * context.resources.displayMetrics.density + 0.5f).toInt()
 
     fun setFocusedEditText(view: EditText?) {
@@ -112,7 +112,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         val neededScrollY = if (!isSystemScroll) {
             cursorBottomInWindow - keyboardTopInwindow
         } else toolbarHeight
-        AppLog.put"isSystemScroll=${isSystemScroll}, neededScrollY=${neededScrollY}, toolbarHeight=${toolbarHeight}")
+        AppLog.put("isSystemScroll=${isSystemScroll}, neededScrollY=${neededScrollY}, toolbarHeight=${toolbarHeight}")
 
         // 记录EditText当前的已滚动距离
         val prevScrollY = edit.scrollY
