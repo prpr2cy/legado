@@ -53,9 +53,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         if (showing != isKeyboardShowing) {
             isKeyboardShowing = showing
             if (showing) {
-                AppLog.put("1: ${System.currentTimeMillis()}")
                 scrollCursorToVisible()
-                AppLog.put("2: ${System.currentTimeMillis()}")
             }
         }
         true
@@ -139,6 +137,22 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
     }
 
     /**
+     * 计算窗口可视区域（RecyclerView 坐标系）
+     */
+    private fun computeVisibleRect(parent: RecyclerView): Rect {
+        val rvLoc = IntArray(2)
+        parent.getLocationOnScreen(rvLoc)
+
+        val windowRect = Rect()
+        parent.getWindowVisibleDisplayFrame(windowRect)
+
+        windowRect.offset(-rvLoc[0], -rvLoc[1])
+        windowRect.offset(-parent.scrollX, -parent.scrollY)
+
+        return windowRect - (toolbarHeight + keyboardMargin)
+    }
+
+    /**
      * 判断子项是否可见
      * @param parent RecyclerView父容器
      * @param child 要判断的子项View
@@ -149,14 +163,17 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         child.getDrawingRect(childRect)
         parent.offsetDescendantRectToMyCoords(child, childRect)
 
+        /*
         val parentRect = Rect(
             parent.paddingLeft,
             parent.paddingTop,
             parent.width - parent.paddingRight,
             parent.height - parent.paddingBottom
         ).apply{ offset(-parent.scrollX, -parent.scrollY) }
+        */
+        val visibleRect = computeVisibleRect(parent)
 
-        return parentRect.contains(childRect) || Rect.intersects(parentRect, childRect)
+        return visibleRect.contains(childRect) || Rect.intersects(visibleRect, childRect)
     }
 
     /**
@@ -167,24 +184,28 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
      * @return true表示矩形区域可见，false表示不可见
      */
     private fun isChildVisible(parent: RecyclerView, child: View, rect: Rect): Boolean {
-        //val childRect = Rect()
-        //child.getDrawingRect(childRect)
-        //parent.offsetDescendantRectToMyCoords(child, childRect)
+        /*
+        val childRect = Rect()
+        child.getDrawingRect(childRect)
+        parent.offsetDescendantRectToMyCoords(child, childRect)
 
-        //val targetRect = Rect(rect).apply{ offset(childRect.left, childRect.top) }
+        val targetRect = Rect(rect).apply{ offset(childRect.left, childRect.top) }
+        */
 
         val targetRect = Rect(rect)
         parent.offsetDescendantRectToMyCoords(child, targetRect)
 
+        /*
         val parentRect = Rect(
             parent.paddingLeft,
             parent.paddingTop,
             parent.width - parent.paddingRight,
             parent.height - parent.paddingBottom
         ).apply { offset(-parent.scrollX, -parent.scrollY) }
-        AppLog.put("4: ${System.currentTimeMillis()}")
+        */
+        val visibleRect = computeVisibleRect(parent)
 
-        return parentRect.contains(targetRect) || Rect.intersects(parentRect, targetRect)
+        return visibleRect.contains(targetRect) || Rect.intersects(visibleRect, targetRect)
     }
 
     /**
@@ -230,7 +251,6 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
          * 如果子View已经在可见区域内，无需滚动
          * 否则调用父方法进行滚动
          */
-        AppLog.put("3: ${System.currentTimeMillis()}")
         return when {
             !allowFocusScroll -> false
             isChildVisible(parent, child, rect) -> false
