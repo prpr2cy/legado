@@ -153,7 +153,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
             parent.paddingLeft,
             parent.paddingTop,
             parent.width - parent.paddingRight,
-            parent.height - parent.paddingBottom - toolbarHeight - keyboardMargin
+            parent.height - parent.paddingBottom
         ).apply{ offset(-parent.scrollX, -parent.scrollY) }
 
         return parentRect.contains(childRect) || Rect.intersects(parentRect, childRect)
@@ -180,7 +180,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
             parent.paddingLeft,
             parent.paddingTop,
             parent.width - parent.paddingRight,
-            parent.height - parent.paddingBottom - toolbarHeight - keyboardMargin
+            parent.height - parent.paddingBottom
         ).apply { offset(-parent.scrollX, -parent.scrollY) }
 
         return parentRect.contains(targetRect) || Rect.intersects(parentRect, targetRect)
