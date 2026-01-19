@@ -178,11 +178,29 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
             parent.paddingLeft,
             parent.paddingTop,
             parent.width - parent.paddingRight,
-            parent.height - parent.paddingBottom
+            parent.height - toolbarHeight - keyboardMargin 
         ).apply { offset(-parent.scrollX, -parent.scrollY) }
 
         return parentRect.contains(targetRect) || Rect.intersects(parentRect, targetRect)
     }
+
+    private fun isCursorVisible(parent: RecyclerView, child: View, rect: Rect): Boolean {
+        // 1. 先拿 rect 的「屏幕绝对坐标」 
+        val targetRect = Rect(rect)
+        val childLoc = intArrayOf(0, 0)
+        child.getLocationOnScreen(childLoc)
+        targetRect.offset(childLoc[0], childLoc[1])
+ 
+        // 2. 可视区域（同样用屏幕坐标）
+        val visibleRect = Rect()
+        parent.getWindowVisibleDisplayFrame(visibleRect)
+        // 需要保留的工具栏/留白 
+        visibleRect.bottom -= (toolbarHeight + keyboardMargin)
+ 
+        // 3. 简单粗暴：完全在可视区里才算可见 
+        return visibleRect.contains(targetRect)
+    }
+
 
     /**
      * 请求将子项的指定矩形区域滚动到屏幕可见区域
@@ -230,7 +248,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         return when {
             !allowFocusScroll -> false
             isChildVisible(parent, child, rect) -> false
-            else -> false //super.requestChildRectangleOnScreen(parent, child, rect, immediate, focusedChildVisible)
+            else -> super.requestChildRectangleOnScreen(parent, child, rect, immediate, focusedChildVisible)
         }
     }
 }
