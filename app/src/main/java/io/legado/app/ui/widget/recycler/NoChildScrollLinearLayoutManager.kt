@@ -9,6 +9,7 @@ import android.view.ViewTreeObserver
 import android.widget.EditText
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import io.legado.app.constant.AppLog
 import io.legado.app.ui.widget.keyboard.KeyboardToolPop
 import kotlin.math.max
 import kotlin.math.min
@@ -29,8 +30,6 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
     private var allowFocusScroll: Boolean = true
     // 记录当前的RecyclerView
     private var recyclerView: RecyclerView? = null
-    // 记录RecyclerView的已滚动距离
-    private var recyclerViewScrollY: Int = 0
     // 记录获得焦点的EditText
     private var editText: EditText? = null
     // 记录键盘的弹起状态
@@ -54,8 +53,9 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         if (showing != isKeyboardShowing) {
             isKeyboardShowing = showing
             if (showing) {
-                recyclerViewScrollY = rv.scrollY
+                AppLog.put("1: ${System.currentTimeMillis()}")
                 scrollCursorToVisible()
+                AppLog.put("2: ${System.currentTimeMillis()}")
             }
         }
         true
@@ -229,6 +229,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
          * 如果子View已经在可见区域内，无需滚动
          * 否则调用父方法进行滚动
          */
+        AppLog.put("3: ${System.currentTimeMillis()}")
         return when {
             !allowFocusScroll -> false
             isChildVisible(parent, child, rect) -> false
