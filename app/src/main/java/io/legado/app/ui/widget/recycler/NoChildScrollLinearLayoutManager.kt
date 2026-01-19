@@ -51,8 +51,6 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         if (showing != isKeyboardShowing) {
             isKeyboardShowing = showing
             if (showing) {
-                allowFocusScroll = true
-                recyclerView?.postDelayed({ allowFocusScroll = true }, 1000)
                 scrollCursorToVisible()
             }
         }
@@ -227,7 +225,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
         return when {
             !allowFocusScroll -> false
             isChildVisible(parent, child, rect) -> false
-            else -> super.requestChildRectangleOnScreen(parent, child, rect, immediate, focusedChildVisible)
+            else -> false //super.requestChildRectangleOnScreen(parent, child, rect, immediate, focusedChildVisible)
         }
     }
 }
