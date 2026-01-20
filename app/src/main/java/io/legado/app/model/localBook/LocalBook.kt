@@ -6,7 +6,9 @@ import androidx.documentfile.provider.DocumentFile
 import com.script.SimpleBindings
 import com.script.rhino.RhinoScriptEngine
 import io.legado.app.R
-import io.legado.app.constant.*
+import io.legado.app.constant.AppLog
+import io.legado.app.constant.AppPattern
+import io.legado.app.constant.BookType
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.BaseSource
 import io.legado.app.data.entities.Book
@@ -25,7 +27,12 @@ import io.legado.app.utils.*
 import kotlinx.coroutines.runBlocking
 import org.apache.commons.text.StringEscapeUtils
 import splitties.init.appCtx
-import java.io.*
+import java.io.ByteArrayInputStream
+import java.io.File
+import java.io.FileInputStream
+import java.io.FileNotFoundException
+import java.io.FileOutputStream
+import java.io.InputStream
 import java.util.regex.Pattern
 
 /**
@@ -105,7 +112,12 @@ object LocalBook {
             throw TocEmptyException(appCtx.getString(R.string.chapter_list_empty))
         }
         val list = ArrayList(LinkedHashSet(chapters))
-        list.forEachIndexed { index, bookChapter -> bookChapter.index = index }
+        list.forEachIndexed { index, bookChapter ->
+            bookChapter.index = index
+            if (bookChapter.title.isEmpty()) {
+                bookChapter.title = "无标题章节"
+            }
+        }
         book.latestChapterTitle = list.last().title
         book.totalChapterNum = list.size
         book.save()
@@ -137,9 +149,17 @@ object LocalBook {
             "获取本地书籍内容失败\n${e.localizedMessage}"
         }
         if (book.isEpub) {
-            content = content?.replace("&lt;img", "&lt; img", true) ?: return null
-            return StringEscapeUtils.unescapeHtml4(content)
+            content ?: return null
+            if (content.indexOf('&') > -1) {
+                content = content.replace("&lt;img", "&lt; img", true)
+                return StringEscapeUtils.unescapeHtml4(content)
+            }
         }
+
+        if (content.isNullOrEmpty()) {
+            return null
+        }
+
         return content
     }
 
@@ -189,15 +209,25 @@ object LocalBook {
                 latestChapterTime = updateTime,
                 order = appDb.bookDao.minOrder - 1
             )
-            if (book.isEpub) EpubFile.upBookInfo(book)
-            if (book.isUmd) UmdFile.upBookInfo(book)
-            if (book.isPdf) PdfFile.upBookInfo(book)
+            upBookInfo(book)
             appDb.bookDao.insert(book)
         } else {
+            deleteBook(book, false)
+            upBookInfo(book)
+            // 触发 isLocalModified
+            book.latestChapterTime = 0
             //已有书籍说明是更新,删除原有目录
             appDb.bookChapterDao.delByBook(bookUrl)
         }
         return book
+    }
+
+    fun upBookInfo(book: Book) {
+        when {
+            book.isEpub -> EpubFile.upBookInfo(book)
+            book.isUmd -> UmdFile.upBookInfo(book)
+            book.isPdf -> PdfFile.upBookInfo(book)
+        }
     }
 
     /* 导入压缩包内的书籍 */
@@ -208,7 +238,9 @@ object LocalBook {
     ): List<Book> {
         val archiveFileDoc = FileDoc.fromUri(archiveFileUri, false)
         val files = ArchiveUtils.deCompress(archiveFileDoc, filter = filter)
-        if (files.isEmpty()) throw NoStackTraceException(appCtx.getString(R.string.unsupport_archivefile_entry))
+        if (files.isEmpty()) {
+            throw NoStackTraceException(appCtx.getString(R.string.unsupport_archivefile_entry))
+        }
         return files.map {
             saveBookFile(FileInputStream(it), saveFileName ?: it.name).let { uri ->
                 importFile(uri).apply {
@@ -254,7 +286,9 @@ object LocalBook {
                 errorCount += 1
             }
         }
-        if (errorCount == uris.size) throw NoStackTraceException("ImportFiles Error:\nAll input files occur error")
+        if (errorCount == uris.size) {
+            throw NoStackTraceException("ImportFiles Error:\nAll input files occur error")
+        }
     }
 
     /**
@@ -303,6 +337,9 @@ object LocalBook {
     fun deleteBook(book: Book, deleteOriginal: Boolean) {
         kotlin.runCatching {
             BookHelp.clearCache(book)
+            if (!book.coverUrl.isNullOrEmpty()) {
+                FileUtils.delete(book.coverUrl!!)
+            }
             if (deleteOriginal) {
                 if (book.bookUrl.isContentScheme()) {
                     val uri = Uri.parse(book.bookUrl)
@@ -358,12 +395,18 @@ object LocalBook {
                 }
                 doc.uri
             } else {
-                val treeFile = File(treeUri.path!!)
-                val file = treeFile.getFile(fileName)
-                FileOutputStream(file).use { oStream ->
-                    it.copyTo(oStream)
+                try {
+                    val treeFile = File(treeUri.path!!)
+                    val file = treeFile.getFile(fileName)
+                    FileOutputStream(file).use { oStream ->
+                        it.copyTo(oStream)
+                    }
+                    Uri.fromFile(file)
+                } catch (e: FileNotFoundException) {
+                    throw SecurityException("请重新设置书籍保存位置\nPermission Denial\n$e").apply {
+                        addSuppressed(e)
+                    }
                 }
-                Uri.fromFile(file)
             }
         }
     }
