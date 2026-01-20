@@ -3,17 +3,14 @@ package io.legado.app
 import android.app.Application
 import android.app.NotificationChannel
 import android.app.NotificationManager
-import android.content.ClipboardManager
 import android.content.Context
 import android.content.pm.ActivityInfo
 import android.content.res.Configuration
 import android.os.Build
-import android.util.AttributeSet
 import android.view.LayoutInflater
-import android.view.MotionEvent
 import android.view.View
-import androidx.appcompat.app.AppCompatDelegate
-import androidx.appcompat.widget.AppCompatEditText
+import android.util.AttributeSet
+import android.widget.TextView
 import com.github.liuyueyi.quick.transfer.ChineseUtils
 import com.github.liuyueyi.quick.transfer.constants.TransType
 import com.jeremyliao.liveeventbus.LiveEventBus
@@ -187,7 +184,7 @@ class App : Application() {
 
         } catch (e: Exception) {
             // 修复失败不影响应用运行，记录详细的错误信息
-            AppLog.putDebug("Failed to install Android 8.0-8.1 selection fix", e)
+            AppLog.put("Failed to install Android 8.0-8.1 selection fix", e)
         }
     }
 
@@ -304,7 +301,7 @@ class App : Application() {
 
 /**
  * 安全的 EditText，修复 Android 8.0-8.1 键盘选择文本崩溃
- * 终极修复方案：监听剪贴板变化，复制瞬间强制清理选区
+ * 简洁反射方案：复制/剪切时直接清理选区
  */
 class SafeEditText @JvmOverloads constructor(
     context: Context,
@@ -312,99 +309,43 @@ class SafeEditText @JvmOverloads constructor(
     defStyleAttr: Int = android.R.attr.editTextStyle
 ) : AppCompatEditText(context, attrs, defStyleAttr) {
 
-    init {
-        // 仅在 Android 8.0-8.1 注册剪贴板监听
+    override fun onTextContextMenuItem(id: Int): Boolean {
+        val consumed = super.onTextContextMenuItem(id)
+
+        // 只在 Android 8.0-8.1 的复制/剪切后清理
         if (Build.VERSION.SDK_INT in Build.VERSION_CODES.O..Build.VERSION_CODES.O_MR1) {
-            setupClipboardListener()
+            if (id == android.R.id.copy || id == android.R.id.cut) {
+                // 立即清理选区
+                killSelectionNow()
+            }
         }
+
+        return consumed
     }
 
-    private var clipboardManager: ClipboardManager? = null
-    private val clipboardListener = ClipboardManager.OnPrimaryClipChangedListener {
-        // 剪贴板变化时立即清理选区
-        handleClipboardChanged()
-    }
-
-    /**
-     * 设置剪贴板监听
-     */
-    private fun setupClipboardListener() {
+    private fun killSelectionNow() {
         try {
-            clipboardManager = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-            clipboardManager?.addPrimaryClipChangedListener(clipboardListener)
-        } catch (e: Exception) {
-            AppLog.putDebug("Setup clipboard listener failed", e)
-        }
-    }
+            // 1. 获取 TextView.mEditor
+            val editorField = TextView::class.java.getDeclaredField("mEditor").apply {
+                isAccessible = true
+            }
+            val editor = editorField.get(this) ?: return
 
-    /**
-     * 处理剪贴板变化
-     */
-    private fun handleClipboardChanged() {
-        // 只在当前 EditText 有焦点且有选区时才处理
-        if (!isFocused || selectionStart == selectionEnd) {
-            return
-        }
+            // 2. 调用 Editor.stopSelectionActionMode()
+            val stopMethod = editor.javaClass.getDeclaredMethod("stopSelectionActionMode").apply {
+                isAccessible = true
+            }
+            stopMethod.invoke(editor)
 
-        // 延迟一小段时间，确保复制操作完成
-        postDelayed({
-            clearSelectionInstantly()
-        }, 50) // 50ms 足够确保复制完成
-    }
-
-    /**
-     * 立即清理选区（无视觉、无回调、无撤销记录）
-     */
-    private fun clearSelectionInstantly() {
-        try {
-            // 1. 保存光标位置
+            // 3. 光标落到尾（防肉眼错位）
             val end = selectionEnd.coerceIn(0, length())
-
-            // 2. 关键：重新设置文本，强制丢弃旧的 Selection 对象
-            // 这会创建全新的 SpannableString，旧的 Selection span 会被丢弃
-            text = text
-
-            // 3. 恢复光标位置
             setSelection(end)
 
-        } catch (e: Exception) {
-            AppLog.putDebug("clear SelectionInstantly failed", e)
+        } catch (ignore: Throwable) {
+            // 任何异常都回落到 text=text 方案
+            val end = selectionEnd.coerceIn(0, length())
+            text = text
+            setSelection(end)
         }
-    }
-
-    /**
-     * 清理资源
-     */
-    override fun onDetachedFromWindow() {
-        // 移除剪贴板监听
-        if (Build.VERSION.SDK_INT in Build.VERSION_CODES.O..Build.VERSION_CODES.O_MR1) {
-            try {
-                clipboardManager?.removePrimaryClipChangedListener(clipboardListener)
-            } catch (e: Exception) {
-                // 忽略异常
-            }
-        }
-
-        super.onDetachedFromWindow()
-    }
-
-    /**
-     * 处理触摸事件，确保点击时也清理选区
-     */
-    override fun onTouchEvent(event: MotionEvent): Boolean {
-        if (Build.VERSION.SDK_INT in Build.VERSION_CODES.O..Build.VERSION_CODES.O_MR1) {
-            if (event.action == MotionEvent.ACTION_DOWN && selectionStart != selectionEnd) {
-                // 点击时有选区，立即清理
-                post {
-                    clearSelectionInstantly()
-
-                    // 设置光标到点击位置
-                    val offset = getOffsetForPosition(event.x, event.y).coerceIn(0, length())
-                    setSelection(offset)
-                }
-            }
-        }
-
-        return super.onTouchEvent(event)
     }
 }
