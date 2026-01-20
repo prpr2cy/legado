@@ -9,6 +9,7 @@ import android.content.res.Configuration
 import android.os.Build
 import android.util.AttributeSet
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.View
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.appcompat.widget.AppCompatEditText
@@ -209,7 +210,7 @@ class App : Application() {
 
         // 如果已经尝试过当前版本，直接跳过
         if (lastAttemptedVersion == currentVersion) {
-            AppLog.putDebug("GMS provider installation already attempted for version $currentVersion, skipping")
+            AppLog.put("GMS provider installation already attempted for version $currentVersion, skipping")
             return
         }
 
@@ -302,7 +303,7 @@ class App : Application() {
 
 /**
  * 安全的 EditText，修复 Android 8.0-8.1 键盘选择文本崩溃
- * 修复方案：在复制/剪切后立即清除旧选区，避免系统崩溃
+ * 最简化版本：覆盖所有可能的崩溃路径
  */
 class SafeEditText @JvmOverloads constructor(
     context: Context,
@@ -310,28 +311,40 @@ class SafeEditText @JvmOverloads constructor(
     defStyleAttr: Int = android.R.attr.editTextStyle
 ) : AppCompatEditText(context, attrs, defStyleAttr) {
 
-    // 重写文本上下文菜单项处理
     override fun onTextContextMenuItem(id: Int): Boolean {
         val consumed = super.onTextContextMenuItem(id)
 
-        // 仅在 Android 8.0-8.1 处理复制和剪切操作
+        // 处理上下文菜单的复制/剪切
         if (Build.VERSION.SDK_INT in Build.VERSION_CODES.O..Build.VERSION_CODES.O_MR1) {
-            when (id) {
-                android.R.id.copy, android.R.id.cut -> {
-                    // 1. 获取选区结束位置
-                    val end = selectionEnd.coerceIn(0, length())
-
-                    // 2. 在该位置插入一个零宽字符，然后立即删除
-                    val zwj = "\u200B"
-                    text?.insert(end, zwj)
-                    text?.delete(end, end + 1)
-
-                    // 3. 把光标放到原来的选区结束位置
-                    setSelection(end)
-                }
+            if (id == android.R.id.copy || id == android.R.id.cut) {
+                clearSelection()
             }
         }
 
         return consumed
+    }
+
+    override fun onTouchEvent(event: MotionEvent): Boolean {
+        // 每次手指按下都检查并清除选区
+        if (Build.VERSION.SDK_INT in Build.VERSION_CODES.O..Build.VERSION_CODES.O_MR1) {
+            if (event.action == MotionEvent.ACTION_DOWN && selectionStart != selectionEnd) {
+                clearSelection()
+            }
+        }
+
+        return super.onTouchEvent(event)
+    }
+
+    /**
+     * 清除选区：重新设置文本 + 恢复光标
+     */
+    private fun clearSelection() {
+        try {
+            val end = selectionEnd.coerceIn(0, length())
+            text = text      // 关键：丢弃旧选区对象
+            setSelection(end) // 恢复光标位置
+        } catch (e: Exception) {)
+            AppLog.putDebug("SafeEditText focus setSelection failed", e)
+        }
     }
 }
