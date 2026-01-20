@@ -11,6 +11,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.util.AttributeSet
 import android.widget.TextView
+import androidx.appcompat.widget.AppCompatEditText
 import com.github.liuyueyi.quick.transfer.ChineseUtils
 import com.github.liuyueyi.quick.transfer.constants.TransType
 import com.jeremyliao.liveeventbus.LiveEventBus
