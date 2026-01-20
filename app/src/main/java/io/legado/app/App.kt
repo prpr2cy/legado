@@ -45,6 +45,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import splitties.init.appCtx
 import splitties.systemservices.notificationManager
+import java.lang.Exception
 import java.net.URL
 import java.util.concurrent.TimeUnit
 
