@@ -1,5 +1,7 @@
 package io.legado.app.ui.widget.code
 
+import android.content.ClipboardManager
+import android.content.ClipData
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Paint
@@ -100,6 +102,22 @@ class CodeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
             }
         )
         addTextChangedListener(mEditorTextWatcher)
+    }
+
+    override fun onTextContextMenuItem(id: Int): Boolean {
+        if (id == android.R.id.copy) {
+            val txt = text ?: return super.onTextContextMenuItem(id)
+            val start = selectionStart 
+            val end   = selectionEnd 
+            if (start < 0 || end < 0) return super.onTextContextMenuItem(id)
+            val min = start.coerceAtMost(end)
+            val max = start.coerceAtLeast(end)
+            val clip = txt.subSequence(min, max).toString()
+            val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager 
+            cm.setPrimaryClip(ClipData.newPlainText("CodeView", clip))
+            return true
+        }
+        return super.onTextContextMenuItem(id)
     }
 
     override fun showDropDown() {

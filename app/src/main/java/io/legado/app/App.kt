@@ -7,12 +7,6 @@ import android.content.Context
 import android.content.pm.ActivityInfo
 import android.content.res.Configuration
 import android.os.Build
-import android.text.Editable
-import android.text.Selection
-import android.view.LayoutInflater
-import android.view.View
-import android.util.AttributeSet
-import androidx.appcompat.widget.AppCompatEditText
 import com.github.liuyueyi.quick.transfer.ChineseUtils
 import com.github.liuyueyi.quick.transfer.constants.TransType
 import com.jeremyliao.liveeventbus.LiveEventBus
@@ -73,11 +67,6 @@ class App : Application() {
         defaultSharedPreferences.registerOnSharedPreferenceChangeListener(AppConfig)
         DefaultData.upVersion()
 
-        // 在 Android 8.0-8.1 安装修复
-        if (Build.VERSION.SDK_INT in Build.VERSION_CODES.O..Build.VERSION_CODES.O_MR1) {
-            installAndroid8SelectionFix()
-        }
-
         Coroutine.async {
             withContext(Dispatchers.IO) {
                 // 1. 设置 URLStreamHandlerFactory（安全调用）
@@ -88,7 +77,7 @@ class App : Application() {
                 }
 
                 // 2. 安装 GMS TLS Provider
-                installGmsTlsProviderIfNeeded(appCtx)
+                installGmsTlsProvider(appCtx)
 
                 // 3. 初始化封面
                 BookCover.toString()
@@ -134,63 +123,6 @@ class App : Application() {
     }
 
     /**
-     * Android 8.0-8.1 键盘选择文本修复
-     */
-    private fun installAndroid8SelectionFix() {
-        try {
-            val layoutInflater = LayoutInflater.from(this)
-
-            // 保存原始的 Factory2
-            val originalFactory2 = layoutInflater.factory2
-
-            // 创建包装器
-            val wrapper = object : LayoutInflater.Factory2 {
-                override fun onCreateView(
-                    parent: View?,
-                    name: String,
-                    context: Context,
-                    attrs: AttributeSet
-                ): View? {
-                    // 同时兼容系统 EditText 和 appcompat 版
-                    // XML中的tag可能是：
-                    // 1. "EditText" (在某些情况下)
-                    // 2. "android.widget.EditText" (系统原生)
-                    // 3. "androidx.appcompat.widget.AppCompatEditText" (AppCompat版本)
-                    if (name == "EditText" ||
-                        name == "android.widget.EditText" ||
-                        name == "androidx.appcompat.widget.AppCompatEditText") {
-                        // 直接创建 SafeEditText，使用默认样式
-                        return SafeEditText(context, attrs, android.R.attr.editTextStyle)
-                    }
-
-                    // 其他 View 走原始流程
-                    return originalFactory2?.onCreateView(parent, name, context, attrs)
-                }
-
-                override fun onCreateView(
-                    name: String,
-                    context: Context,
-                    attrs: AttributeSet
-                ): View? {
-                    return onCreateView(null, name, context, attrs)
-                }
-            }
-
-            // 关键修复：同时设置 factory2 和 factory，避免链式断裂
-            layoutInflater.factory2 = wrapper
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                // 在 API 21+ 上，factory 和 factory2 是分开的
-                // 某些库会先检查 factory，所以需要同时设置
-                layoutInflater.factory = wrapper
-            }
-
-        } catch (e: Exception) {
-            // 修复失败不影响应用运行，记录详细的错误信息
-            AppLog.put("Failed to install Android 8.0-8.1 selection fix", e)
-        }
-    }
-
-    /**
      * 尝试在安装了GMS的设备上(GMS或者MicroG)使用GMS内置的Conscrypt
      * 作为首选JCE提供程序，而使Okhttp在低版本Android上
      * 能够启用TLSv1.3
@@ -201,7 +133,7 @@ class App : Application() {
      * @param context
      * @return
      */
-    private fun installGmsTlsProviderIfNeeded(context: Context) {
+    private fun installGmsTlsProvider(context: Context) {
         val prefs = defaultSharedPreferences
         val currentVersion = BuildConfig.VERSION_CODE
 
@@ -240,15 +172,6 @@ class App : Application() {
             // 无论成功与否，都记录已经尝试过当前版本
             prefs.edit().putInt(PREF_LAST_ATTEMPTED_VERSION, currentVersion).apply()
         }
-    }
-
-    /**
-     * 旧版本的 installGmsTlsProvider 方法，保持兼容性
-     * 但实际不再使用，由 installGmsTlsProviderIfNeeded 替代
-     */
-    @Deprecated("Use installGmsTlsProviderIfNeeded instead", ReplaceWith("installGmsTlsProviderIfNeeded(context)"))
-    private fun installGmsTlsProvider(context: Context) {
-        installGmsTlsProviderIfNeeded(context)
     }
 
     /**
@@ -298,39 +221,5 @@ class App : Application() {
                 webChannel
             )
         )
-    }
-}
-
-/**
- * 安全的 EditText，修复 Android 8.0-8.1 键盘选择文本崩溃
- * 简洁反射方案：复制/剪切时直接清理选区信息
- */
-
-class SafeEditText @JvmOverloads constructor(
-    context: Context,
-    attrs: AttributeSet? = null,
-    defStyleAttr: Int = android.R.attr.editTextStyle
-) : AppCompatEditText(context, attrs, defStyleAttr) {
-
-    override fun onTextContextMenuItem(id: Int): Boolean {
-        val result = super.onTextContextMenuItem(id)
-
-        // 只在 Android 8.0-8.1 清理
-        if (Build.VERSION.SDK_INT in 26..27) {
-            if (id == android.R.id.copy || id == android.R.id.cut) {
-                clearSelectionSpan()
-            }
-        }
-
-        return result
-    }
-
-    private fun clearSelectionSpan() {
-        if (selectionStart == selectionEnd) return
-
-        val editable = editableText
-        editable.removeSpan(Selection.SELECTION_START)
-        editable.removeSpan(Selection.SELECTION_END)
-        setSelection(selectionEnd)
     }
 }
