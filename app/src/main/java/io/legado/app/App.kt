@@ -7,10 +7,11 @@ import android.content.Context
 import android.content.pm.ActivityInfo
 import android.content.res.Configuration
 import android.os.Build
+import android.text.Editable
+import android.text.Selection
 import android.view.LayoutInflater
 import android.view.View
 import android.util.AttributeSet
-import android.widget.TextView
 import androidx.appcompat.widget.AppCompatEditText
 import com.github.liuyueyi.quick.transfer.ChineseUtils
 import com.github.liuyueyi.quick.transfer.constants.TransType
@@ -302,8 +303,9 @@ class App : Application() {
 
 /**
  * 安全的 EditText，修复 Android 8.0-8.1 键盘选择文本崩溃
- * 简洁反射方案：复制/剪切时直接清理选区
+ * 简洁反射方案：复制/剪切时直接清理选区信息
  */
+
 class SafeEditText @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
@@ -311,42 +313,24 @@ class SafeEditText @JvmOverloads constructor(
 ) : AppCompatEditText(context, attrs, defStyleAttr) {
 
     override fun onTextContextMenuItem(id: Int): Boolean {
-        val consumed = super.onTextContextMenuItem(id)
+        val result = super.onTextContextMenuItem(id)
 
-        // 只在 Android 8.0-8.1 的复制/剪切后清理
-        if (Build.VERSION.SDK_INT in Build.VERSION_CODES.O..Build.VERSION_CODES.O_MR1) {
+        // 只在 Android 8.0-8.1 清理
+        if (Build.VERSION.SDK_INT in 26..27) {
             if (id == android.R.id.copy || id == android.R.id.cut) {
-                // 立即清理选区
-                killSelectionNow()
+                clearSelectionSpan()
             }
         }
 
-        return consumed
+        return result
     }
 
-    private fun killSelectionNow() {
-        try {
-            // 1. 获取 TextView.mEditor
-            val editorField = TextView::class.java.getDeclaredField("mEditor").apply {
-                isAccessible = true
-            }
-            val editor = editorField.get(this) ?: return
+    private fun clearSelectionSpan() {
+        if (selectionStart == selectionEnd) return
 
-            // 2. 调用 Editor.stopSelectionActionMode()
-            val stopMethod = editor.javaClass.getDeclaredMethod("stopSelectionActionMode").apply {
-                isAccessible = true
-            }
-            stopMethod.invoke(editor)
-
-            // 3. 光标落到尾（防肉眼错位）
-            val end = selectionEnd.coerceIn(0, length())
-            setSelection(end)
-
-        } catch (ignore: Throwable) {
-            // 任何异常都回落到 text=text 方案
-            val end = selectionEnd.coerceIn(0, length())
-            text = text
-            setSelection(end)
-        }
+        val editable = editableText
+        editable.removeSpan(Selection.SELECTION_START)
+        editable.removeSpan(Selection.SELECTION_END)
+        setSelection(selectionEnd)
     }
 }
