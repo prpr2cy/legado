@@ -6,11 +6,9 @@ import android.app.NotificationManager
 import android.content.Context
 import android.content.pm.ActivityInfo
 import android.content.res.Configuration
-import android.graphics.Rect
 import android.os.Build
 import android.util.AttributeSet
 import android.view.LayoutInflater
-import android.view.MotionEvent
 import android.view.View
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.appcompat.widget.AppCompatEditText
@@ -304,7 +302,7 @@ class App : Application() {
 
 /**
  * 安全的 EditText，修复 Android 8.0-8.1 键盘选择文本崩溃
- * 修复方案：处理复制/剪切后所有可能导致崩溃的交互路径
+ * 修复方案：在复制/剪切后立即清除旧选区，避免系统崩溃
  */
 class SafeEditText @JvmOverloads constructor(
     context: Context,
@@ -312,107 +310,27 @@ class SafeEditText @JvmOverloads constructor(
     defStyleAttr: Int = android.R.attr.editTextStyle
 ) : AppCompatEditText(context, attrs, defStyleAttr) {
 
-    // 标记"刚做完复制/剪切"
-    private var pasteboardOpJustDone = false
-
-    // 延迟清除标记的任务
-    private val clearFlagRunnable = Runnable { pasteboardOpJustDone = false }
-
-    /**
-     * 重写文本上下文菜单项处理
-     * 在复制/剪切后立即标记操作状态
-     */
+    // 重写文本上下文菜单项处理
     override fun onTextContextMenuItem(id: Int): Boolean {
         val consumed = super.onTextContextMenuItem(id)
 
         // 仅在 Android 8.0-8.1 处理复制和剪切操作
         if (Build.VERSION.SDK_INT in Build.VERSION_CODES.O..Build.VERSION_CODES.O_MR1) {
             when (id) {
-                android.R.id.copy,       // 复制
-                android.R.id.cut -> {    // 剪切
-                    pasteboardOpJustDone = true
-                    // 移除之前的延迟任务
-                    removeCallbacks(clearFlagRunnable)
-                    // 设置1秒后自动清除标记
-                    postDelayed(clearFlagRunnable, 1000L)
+                android.R.id.copy, android.R.id.cut -> {
+                    // 1. 获取选区结束位置
+                    val end = selectionEnd.coerceIn(0, length())
+
+                    // 2. 关键：重新设置文本，彻底丢弃旧选区对象
+                    // 这会强制 TextView 重新创建 Layout 和 SpanList，清除所有选区缓存
+                    text = text
+
+                    // 3. 把光标放到原来的选区结束位置
+                    setSelection(end)
                 }
             }
         }
 
         return consumed
-    }
-
-    /**
-     * 拦截触摸事件，处理"先点一下再重选"的情况
-     * 当用户刚做完复制/剪切操作，又点击了文本时，清除选区标记
-     */
-    override fun onTouchEvent(event: MotionEvent): Boolean {
-        if (Build.VERSION.SDK_INT in Build.VERSION_CODES.O..Build.VERSION_CODES.O_MR1) {
-            if (event.action == MotionEvent.ACTION_DOWN && pasteboardOpJustDone) {
-                // 清除标记，避免重复处理
-                pasteboardOpJustDone = false
-                removeCallbacks(clearFlagRunnable)
-
-                // 计算点击位置的光标偏移
-                val offset = getOffsetForPosition(event.x, event.y)
-                val textLength = text?.length ?: 0
-                val safeOffset = offset.coerceIn(0, textLength)
-
-                // 关键：先把光标设置到点击位置
-                post {
-                    try {
-                        // 清空选区，光标移到点击位置
-                        setSelection(safeOffset)
-                    } catch (e: Exception) {
-                        // 如果设置失败，回退到文本末尾
-                        setSelection(textLength)
-                        AppLog.putDebug("SafeEditText touch setSelection failed", e)
-                    }
-                }
-            }
-        }
-
-        return super.onTouchEvent(event)
-    }
-
-    /**
-     * 处理焦点变化，确保获取焦点时没有错误选区
-     */
-    override fun onFocusChanged(gainFocus: Boolean, direction: Int, previouslyFocusedRect: Rect?) {
-        if (Build.VERSION.SDK_INT in Build.VERSION_CODES.O..Build.VERSION_CODES.O_MR1) {
-            // 如果刚做完复制/剪切操作后获得焦点
-            if (gainFocus && pasteboardOpJustDone) {
-                // 清除标记
-                pasteboardOpJustDone = false
-                removeCallbacks(clearFlagRunnable)
-
-                // 确保光标位置正确
-                val textLength = text?.length ?: 0
-                post {
-                    try {
-                        // 检查是否仍有选区
-                        if (selectionStart != selectionEnd) {
-                            // 如果有选区，清空它，光标放到选区结尾
-                            setSelection(selectionEnd.coerceIn(0, textLength))
-                        }
-                    } catch (e: Exception) {
-                        // 如果失败，设置到文本末尾
-                        setSelection(textLength)
-                        AppLog.putDebug("SafeEditText focus setSelection failed", e)
-                    }
-                }
-            }
-        }
-
-        super.onFocusChanged(gainFocus, direction, previouslyFocusedRect)
-    }
-
-    /**
-     * 清理资源
-     */
-    override fun onDetachedFromWindow() {
-        // 移除所有待执行的延迟任务
-        removeCallbacks(clearFlagRunnable)
-        super.onDetachedFromWindow()
     }
 }
