@@ -116,6 +116,16 @@ class EpubFile(var book: Book) {
     }
 
     private fun getContent(chapter: BookChapter): String? {
+        /**
+         * <image width="1038" height="670" xlink:href="..."/>
+         * ...titlepage.xhtml
+         * 大多数epub文件的封面页都会带有cover，可以一定程度上解决封面读取问题
+         */
+        if (chapter.url.contains("titlepage.xhtml") ||
+            chapter.url.contains("cover")
+        ) {
+            return "<img src=\"cover.jpeg\" />"
+        }
         /*获取当前章节文本*/
         val contents = epubBookContents ?: return null
         val nextChapterFirstResourceHref = chapter.getVariable("nextUrl").substringBeforeLast("#")
@@ -233,10 +243,10 @@ class EpubFile(var book: Book) {
             }
 
             // 如果XHTML文件中没有字符集信息，返回默认字符集
-            StandardCharsets.UTF_8
+            Charset.defaultCharset()
         } catch (e: Exception) {
             e.printOnDebug()
-            StandardCharsets.UTF_8
+            Charset.defaultCharset()
         }
     }
 
@@ -256,6 +266,8 @@ class EpubFile(var book: Book) {
             if (xhtmlCharset != StandardCharsets.UTF_8) {
                 return xhtmlCharset
             }
+
+            StandardCharsets.UTF_8
         } catch (e: Exception) {
             e.printOnDebug()
             StandardCharsets.UTF_8
@@ -263,17 +275,6 @@ class EpubFile(var book: Book) {
     }
 
     private fun getBody(res: Resource, startFragmentId: String?, endFragmentId: String?): Element {
-        /**
-         * <image width="1038" height="670" xlink:href="..."/>
-         * ...titlepage.xhtml
-         * 大多数epub文件的封面页都会带有cover，可以一定程度上解决封面读取问题
-         */
-        if (res.href.contains("titlepage.xhtml") ||
-            res.href.contains("cover")
-        ) {
-            return Jsoup.parseBodyFragment("<img src=\"cover.jpeg\" />")
-        }
-
         // 检测字符集
         mCharset = detectCharset(res)
 
