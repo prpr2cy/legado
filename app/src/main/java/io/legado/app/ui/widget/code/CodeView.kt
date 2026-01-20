@@ -7,7 +7,6 @@ import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Paint.FontMetricsInt
 import android.graphics.Rect
-import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.text.*
@@ -107,18 +106,16 @@ class CodeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
 
     override fun onTextContextMenuItem(id: Int): Boolean {
         if (id == android.R.id.copy) {
-            val str = text ?: return super.onTextContextMenuItem(id)
+            val text = text ?: return super.onTextContextMenuItem(id)
             val start = selectionStart
             val end   = selectionEnd
             if (start < 0 || end < 0) return super.onTextContextMenuItem(id)
             val min = start.coerceAtMost(end)
             val max = start.coerceAtLeast(end)
-            val copyText = str.subSequence(min, max).toString()
+            val copyText = text.subSequence(min, max).toString()
             val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
             clipboard.setPrimaryClip(ClipData.newPlainText("CodeView", copyText))
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                setSelection(end, end)
-            }
+            setSelection(end)
             return true
         }
         return super.onTextContextMenuItem(id)
