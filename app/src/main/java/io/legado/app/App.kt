@@ -321,9 +321,10 @@ class SafeEditText @JvmOverloads constructor(
                     // 1. 获取选区结束位置
                     val end = selectionEnd.coerceIn(0, length())
 
-                    // 2. 关键：重新设置文本，彻底丢弃旧选区对象
-                    // 这会强制 TextView 重新创建 Layout 和 SpanList，清除所有选区缓存
-                    text = text
+                    // 2. 在末尾插入一个零宽字符，然后立即删除
+                    val zwj = "\u200B"
+                    text?.insert(end, zwj)
+                    text?.delete(end, end + 1)
 
                     // 3. 把光标放到原来的选区结束位置
                     setSelection(end)
