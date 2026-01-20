@@ -321,7 +321,7 @@ class SafeEditText @JvmOverloads constructor(
                     // 1. 获取选区结束位置
                     val end = selectionEnd.coerceIn(0, length())
 
-                    // 2. 在末尾插入一个零宽字符，然后立即删除
+                    // 2. 在该位置插入一个零宽字符，然后立即删除
                     val zwj = "\u200B"
                     text?.insert(end, zwj)
                     text?.delete(end, end + 1)
