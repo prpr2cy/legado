@@ -7,6 +7,7 @@ import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Paint.FontMetricsInt
 import android.graphics.Rect
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.text.*
@@ -38,6 +39,7 @@ class CodeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
     private val mErrorHashSet: SortedMap<Int, Int> = TreeMap()
     private val mSyntaxPatternMap: MutableMap<Pattern, Int> = HashMap()
     private var mIndentCharacterList = mutableListOf('{', '+', '-', '*', '/', '=')
+    private val isAndroid8 = Build.VERSION.SDK_INT in Build.VERSION_CODES.O..Build.VERSION_CODES.O_MR1
 
     private val mUpdateRunnable = Runnable {
         val source = text
@@ -92,6 +94,11 @@ class CodeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
         setTokenizer(mAutoCompleteTokenizer)
         filters = arrayOf(
             InputFilter { source, start, end, dest, dStart, dEnd ->
+                if (isAndroid8 && deleteLen > 100) {
+                    setLayerType(LAYER_TYPE_SOFTWARE, null)
+                    post { setLayerType(LAYER_TYPE_HARDWARE, null) }
+                }
+
                 if (modified && end - start == 1 && start < source.length && dStart < dest.length) {
                     val c = source[start]
                     if (c == '\n') {
@@ -105,7 +112,7 @@ class CodeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
     }
 
     override fun onTextContextMenuItem(id: Int): Boolean {
-        if (id == android.R.id.copy) {
+        if (isAndroid8 && id == android.R.id.copy) {
             val text = text ?: return super.onTextContextMenuItem(id)
             val start = selectionStart
             val end   = selectionEnd
