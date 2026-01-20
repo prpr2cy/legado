@@ -45,7 +45,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import splitties.init.appCtx
 import splitties.systemservices.notificationManager
-import java.lang.Exception
 import java.net.URL
 import java.util.concurrent.TimeUnit
 
@@ -344,8 +343,8 @@ class SafeEditText @JvmOverloads constructor(
             val end = selectionEnd.coerceIn(0, length())
             text = text      // 关键：丢弃旧选区对象
             setSelection(end) // 恢复光标位置
-        } catch (e: Exception) {)
-            AppLog.putDebug("SafeEditText focus setSelection failed", e)
+        } catch (e: Exception) {
+            AppLog.putDebug("SafeEditText clear setSelection failed", e)
         }
     }
 }
