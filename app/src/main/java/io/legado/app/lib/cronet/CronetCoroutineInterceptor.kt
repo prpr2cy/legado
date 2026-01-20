@@ -5,7 +5,12 @@ import io.legado.app.utils.printOnDebug
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeout
-import okhttp3.*
+import okhttp3.Call
+import okhttp3.CookieJar
+import okhttp3.HttpUrl
+import okhttp3.Interceptor
+import okhttp3.Request
+import okhttp3.Response
 import okhttp3.internal.http.receiveHeaders
 import org.chromium.net.UrlRequest
 import org.chromium.net.UrlResponseInfo
