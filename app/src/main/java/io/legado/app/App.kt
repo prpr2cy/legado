@@ -73,7 +73,7 @@ class App : Application() {
                 try {
                     URL.setURLStreamHandlerFactory(ObsoleteUrlFactory(okHttpClient))
                 } catch (e: Error) {
-                    AppLog.put("URLStreamHandlerFactory already set by other module: ${e.message}", e)
+                    AppLog.put("URLStreamHandlerFactory already set by other module", e)
                 }
 
                 // 2. 安装 GMS TLS Provider
@@ -165,7 +165,7 @@ class App : Application() {
             // 预期行为：无GMS的设备会抛出异常
             // 只记录一次日志，避免重复记录
             if (lastAttemptedVersion != currentVersion) {
-                AppLog.put("GMS provider not available: ${e.message}", e)
+                AppLog.put("GMS provider not available", e)
             }
         } finally {
             // 无论成功与否，都记录已经尝试过当前版本
