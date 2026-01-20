@@ -66,6 +66,7 @@ class NoChildScrollLinearLayoutManager @JvmOverloads constructor(
             } else {
                 cursorScrollJob?.cancel()
                 cursorScrollJob = null
+                allowFocusScroll = true
             }
         }
         true
