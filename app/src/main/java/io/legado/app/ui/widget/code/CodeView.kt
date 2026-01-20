@@ -95,7 +95,7 @@ class CodeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
         setTokenizer(mAutoCompleteTokenizer)
         filters = arrayOf(
             InputFilter { source, start, end, dest, dStart, dEnd ->
-                val changeLength = abs(dend - dstart)
+                val changeLength = abs(dEnd - dStart)
                 if (isAndroid8 && changeLength > 100) {
                     setLayerType(LAYER_TYPE_SOFTWARE, null)
                     post { setLayerType(LAYER_TYPE_HARDWARE, null) }
