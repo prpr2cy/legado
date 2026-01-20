@@ -3,6 +3,7 @@ package io.legado.app
 import android.app.Application
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.content.ClipboardManager
 import android.content.Context
 import android.content.pm.ActivityInfo
 import android.content.res.Configuration
@@ -303,7 +304,7 @@ class App : Application() {
 
 /**
  * 安全的 EditText，修复 Android 8.0-8.1 键盘选择文本崩溃
- * 最简化版本：覆盖所有可能的崩溃路径
+ * 终极修复方案：监听剪贴板变化，复制瞬间强制清理选区
  */
 class SafeEditText @JvmOverloads constructor(
     context: Context,
@@ -311,40 +312,99 @@ class SafeEditText @JvmOverloads constructor(
     defStyleAttr: Int = android.R.attr.editTextStyle
 ) : AppCompatEditText(context, attrs, defStyleAttr) {
 
-    override fun onTextContextMenuItem(id: Int): Boolean {
-        val consumed = super.onTextContextMenuItem(id)
-
-        // 处理上下文菜单的复制/剪切
+    init {
+        // 仅在 Android 8.0-8.1 注册剪贴板监听
         if (Build.VERSION.SDK_INT in Build.VERSION_CODES.O..Build.VERSION_CODES.O_MR1) {
-            if (id == android.R.id.copy || id == android.R.id.cut) {
-                clearSelection()
+            setupClipboardListener()
+        }
+    }
+
+    private var clipboardManager: ClipboardManager? = null
+    private val clipboardListener = ClipboardManager.OnPrimaryClipChangedListener {
+        // 剪贴板变化时立即清理选区
+        handleClipboardChanged()
+    }
+
+    /**
+     * 设置剪贴板监听
+     */
+    private fun setupClipboardListener() {
+        try {
+            clipboardManager = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+            clipboardManager?.addPrimaryClipChangedListener(clipboardListener)
+        } catch (e: Exception) {
+            AppLog.putDebug("Setup clipboard listener failed", e)
+        }
+    }
+
+    /**
+     * 处理剪贴板变化
+     */
+    private fun handleClipboardChanged() {
+        // 只在当前 EditText 有焦点且有选区时才处理
+        if (!isFocused || selectionStart == selectionEnd) {
+            return
+        }
+
+        // 延迟一小段时间，确保复制操作完成
+        postDelayed({
+            clearSelectionInstantly()
+        }, 50) // 50ms 足够确保复制完成
+    }
+
+    /**
+     * 立即清理选区（无视觉、无回调、无撤销记录）
+     */
+    private fun clearSelectionInstantly() {
+        try {
+            // 1. 保存光标位置
+            val end = selectionEnd.coerceIn(0, length())
+
+            // 2. 关键：重新设置文本，强制丢弃旧的 Selection 对象
+            // 这会创建全新的 SpannableString，旧的 Selection span 会被丢弃
+            text = text
+
+            // 3. 恢复光标位置
+            setSelection(end)
+
+        } catch (e: Exception) {
+            AppLog.putDebug("clear SelectionInstantly failed", e)
+        }
+    }
+
+    /**
+     * 清理资源
+     */
+    override fun onDetachedFromWindow() {
+        // 移除剪贴板监听
+        if (Build.VERSION.SDK_INT in Build.VERSION_CODES.O..Build.VERSION_CODES.O_MR1) {
+            try {
+                clipboardManager?.removePrimaryClipChangedListener(clipboardListener)
+            } catch (e: Exception) {
+                // 忽略异常
             }
         }
 
-        return consumed
+        super.onDetachedFromWindow()
     }
 
+    /**
+     * 处理触摸事件，确保点击时也清理选区
+     */
     override fun onTouchEvent(event: MotionEvent): Boolean {
-        // 每次手指按下都检查并清除选区
         if (Build.VERSION.SDK_INT in Build.VERSION_CODES.O..Build.VERSION_CODES.O_MR1) {
             if (event.action == MotionEvent.ACTION_DOWN && selectionStart != selectionEnd) {
-                clearSelection()
+                // 点击时有选区，立即清理
+                post {
+                    clearSelectionInstantly()
+
+                    // 设置光标到点击位置
+                    val offset = getOffsetForPosition(event.x, event.y).coerceIn(0, length())
+                    setSelection(offset)
+                }
             }
         }
 
         return super.onTouchEvent(event)
-    }
-
-    /**
-     * 清除选区：重新设置文本 + 恢复光标
-     */
-    private fun clearSelection() {
-        try {
-            val end = selectionEnd.coerceIn(0, length())
-            text = text      // 关键：丢弃旧选区对象
-            setSelection(end) // 恢复光标位置
-        } catch (e: Exception) {
-            AppLog.putDebug("SafeEditText clear setSelection failed", e)
-        }
     }
 }
