@@ -39,22 +39,29 @@
 规则填写示范
 [
     {
-        name: "telephone",
-        type: "text"
+        "name": "telephone",
+        "type": "text"
     },
     {
-        name: "password",
-        type: "password"
+        "name": "password",
+        "type": "password"
     },
     {
-        name: "注册",
-        type: "button",
-        action: "http://www.yooike.com/xiaoshuo/#/register?title=%E6%B3%A8%E5%86%8C"
+        "name": "注册",
+        "type": "button",
+        "action": "http://www.yooike.com/xiaoshuo/#/register?title=%E6%B3%A8%E5%86%8C"
     },
     {
-        name: "获取验证码",
-        type: "button",
-        action: "getVerificationCode()"
+        "name": "获取验证码",
+        "type": "button",
+        "action": "getVerificationCode()",
+        "style": {
+            "layout_flexGrow": 0,
+            "layout_flexShrink": 1,
+            "layout_alignSelf": "auto",
+            "layout_flexBasisPercent": -1,
+            "layout_wrapBefore": false
+        }
     }
 ]
 ```
@@ -142,9 +149,9 @@ https://www.baidu.com,{"js":"java.url=java.url+'yyyy'"}
     "method":"POST",
     "body":"show=title&tempid=1&keyboard="+key
     });
-    return java.put('surl',String(java.connect(url).raw().request().url()));
+    return source.put('surl',String(java.connect(url).raw().request().url()));
   } else {
-    return java.get('surl')+'&page='+(page-1)
+    return source.get('surl')+'&page='+(page-1)
   }
 })()
 或者
@@ -153,9 +160,9 @@ https://www.baidu.com,{"js":"java.url=java.url+'yyyy'"}
   if(page==1){
     let url=base+'index.php';
     let body='show=title&tempid=1&keyboard='+key;
-    return base+java.put('surl',java.post(url,body,{}).header("Location"));
+    return base+source.put('surl',java.post(url,body,{}).header("Location"));
   } else {
-    return base+java.get('surl')+'&page='+(page-1);
+    return base+source.get('surl')+'&page='+(page-1);
   }
 })()
 ```
@@ -175,7 +182,7 @@ let options = {
 (function(){
   var b64=String(src).match(/ttf;base64,([^\)]+)/);
   if(b64){
-    var f1 = java.queryBase64TTF(b64[1]);
+    var f1 = java.queryTTF(b64[1]);
     var f2 = java.queryTTF("https://alanskycn.gitee.io/teachme/assets/font/Source Han Sans CN Regular.ttf");
     return java.replaceFont(result, f1, f2);
   }
@@ -191,5 +198,40 @@ let options = {
 > 适用于图片需要二次解密的情况，直接填写JavaScript，返回解密后的`ByteArray`  
 > 部分变量说明：java（仅支持[js扩展类](https://github.com/gedoor/legado/blob/master/app/src/main/java/io/legado/app/help/JsExtensions.kt)），result为待解密图片的`ByteArray`，src为图片链接
 
+```js
+java.createSymmetricCrypto("AES/CBC/PKCS5Padding", key, iv).decrypt(result)
+```
+
+```js
+function decodeImage(data, key) {
+  var input = new Packages.java.io.ByteArrayInputStream(data)
+  var out = new Packages.java.io.ByteArrayOutputStream()
+  var byte
+  while ((byte = input.read()) != -1) {
+    out.write(byte ^ key)
+  }
+  return out.toByteArray()
+}
+
+decodeImage(result, key)
+```
+
 * 封面解密
 > 同图片解密 其中result为待解密封面的`inputStream`
+
+```js
+java.createSymmetricCrypto("AES/CBC/PKCS5Padding", key, iv).decrypt(result)
+```
+
+```js
+function decodeImage(data, key) {
+  var out = new Packages.java.io.ByteArrayOutputStream()
+  var byte
+  while ((byte = data.read()) != -1) {
+    out.write(byte ^ key)
+  }
+  return out.toByteArray()
+}
+
+decodeImage(result, key)
+```
