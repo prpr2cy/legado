@@ -317,7 +317,7 @@ abstract class AbsCallBack(
                     contentLength,
                     bodySource
                 )
-            } ?: ResponseBody.EMPTY
+            }
 
             return Response.Builder()
                 .request(request)
