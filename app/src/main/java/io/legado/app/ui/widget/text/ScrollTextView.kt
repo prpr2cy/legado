@@ -179,9 +179,9 @@ class ScrollTextView(context: Context, attrs: AttributeSet?) :
 
         //计算滑动距离的边界
         mOffsetHeight = mLayoutHeight + paddingTop + paddingBottom - mHeight
-        if (mOffsetHeight <= 0) {
-            scrollTo(0, 0)
-        }
+        //if (mOffsetHeight <= 0) {
+        //    scrollTo(0, 0)
+        //}
     }
 
     private fun resetTouch() {
