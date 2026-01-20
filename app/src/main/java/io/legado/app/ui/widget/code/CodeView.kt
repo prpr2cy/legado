@@ -20,6 +20,7 @@ import io.legado.app.ui.widget.text.ScrollMultiAutoCompleteTextView
 import java.util.*
 import java.util.regex.Matcher
 import java.util.regex.Pattern
+import kotlin.math.abs
 import kotlin.math.roundToInt
 
 @Suppress("unused")
@@ -94,7 +95,8 @@ class CodeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
         setTokenizer(mAutoCompleteTokenizer)
         filters = arrayOf(
             InputFilter { source, start, end, dest, dStart, dEnd ->
-                if (isAndroid8 && deleteLen > 100) {
+                val changeLength = abs(dend - dstart)
+                if (isAndroid8 && changeLength > 100) {
                     setLayerType(LAYER_TYPE_SOFTWARE, null)
                     post { setLayerType(LAYER_TYPE_HARDWARE, null) }
                 }
