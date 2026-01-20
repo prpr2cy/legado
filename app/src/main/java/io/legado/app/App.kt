@@ -333,8 +333,8 @@ class SafeEditText @JvmOverloads constructor(
                     pasteboardOpJustDone = true
                     // 移除之前的延迟任务
                     removeCallbacks(clearFlagRunnable)
-                    // 设置1.5秒后自动清除标记
-                    postDelayed(clearFlagRunnable, 1500L)
+                    // 设置1秒后自动清除标记
+                    postDelayed(clearFlagRunnable, 1000L)
                 }
             }
         }
