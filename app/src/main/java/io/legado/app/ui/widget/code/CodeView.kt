@@ -14,6 +14,9 @@ import android.text.*
 import android.text.style.BackgroundColorSpan
 import android.text.style.ForegroundColorSpan
 import android.text.style.ReplacementSpan
+import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputConnection
+import android.view.inputmethod.InputConnectionWrapper
 import android.util.AttributeSet
 import androidx.annotation.ColorInt
 import io.legado.app.ui.widget.text.ScrollMultiAutoCompleteTextView
@@ -63,20 +66,20 @@ class CodeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
     override fun onTextContextMenuItem(id: Int): Boolean {
         if (!isAndroid8) return super.onTextContextMenuItem(id)
         when (id) {
-            android.R.id.COPY -> {
+            android.R.id.copy -> {
                 val s = getSelectedText() ?: return super.onTextContextMenuItem(id)
                 copyToClipboard(s)
                 setSelection(selectionEnd)
                 return true
             }
-            android.R.id.CUT -> {
+            android.R.id.cut -> {
                 val s = getSelectedText() ?: return super.onTextContextMenuItem(id)
                 copyToClipboard(s)
                 editableText.replaceSafe(selectionStart, selectionEnd, "")
                 setSelection(selectionEnd)
                 return true
             }
-            android.R.id.PASTE -> {
+            android.R.id.paste -> {
                 val clip = (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager)
                     .primaryClip ?: return super.onTextContextMenuItem(id)
                 val paste = clip.getItemAt(0).coerceToText(context)
@@ -139,7 +142,7 @@ class CodeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
         ) {
             changeStart = start
             changeCount = addCount
-            if (isSafeModified || !isAndroid8Bug || deleteCount <= SAFE_CHUNK) return
+            if (isSafeModified || !isAndroid8 || deleteCount <= SAFE_CHUNK) return
 
             isSafeModified = true 
             editableText.replaceSafe(start, start + deleteCount, "")
