@@ -132,7 +132,7 @@ class CodeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
             setLayerType(LAYER_TYPE_SOFTWARE, null)
             super.onDraw(canvas)
             // 下一帧恢复硬件加速
-            postDelayed({ setLayerType(LAYER_TYPE_HARDWARE, null) }, 500)
+            //post { setLayerType(LAYER_TYPE_HARDWARE, null) }
             return
         }
         super.onDraw(canvas)
@@ -159,46 +159,40 @@ class CodeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
         dStart: Int,
         dEnd: Int
     ): CharSequence {
-        var indent = ""
-        var iStart = dStart - 1
-        var dataBefore = false
-        var pt = 0
-        while (iStart > -1) {
-            val c = dest[iStart]
-            if (c == '\n') break
-            if (c != ' ' && c != '\t') {
-                if (!dataBefore) {
-                    if (mIndentCharacterList.contains(c)) --pt
-                    dataBefore = true
-                }
-                if (c == '(') {
-                    --pt
-                } else if (c == ')') {
-                    ++pt
-                }
+        // 1. 如果不是换行，直接返回
+        if (source.isNotEmpty() && source[0] != '\n') {
+            return source
+        }
+
+        // 2. 查找上一行末尾位置
+        var lineStart = dStart - 1
+        while (lineStart >= 0 && dest[lineStart] != '\n') {
+            lineStart--
+        }
+        lineStart++
+
+        // 3. 计算上一行的缩进空格数（制表符按2个空格计算）
+        var totalSpaces = 0
+        var i = lineStart
+        while (i < dStart) {
+            when (dest[i]) {
+                ' ' -> totalSpaces++
+                '\t' -> totalSpaces += 2
+                else -> break
             }
-            --iStart
+            i++
         }
-        if (iStart > -1) {
-            val charAtCursor = dest[dStart]
-            var iEnd: Int = ++iStart
-            while (iEnd < dEnd) {
-                val c = dest[iEnd]
-                if (charAtCursor != '\n' && c == '/' && iEnd + 1 < dEnd && dest[iEnd] == c) {
-                    iEnd += 2
-                    break
-                }
-                if (c != ' ' && c != '\t') {
-                    break
-                }
-                ++iEnd
-            }
-            indent += dest.subSequence(iStart, iEnd)
+
+        // 4. 确保缩进空格数是2的倍数
+        if (totalSpaces % 2 != 0) {
+            totalSpaces = (totalSpaces / 2) * 2
         }
-        if (pt < 0) {
-            indent += "\t"
+
+        // 5. 构建结果：换行符 + 缩进空格
+        return buildString {
+            append(source)
+            append(" ".repeat(totalSpaces))
         }
-        return source.toString() + indent
     }
 
     private fun highlightSyntax(editable: Editable) {
