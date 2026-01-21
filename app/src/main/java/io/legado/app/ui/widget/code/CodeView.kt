@@ -14,9 +14,6 @@ import android.text.*
 import android.text.style.BackgroundColorSpan
 import android.text.style.ForegroundColorSpan
 import android.text.style.ReplacementSpan
-import android.view.inputmethod.EditorInfo
-import android.view.inputmethod.InputConnection
-import android.view.inputmethod.InputConnectionWrapper
 import android.util.AttributeSet
 import androidx.annotation.ColorInt
 import io.legado.app.ui.widget.text.ScrollMultiAutoCompleteTextView
@@ -46,6 +43,8 @@ class CodeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
     private var mIndentCharacterList = mutableListOf('{', '+', '-', '*', '/', '=')
 
     /* ---------- Android 8.0-8.1 安全文本编辑 ---------- */
+    private val isAndroid8 = Build.VERSION.SDK_INT in 26..27
+
     private fun copyToClipboard(text: String) {
         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         clipboard.setPrimaryClip(ClipData.newPlainText("CodeView", text))
@@ -64,62 +63,13 @@ class CodeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
     }
 
     override fun onTextContextMenuItem(id: Int): Boolean {
-        if (!isAndroid8) return super.onTextContextMenuItem(id)
-        when (id) {
-            android.R.id.copy -> {
-                val s = getSelectedText() ?: return super.onTextContextMenuItem(id)
-                copyToClipboard(s)
-                setSelection(selectionEnd)
-                return true
-            }
-            android.R.id.cut -> {
-                val s = getSelectedText() ?: return super.onTextContextMenuItem(id)
-                copyToClipboard(s)
-                editableText.replaceSafe(selectionStart, selectionEnd, "")
-                setSelection(selectionEnd)
-                return true
-            }
-            android.R.id.paste -> {
-                val clip = (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager)
-                    .primaryClip ?: return super.onTextContextMenuItem(id)
-                val paste = clip.getItemAt(0).coerceToText(context)
-                editableText.replaceSafe(selectionStart, selectionEnd, paste)
-                setSelection(selectionEnd)
-                return true
-            }
+        if (isAndroid8 && id == android.R.id.copy) {
+            val copyText = getSelectedText() ?: return super.onTextContextMenuItem(id)
+            copyToClipboard(copyText)
+            setSelection(selectionEnd)
+            return true
         }
         return super.onTextContextMenuItem(id)
-    }
-
-    override fun onCreateInputConnection(outAttrs: EditorInfo): InputConnection? {
-        val connection = super.onCreateInputConnection(outAttrs)
-        return if (!isAndroid8 || connection == null) connection
-        else SafeInputConnection(connection, true)
-    }
-
-    private inner class SafeInputConnection(
-        target: InputConnection,
-        mutable: Boolean
-    ) : InputConnectionWrapper(target, mutable) {
-
-        override fun deleteSurroundingText(beforeLength: Int, afterLength: Int): Boolean {
-            if (beforeLength > 0) {
-                val start = selectionStart
-                val end = selectionEnd
-                val min = min(start, end)
-                val max = max(start, end)
-                if (min >= 0 && max >= 0) {
-                    val deleteStart = max(0, min - beforeLength)
-                    val deleteEnd = max + afterLength
-                    if (deleteEnd - deleteStart > SAFE_CHUNK) {
-                        editableText.deleteSafe(deleteStart, deleteEnd)
-                        setSelection(deleteStart)
-                        return true
-                    }
-                }
-            }
-            return super.deleteSurroundingText(beforeLength, afterLength)
-        }
     }
 
     /* ---------- CodeView 原有代码 ---------- */
@@ -131,50 +81,78 @@ class CodeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
     private val mEditorTextWatcher: TextWatcher = object : TextWatcher {
 
         private var changeStart = 0
-        private var changeCount = 0
+        private var deleteCount = 0
+        private var insertCount = 0
+        private var originalText: String = ""
+        private var insertText: String = ""
         private var isSafeModified = false
 
         override fun beforeTextChanged(
             source: CharSequence,
             start: Int,
-            deleteCount: Int,
-            addCount: Int
+            count: Int,
+            after: Int
         ) {
-            changeStart = start
-            changeCount = addCount
-            if (isSafeModified || !isAndroid8 || deleteCount <= SAFE_CHUNK) return
+            if (isSafeModified) return
 
-            isSafeModified = true 
-            editableText.replaceSafe(start, start + deleteCount, "")
-            setSelection(start)
-            throw CancelInputException()
+            changeStart = start
+            deleteCount = count
+            insertCount = after
+
+            if (isAndroid8) {
+                isSafeModified = true
+                originalText = source.toString()
+            }
         }
 
         override fun onTextChanged(
             source: CharSequence,
             start: Int,
-            deleteCount: Int,
-            addCount: Int
+            before: Int,
+            count: Int
         ) {
+            if (!modified) return
             if (isSafeModified) {
-                isSafeModified = false
+                insertText = source.subSequence(start, start + count).toString()
                 return
             }
 
-            if (!modified) return
             if (highlightWhileTextChanging && mSyntaxPatternMap.isNotEmpty()) {
-                convertTabs(editableText, start, addCount)
+                convertTabs(editableText, start, count)
                 mUpdateHandler.postDelayed(mUpdateRunnable, mUpdateDelayTime.toLong())
             }
             if (mRemoveErrorsWhenTextChanged) removeAllErrorLines()
         }
 
         override fun afterTextChanged(editable: Editable) {
+            if (isSafeModified) {
+                try {
+                    removeTextChangedListener(this)
+                    var cursorPosition = changeStart
+                    if (deleteCount > 0) {
+                        editable.deleteSafe(changeStart, changeStart + deleteCount)
+                    }
+                    if (insertText.length > 0) {
+                        cursorPosition += insertText.length
+                        editable.insertSafe(changeStart, insertText)
+                    }
+                    setSelection(cursorPosition)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                } finally {
+                    originalText = ""
+                    insertText = ""
+                    isSafeModified = false
+                    addTextChangedListener(this)
+                    return
+                }
+            }
+
             if (!highlightWhileTextChanging) {
                 if (!modified) return
                 cancelHighlighterRender()
                 if (mSyntaxPatternMap.isNotEmpty()) {
-                    convertTabs(editableText, changeStart, changeCount)
+                    convertTabs(editableText, changeStart, insertCount)
                     mUpdateHandler.postDelayed(mUpdateRunnable, mUpdateDelayTime.toLong())
                 }
             }
@@ -256,7 +234,8 @@ class CodeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
         if (mSyntaxPatternMap.isEmpty()) return
         for (pattern in mSyntaxPatternMap.keys) {
             val color = mSyntaxPatternMap[pattern]!!
-            val m = pattern.matcher(editable)
+            val snapshot = editable.toString()
+            val m = pattern.matcher(snapshot)
             while (m.find()) {
                 createForegroundColorSpan(editable, m, color)
             }
@@ -378,7 +357,7 @@ class CodeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
 
     fun setSyntaxPatternsMap(syntaxPatterns: Map<Pattern, Int>?) {
         if (mSyntaxPatternMap.isNotEmpty()) mSyntaxPatternMap.clear()
-        mSyntaxPatternMap.putAll(syntaxPatterns!!)
+        syntaxPatterns?.let { mSyntaxPatternMap.putAll(it) }
     }
 
     fun addSyntaxPattern(pattern: Pattern, @ColorInt Color: Int) {
@@ -499,27 +478,7 @@ class CodeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
 
 /* ---------- Android 8.0-8.1 分段删除/插入 ---------- */
 private val isAndroid8 = Build.VERSION.SDK_INT in 26..27
-private const val SAFE_CHUNK = 150
-private class CancelInputException: Exception()
-
-private inline fun Editable.replaceSafe(start: Int, end: Int, text: CharSequence): Editable {
-    val min = min(start, end)
-    val max = max(start, end)
-    if (!isAndroid8 || max - min + text.length <= SAFE_CHUNK) {
-        replace(min, max, text)
-        return this
-    }
-    /* 分段插入 */
-    var pos = min
-    for (i in text.indices step SAFE_CHUNK) {
-        val chunk = text.substring(i, minOf(i + SAFE_CHUNK, text.length))
-        replace(pos, pos, chunk)
-        pos += chunk.length
-    }
-    /* 删掉旧尾巴 */
-    deleteSafe(pos, pos + (max - min))
-    return this
-}
+private const val SAFE_CHUNK = 200
 
 private fun Editable.deleteSafe(start: Int, end: Int) {
     val min = min(start, end)
@@ -528,10 +487,30 @@ private fun Editable.deleteSafe(start: Int, end: Int) {
         delete(min, max)
         return
     }
+
     var cur = max
     while (cur > min) {
-        val left = maxOf(min, cur - SAFE_CHUNK)
+        val left = max(min, cur - SAFE_CHUNK)
+        if (left == cur) break
         delete(left, cur)
         cur = left
     }
+}
+
+private fun Editable.insertSafe(start: Int, text: CharSequence): Editable {
+    if (!isAndroid8 || text.length <= SAFE_CHUNK) {
+        insert(start, text)
+        return this
+    }
+
+    var pos = start
+    var i = 0
+    while (i < text.length) {
+        val addSize = min(SAFE_CHUNK, text.length - i)
+        val addText = text.subSequence(i, i + addSize)
+        insert(pos, addText)
+        pos += addSize
+        i += addSize
+    }
+    return this
 }
