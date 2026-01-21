@@ -21,7 +21,7 @@ import io.legado.app.ui.widget.text.ScrollMultiAutoCompleteTextView
 import java.util.*
 import java.util.regex.Matcher
 import java.util.regex.Pattern
-import kotlin.math.abs
+import kotlin.math.max
 import kotlin.math.roundToInt
 
 @Suppress("unused")
@@ -57,6 +57,10 @@ class CodeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
             before: Int,
             count: Int
         ) {
+            val change = max(count, after)
+            if (isAndroid8 && change > 200) {
+                setLayerType(LAYER_TYPE_SOFTWARE, null)
+            }
             this.start = start
             this.count = count
         }
@@ -78,6 +82,9 @@ class CodeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
         }
 
         override fun afterTextChanged(editable: Editable) {
+            if (isAndroid8 && layerType == LAYER_TYPE_SOFTWARE) {
+                post { setLayerType(LAYER_TYPE_HARDWARE, null) }
+            }
             if (!highlightWhileTextChanging) {
                 if (!modified) return
                 cancelHighlighterRender()
@@ -123,19 +130,6 @@ class CodeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
             return true
         }
         return super.onTextContextMenuItem(id)
-    }
-
-    override fun beforeTextChanged(source: CharSequence, start: Int, count: Int, after: Int) {
-        val change = max(count, after)
-        if (isAndroid8 && change > 200) {
-            setLayerType(LAYER_TYPE_SOFTWARE, null)
-        }
-    }
-
-    override fun onTextChanged(source: CharSequence, start: Int, before: Int, count: Int) {
-        if (isAndroid8 && layerType == LAYER_TYPE_SOFTWARE) {
-            post { setLayerType(LAYER_TYPE_HARDWARE, null) }
-        }
     }
 
     override fun showDropDown() {
