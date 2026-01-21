@@ -16,7 +16,6 @@ import android.text.style.ForegroundColorSpan
 import android.text.style.ReplacementSpan
 import android.util.AttributeSet
 import androidx.annotation.ColorInt
-import io.legado.app.constant.AppLog
 import io.legado.app.ui.widget.text.ScrollMultiAutoCompleteTextView
 import java.util.*
 import java.util.regex.Matcher
@@ -97,13 +96,13 @@ class CodeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
         filters = arrayOf(
             InputFilter { source, start, end, dest, dStart, dEnd ->
                 val changeLength = abs(dEnd - dStart)
-                AppLog.put("replaceLength=$changeLength")
+                android.util.Log.d("CodeView", "replace $replaced")
                 if (isAndroid8 && changeLength > 100) {
-                    AppLog.put("large replace $changeLength chars, fallback to software")
+                    android.util.Log.d("CodeView", "large replace $changeLength chars, fallback to software")
                     setLayerType(LAYER_TYPE_SOFTWARE, null)
                     postDelayed({
                         setLayerType(LAYER_TYPE_HARDWARE, null)
-                        AppLog.put("restore hardware layer")
+                        android.util.Log.d("CodeView", "restore hardware layer")
                     }, 200)
                 }
 
