@@ -15,8 +15,6 @@ import android.text.style.BackgroundColorSpan
 import android.text.style.ForegroundColorSpan
 import android.text.style.ReplacementSpan
 import android.util.AttributeSet
-import android.view.KeyEvent
-import android.widget.TextView
 import androidx.annotation.ColorInt
 import io.legado.app.ui.widget.text.ScrollMultiAutoCompleteTextView
 import java.util.*
@@ -44,19 +42,7 @@ class CodeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
     private val mSyntaxPatternMap: MutableMap<Pattern, Int> = HashMap()
     private var mIndentCharacterList = mutableListOf('{', '+', '-', '*', '/', '=')
 
-    // ========== Android 8.0-8.1 安全操作 ==========
-    private val isAndroid8Bug = Build.VERSION.SDK_INT in Build.VERSION_CODES.O..Build.VERSION_CODES.O_MR1
-    private val maxDeleteChunkSize = 150  // 必须小于200，安全起见用150
-
-    // 安全操作队列
-    private val safeOperationQueue = SafeReplace8(this)
-
-    // TextWatcher中拦截大删除的标记
-    private var pendingSafeDelete = false
-    private var pendingStart = 0
-    private var pendingDelete = 0
-
-    // ========== 统一的复制到剪贴板方法 ==========
+    /* ---------- Android 8.0-8.1 安全文本编辑 ---------- */
     private fun copyToClipboard(text: String) {
         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         clipboard.setPrimaryClip(ClipData.newPlainText("CodeView", text))
@@ -74,170 +60,66 @@ class CodeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
         return text.subSequence(min, max).toString()
     }
 
-    // ========== 上下文菜单操作 ==========
     override fun onTextContextMenuItem(id: Int): Boolean {
-        if (isAndroid8Bug) {
-            return when (id) {
-                android.R.id.copy -> handleCopy()
-                android.R.id.cut -> handleCut()
-                android.R.id.paste -> handlePaste()
-                else -> super.onTextContextMenuItem(id)
+        if (!isAndroid8) return super.onTextContextMenuItem(id)
+        when (id) {
+            android.R.id.COPY -> {
+                val s = getSelectedText() ?: return super.onTextContextMenuItem(id)
+                copyToClipboard(s)
+                setSelection(selectionEnd)
+                return true
+            }
+            android.R.id.CUT -> {
+                val s = getSelectedText() ?: return super.onTextContextMenuItem(id)
+                copyToClipboard(s)
+                editableText.replaceSafe(selectionStart, selectionEnd, "")
+                setSelection(selectionEnd)
+                return true
+            }
+            android.R.id.PASTE -> {
+                val clip = (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager)
+                    .primaryClip ?: return super.onTextContextMenuItem(id)
+                val paste = clip.getItemAt(0).coerceToText(context)
+                editableText.replaceSafe(selectionStart, selectionEnd, paste)
+                setSelection(selectionEnd)
+                return true
             }
         }
         return super.onTextContextMenuItem(id)
     }
 
-    // ========== 修复键盘删除键 ==========
-    override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
-        if (isAndroid8Bug) {
-            if (keyCode == KeyEvent.KEYCODE_DEL || keyCode == KeyEvent.KEYCODE_FORWARD_DEL) {
-                if (selectionStart != selectionEnd) {
-                    val start = selectionStart
-                    val end = selectionEnd
-                    val min = min(start, end)
-                    val max = max(start, end)
+    override fun onCreateInputConnection(outAttrs: EditorInfo): InputConnection? {
+        val connection = super.onCreateInputConnection(outAttrs)
+        return if (!isAndroid8 || connection == null) connection
+        else SafeInputConnection(connection, true)
+    }
 
-                    safeDelete(min, max - min)
-                    return true
+    private inner class SafeInputConnection(
+        target: InputConnection,
+        mutable: Boolean
+    ) : InputConnectionWrapper(target, mutable) {
+
+        override fun deleteSurroundingText(beforeLength: Int, afterLength: Int): Boolean {
+            if (beforeLength > 0) {
+                val start = selectionStart
+                val end = selectionEnd
+                val min = min(start, end)
+                val max = max(start, end)
+                if (min >= 0 && max >= 0) {
+                    val deleteStart = max(0, min - beforeLength)
+                    val deleteEnd = max + afterLength
+                    if (deleteEnd - deleteStart > SAFE_CHUNK) {
+                        editableText.deleteSafe(deleteStart, deleteEnd)
+                        setSelection(deleteStart)
+                        return true
+                    }
                 }
             }
-        }
-
-        return super.onKeyDown(keyCode, event)
-    }
-
-    private fun handleCopy(): Boolean {
-        val selectedText = getSelectedText() ?: return false
-        copyToClipboard(selectedText)
-        setSelection(selectionEnd)
-        return true
-    }
-
-    private fun handleCut(): Boolean {
-        val start = selectionStart
-        val end = selectionEnd
-
-        if (start < 0 || end < 0 || start == end) return false
-
-        val mi = min(start, end)
-        val mx = max(start, end)
-        val txt = text?.subSequence(mi, mx)?.toString() ?: return false
-
-        // 复制到剪贴板
-        copyToClipboard(txt)
-
-        // 安全删除选中文本
-        safeDelete(mi, mx - mi)
-        return true
-    }
-
-    private fun handlePaste(): Boolean {
-        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-        val clip = clipboard.primaryClip ?: return false
-        val paste = clip.getItemAt(0).text?.toString() ?: return false
-
-        val start = selectionStart
-        val end = selectionEnd
-        val mi = min(start, end)
-        val mx = max(start, end)
-
-        // 安全替换（删除选中文本并插入粘贴内容）
-        safeReplace(mi, mx - mi, paste)
-        return true
-    }
-
-    // ========== 安全操作方法 ==========
-
-    /**
-     * 8.0 安全删除：外部统一调它即可
-     */
-    private fun safeDelete(start: Int, length: Int) {
-        if (!isAndroid8Bug || length <= maxDeleteChunkSize) {
-            editableText.delete(start, start + length)
-            setSelection(start)
-        } else {
-            safeOperationQueue.add(start, length, "")
+            return super.deleteSurroundingText(beforeLength, afterLength)
         }
     }
 
-    /**
-     * 8.0 安全替换：删除+插入合二为一
-     */
-    private fun safeReplace(start: Int, deleteLen: Int, newText: String) {
-        if (!isAndroid8Bug || (deleteLen <= maxDeleteChunkSize && newText.length <= maxDeleteChunkSize)) {
-            editableText.replace(start, start + deleteLen, newText)
-            setSelection(start + newText.length)
-        } else {
-            safeOperationQueue.add(start, deleteLen, newText)
-        }
-    }
-
-    /**
-     * 8.0 专用：把一次 >150 字符的 delete/insert 拆成多帧
-     */
-    private class SafeReplace8(private val codeView: CodeView) {
-
-        private data class Task(
-            val start: Int,
-            val deleteLen: Int,
-            val newText: String
-        )
-
-        private val tasks = ArrayDeque<Task>()
-        private var running = false
-        private val handler = Handler(Looper.getMainLooper())
-        private val maxChunkSize = 150
-
-        /**
-         * 唯一入口：外部直接调用，线程安全
-         */
-        fun add(start: Int, deleteLen: Int, newText: String) {
-            tasks += Task(start, deleteLen, newText)
-            if (!running) next()
-        }
-
-        private fun next() {
-            val task = tasks.pollFirst() ?: return
-            running = true
-
-            val editable = codeView.editableText
-            var delDone = 0
-            var addDone = 0
-
-            val job = object : Runnable {
-                override fun run() {
-                    /* 1. 先分段删 */
-                    if (delDone < task.deleteLen) {
-                        val del = min(maxChunkSize, task.deleteLen - delDone)
-                        editable.replace(task.start, task.start + del, "")
-                        delDone += del
-                        handler.post(this)
-                        return
-                    }
-
-                    /* 2. 再分段插 */
-                    if (addDone < task.newText.length) {
-                        val piece = task.newText.substring(
-                            addDone,
-                            min(addDone + maxChunkSize, task.newText.length)
-                        )
-                        editable.insert(task.start, piece)
-                        addDone += piece.length
-                        handler.post(this)
-                        return
-                    }
-
-                    /* 3. 本任务完成 */
-                    running = false
-                    codeView.setSelection(task.start + task.newText.length)
-                    next()   // 继续下一个排队任务
-                }
-            }
-            handler.post(job)
-        }
-    }
-
-    // ========== 原有代码 ==========
+    /* ---------- CodeView 原有代码 ---------- */
     private val mUpdateRunnable = Runnable {
         val source = text
         highlightWithoutChange(source)
@@ -247,6 +129,7 @@ class CodeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
 
         private var changeStart = 0
         private var changeCount = 0
+        private var isSafeModified = false
 
         override fun beforeTextChanged(
             source: CharSequence,
@@ -256,13 +139,12 @@ class CodeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
         ) {
             changeStart = start
             changeCount = addCount
+            if (isSafeModified || !isAndroid8Bug || deleteCount <= SAFE_CHUNK) return
 
-            // 拦截大删除操作（8.0且一次性净删 >150）
-            if (isAndroid8Bug && deleteCount > maxDeleteChunkSize && addCount < deleteCount) {
-                pendingSafeDelete = true
-                pendingStart = start
-                pendingDelete = deleteCount
-            }
+            isSafeModified = true 
+            editableText.replaceSafe(start, start + deleteCount, "")
+            setSelection(start)
+            throw CancelInputException()
         }
 
         override fun onTextChanged(
@@ -271,17 +153,12 @@ class CodeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
             deleteCount: Int,
             addCount: Int
         ) {
-            if (pendingSafeDelete) {
-                pendingSafeDelete = false
-                // 把系统删掉的先恢复，再自己慢慢删
-                val deletedText = source.subSequence(start, start + deleteCount)
-                editableText.insert(pendingStart, deletedText)
-                safeDelete(pendingStart, pendingDelete)
+            if (isSafeModified) {
+                isSafeModified = false
                 return
             }
 
             if (!modified) return
-
             if (highlightWhileTextChanging && mSyntaxPatternMap.isNotEmpty()) {
                 convertTabs(editableText, start, addCount)
                 mUpdateHandler.postDelayed(mUpdateRunnable, mUpdateDelayTime.toLong())
@@ -614,5 +491,44 @@ class CodeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
     companion object {
         private val PATTERN_LINE = Pattern.compile("(^.+$)+", Pattern.MULTILINE)
         private val PATTERN_TRAILING_WHITE_SPACE = Pattern.compile("[\\t ]+$", Pattern.MULTILINE)
+    }
+}
+
+/* ---------- Android 8.0-8.1 分段删除/插入 ---------- */
+private val isAndroid8 = Build.VERSION.SDK_INT in 26..27
+private const val SAFE_CHUNK = 150
+private class CancelInputException: Exception()
+
+private inline fun Editable.replaceSafe(start: Int, end: Int, text: CharSequence): Editable {
+    val min = min(start, end)
+    val max = max(start, end)
+    if (!isAndroid8 || max - min + text.length <= SAFE_CHUNK) {
+        replace(min, max, text)
+        return this
+    }
+    /* 分段插入 */
+    var pos = min
+    for (i in text.indices step SAFE_CHUNK) {
+        val chunk = text.substring(i, minOf(i + SAFE_CHUNK, text.length))
+        replace(pos, pos, chunk)
+        pos += chunk.length
+    }
+    /* 删掉旧尾巴 */
+    deleteSafe(pos, pos + (max - min))
+    return this
+}
+
+private fun Editable.deleteSafe(start: Int, end: Int) {
+    val min = min(start, end)
+    val max = max(start, end)
+    if (!isAndroid8 || max - min <= SAFE_CHUNK) {
+        delete(min, max)
+        return
+    }
+    var cur = max
+    while (cur > min) {
+        val left = maxOf(min, cur - SAFE_CHUNK)
+        delete(left, cur)
+        cur = left
     }
 }
