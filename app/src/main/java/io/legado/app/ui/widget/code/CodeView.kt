@@ -127,24 +127,7 @@ class CodeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
 
     override fun onDraw(canvas: Canvas) {
         // 只在 8.0/8.1 且硬件加速才做兜底
-        if (!isAndroid8 || !canvas.isHardwareAccelerated) {
-            super.onDraw(canvas)
-            return
-        }
-
-        /* 用反射拿 TextView.mLayout 内部的 mBlockEndLines，
-           如果数组为空说明 Layout 已失效，立即退化到软件层 */
-        val layoutField = TextView::class.java.getDeclaredField("mLayout")
-        layoutField.isAccessible = true
-        val layout = layoutField.get(this) as? DynamicLayout ?: run {
-            super.onDraw(canvas);
-            return
-        }
-        val blockField = DynamicLayout::class.java.getDeclaredField("mBlockEndLines")
-        blockField.isAccessible = true
-        val blocks = blockField.get(layout) as? IntArray
-
-        if (blocks == null || blocks.isEmpty()) {
+        if (isAndroid8 && canvas.isHardwareAccelerated) {
             // 退化：临时切软件层并直接画完
             setLayerType(LAYER_TYPE_SOFTWARE, null)
             super.onDraw(canvas)
