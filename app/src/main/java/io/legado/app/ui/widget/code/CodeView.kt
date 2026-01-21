@@ -125,17 +125,17 @@ class CodeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
         return super.onTextContextMenuItem(id)
     }
 
-    override fun onDraw(canvas: Canvas) {
-        // 只在 8.0/8.1 且硬件加速才做兜底
-        if (isAndroid8 && canvas.isHardwareAccelerated) {
-            // 退化：临时切软件层并直接画完
+    override fun beforeTextChanged(source: CharSequence, start: Int, count: Int, after: Int) {
+        val change = max(count, after)
+        if (isAndroid8 && change > 200) {
             setLayerType(LAYER_TYPE_SOFTWARE, null)
-            super.onDraw(canvas)
-            // 下一帧恢复硬件加速
-            //post { setLayerType(LAYER_TYPE_HARDWARE, null) }
-            return
         }
-        super.onDraw(canvas)
+    }
+
+    override fun onTextChanged(source: CharSequence, start: Int, before: Int, count: Int) {
+        if (isAndroid8 && layerType == LAYER_TYPE_SOFTWARE) {
+            post { setLayerType(LAYER_TYPE_HARDWARE, null) }
+        }
     }
 
     override fun showDropDown() {
@@ -159,19 +159,16 @@ class CodeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
         dStart: Int,
         dEnd: Int
     ): CharSequence {
-        // 1. 如果不是换行，直接返回
         if (source.isNotEmpty() && source[0] != '\n') {
             return source
         }
 
-        // 2. 查找上一行末尾位置
         var lineStart = dStart - 1
         while (lineStart >= 0 && dest[lineStart] != '\n') {
             lineStart--
         }
         lineStart++
 
-        // 3. 计算上一行的缩进空格数（制表符按2个空格计算）
         var totalSpaces = 0
         var i = lineStart
         while (i < dStart) {
@@ -183,12 +180,10 @@ class CodeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
             i++
         }
 
-        // 4. 确保缩进空格数是2的倍数
         if (totalSpaces % 2 != 0) {
             totalSpaces = (totalSpaces / 2) * 2
         }
 
-        // 5. 构建结果：换行符 + 缩进空格
         return buildString {
             append(source)
             append(" ".repeat(totalSpaces))
@@ -246,7 +241,6 @@ class CodeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
     }
 
     private fun highlight(editable: Editable): Editable {
-        // if (editable.isEmpty() || editable.length > 1024) return editable
         if (editable.length !in 1..1024) {
             return editable
         }
