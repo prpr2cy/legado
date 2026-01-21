@@ -15,6 +15,7 @@ import android.text.style.BackgroundColorSpan
 import android.text.style.ForegroundColorSpan
 import android.text.style.ReplacementSpan
 import android.util.AttributeSet
+import android.view.KeyEvent
 import android.widget.TextView
 import androidx.annotation.ColorInt
 import io.legado.app.ui.widget.text.ScrollMultiAutoCompleteTextView
@@ -131,7 +132,7 @@ class CodeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
     }
 
     private fun handlePaste(): Boolean {
-        val clipboard = context.getSystemService(Context.CLIPboardManager::class.java) as ClipboardManager
+        val clipboard = context.getSystemService(Context.ClipboardManager::class.java) as ClipboardManager
         val clip = clipboard.primaryClip ?: return false
         val paste = clip.getItemAt(0).text?.toString() ?: return false
 
