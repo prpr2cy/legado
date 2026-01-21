@@ -132,7 +132,7 @@ class CodeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
     }
 
     private fun handlePaste(): Boolean {
-        val clipboard = context.getSystemService(Context.ClipboardManager::class.java) as ClipboardManager
+        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         val clip = clipboard.primaryClip ?: return false
         val paste = clip.getItemAt(0).text?.toString() ?: return false
 
