@@ -49,34 +49,34 @@ class CodeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
     }
 
     private val mEditorTextWatcher: TextWatcher = object : TextWatcher {
-        private var start = 0
-        private var count = 0
+
+        private var changeStart   = 0
+        private var changeCount   = 0
+
         override fun beforeTextChanged(
-            charSequence: CharSequence,
+            source: CharSequence,
             start: Int,
-            before: Int,
-            count: Int
+            deleteCount: Int,
+            addCount: Int
         ) {
-            val change = max(count, after)
-            if (isAndroid8 && change > 200) {
+            if (isAndroid8 && max(deleteCount, addCount) > 200) {
                 setLayerType(LAYER_TYPE_SOFTWARE, null)
             }
-            this.start = start
-            this.count = count
+            changeStart = start
+            changeCount = addCount
         }
 
         override fun onTextChanged(
-            charSequence: CharSequence,
+            source: CharSequence,
             start: Int,
-            before: Int,
-            count: Int
+            deleteCount: Int,
+            addCount: Int
         ) {
             if (!modified) return
-            if (highlightWhileTextChanging) {
-                if (mSyntaxPatternMap.isNotEmpty()) {
-                    convertTabs(editableText, start, count)
-                    mUpdateHandler.postDelayed(mUpdateRunnable, mUpdateDelayTime.toLong())
-                }
+
+            if (highlightWhileTextChanging && mSyntaxPatternMap.isNotEmpty()) {
+                convertTabs(editableText, start, addCount)
+                mUpdateHandler.postDelayed(mUpdateRunnable, mUpdateDelayTime.toLong())
             }
             if (mRemoveErrorsWhenTextChanged) removeAllErrorLines()
         }
@@ -85,11 +85,12 @@ class CodeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
             if (isAndroid8 && layerType == LAYER_TYPE_SOFTWARE) {
                 post { setLayerType(LAYER_TYPE_HARDWARE, null) }
             }
+
             if (!highlightWhileTextChanging) {
                 if (!modified) return
                 cancelHighlighterRender()
                 if (mSyntaxPatternMap.isNotEmpty()) {
-                    convertTabs(editableText, start, count)
+                    convertTabs(editableText, changeStart, changeCount)
                     mUpdateHandler.postDelayed(mUpdateRunnable, mUpdateDelayTime.toLong())
                 }
             }
