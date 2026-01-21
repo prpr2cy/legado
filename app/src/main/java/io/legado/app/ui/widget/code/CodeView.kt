@@ -96,7 +96,7 @@ class CodeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
         filters = arrayOf(
             InputFilter { source, start, end, dest, dStart, dEnd ->
                 val changeLength = abs(dEnd - dStart)
-                android.util.Log.d("CodeView", "replace $replaced")
+                android.util.Log.d("CodeView", "replace $changeLength")
                 if (isAndroid8 && changeLength > 100) {
                     android.util.Log.d("CodeView", "large replace $changeLength chars, fallback to software")
                     setLayerType(LAYER_TYPE_SOFTWARE, null)
