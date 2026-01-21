@@ -16,6 +16,7 @@ import android.text.style.ForegroundColorSpan
 import android.text.style.ReplacementSpan
 import android.util.AttributeSet
 import androidx.annotation.ColorInt
+import io.legado.app.constant.AppLog
 import io.legado.app.ui.widget.text.ScrollMultiAutoCompleteTextView
 import java.util.*
 import java.util.regex.Matcher
@@ -99,9 +100,10 @@ class CodeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
             deleteCount = count
             insertCount = after
 
-            if (isAndroid8) {
+            if (!isAndroid8) {
                 isSafeModified = true
                 originalText = source.toString()
+                AppLog.put("1: $originalText")
             }
         }
 
@@ -114,6 +116,7 @@ class CodeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
             if (!modified) return
             if (isSafeModified) {
                 insertText = source.subSequence(start, start + count).toString()
+                AppLog.put("2: $insertText")
                 return
             }
 
@@ -126,11 +129,18 @@ class CodeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
 
         override fun afterTextChanged(editable: Editable) {
             if (isSafeModified) {
+                AppLog.put("3: ${editable.toString()}")
+                /*
                 try {
                     removeTextChangedListener(this)
                     var cursorPosition = changeStart
                     if (deleteCount > 0) {
-                        editable.deleteSafe(changeStart, changeStart + deleteCount)
+                        val changeEnd = if (editable == originalText) {
+                            changeStart + deleteCount
+                        } else {
+                            
+                        }
+                        editable.deleteSafe(changeStart, )
                     }
                     if (insertText.length > 0) {
                         cursorPosition += insertText.length
@@ -146,6 +156,7 @@ class CodeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
                     addTextChangedListener(this)
                     return
                 }
+                */
             }
 
             if (!highlightWhileTextChanging) {
