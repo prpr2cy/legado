@@ -149,7 +149,7 @@ class CodeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
             setLayerType(LAYER_TYPE_SOFTWARE, null)
             super.onDraw(canvas)
             // 下一帧恢复硬件加速
-            post { setLayerType(LAYER_TYPE_HARDWARE, null) }
+            postDelayed({ setLayerType(LAYER_TYPE_HARDWARE, null) }, 500)
             return
         }
         super.onDraw(canvas)
