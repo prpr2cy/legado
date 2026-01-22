@@ -97,6 +97,12 @@ class CodeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
             before: Int,
             count: Int
         ) {
+            if (isAndroid8 && (before + count) > 200) {
+                post {
+                    requestLayout()
+                }
+            }
+
             if (!modified) return
             if (highlightWhileTextChanging && mSyntaxPatternMap.isNotEmpty()) {
                 convertTabs(editableText, start, count)
