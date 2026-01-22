@@ -16,7 +16,6 @@ import android.text.style.ForegroundColorSpan
 import android.text.style.ReplacementSpan
 import android.util.AttributeSet
 import androidx.annotation.ColorInt
-import io.legado.app.constant.AppLog
 import io.legado.app.ui.widget.text.ScrollMultiAutoCompleteTextView
 import java.util.*
 import java.util.regex.Matcher
@@ -43,7 +42,6 @@ class CodeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
     private val mSyntaxPatternMap: MutableMap<Pattern, Int> = HashMap()
     private var mIndentCharacterList = mutableListOf('{', '+', '-', '*', '/', '=')
 
-    /* ---------- Android 8.0-8.1 安全复制 ---------- */
     private val isAndroid8 = Build.VERSION.SDK_INT in 26..27
 
     private fun sendToClipboard(text: String) {
@@ -73,7 +71,6 @@ class CodeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
         return super.onTextContextMenuItem(id)
     }
 
-    /* ---------- CodeView 原有代码 ---------- */
     private val mUpdateRunnable = Runnable {
         val source = text
         highlightWithoutChange(source)
@@ -83,14 +80,6 @@ class CodeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
 
         private var highlightStart = 0
         private var highlightCount = 0
-        /*
-        private var changeStart = 0
-        private var deleteCount = 0
-        private var insertCount = 0
-        */
-        private var originalText: CharSequence = ""
-        private var isSafeModified = false
-        private var cursorPosition = 0
 
         override fun beforeTextChanged(
             source: CharSequence,
@@ -100,7 +89,6 @@ class CodeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
         ) {
             highlightStart = start
             highlightCount = after
-            originalText = source
         }
 
         override fun onTextChanged(
@@ -109,29 +97,6 @@ class CodeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
             before: Int,
             count: Int
         ) {
-            if (isSafeModified) return
-            if (!isAndroid8 && !isSafeModified && before > 500) {
-                try {
-                    isSafeModified = true
-                    removeTextChangedListener(this)
-                    val changeStart = start
-                    val deleteCount = before
-                    val insertText = source
-                    var cursorPosition = changeStart
-                    if (deleteCount > 0) {
-                        originalText.deleteSafe(changeStart, changeStart + deleteCount)
-                    }
-                    if (insertText.length > 0) {
-                        originalText.insertSafe(changeStart, insertText)
-                        cursorPosition += insertText.length
-                    }
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                } finally {
-                    return
-                }
-            }
-
             if (!modified) return
             if (highlightWhileTextChanging && mSyntaxPatternMap.isNotEmpty()) {
                 convertTabs(editableText, start, count)
@@ -141,19 +106,6 @@ class CodeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
         }
 
         override fun afterTextChanged(editable: Editable) {
-            if (isSafeModified) {
-                try {
-                    AppLog.put("editable=${editable}")
-                    AppLog.put("originalText=${originalText}")
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                } finally {
-                    isSafeModified = false
-                    addTextChangedListener(this)
-                    return
-                }
-            }
-
             if (!highlightWhileTextChanging) {
                 if (!modified) return
                 cancelHighlighterRender()
@@ -480,43 +432,4 @@ class CodeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
         private val PATTERN_LINE = Pattern.compile("(^.+$)+", Pattern.MULTILINE)
         private val PATTERN_TRAILING_WHITE_SPACE = Pattern.compile("[\\t ]+$", Pattern.MULTILINE)
     }
-}
-
-/* ---------- Android 8.0-8.1 分段删除/插入 ---------- */
-private val isAndroid8 = Build.VERSION.SDK_INT in 26..27
-private const val SAFE_CHUNK = 200
-
-fun Editable.deleteSafe(start: Int, end: Int) {
-    val min = min(start, end)
-    val max = max(start, end)
-    if (!isAndroid8 || max - min <= SAFE_CHUNK) {
-        delete(min, max)
-        return
-    }
-
-    var cur = max
-    while (cur > min) {
-        val left = max(min, cur - SAFE_CHUNK)
-        if (left == cur) break
-        delete(left, cur)
-        cur = left
-    }
-}
-
-fun Editable.insertSafe(start: Int, text: CharSequence): Editable {
-    if (!isAndroid8 || text.length <= SAFE_CHUNK) {
-        insert(start, text)
-        return this
-    }
-
-    var pos = start
-    var i = 0
-    while (i < text.length) {
-        val addSize = min(SAFE_CHUNK, text.length - i)
-        val addText = text.subSequence(i, i + addSize)
-        insert(pos, addText)
-        pos += addSize
-        i += addSize
-    }
-    return this
 }

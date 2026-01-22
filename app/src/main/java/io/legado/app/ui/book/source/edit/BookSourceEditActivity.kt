@@ -46,6 +46,7 @@ import io.legado.app.ui.widget.text.EditEntity
 import io.legado.app.utils.GSON
 import io.legado.app.utils.isContentScheme
 import io.legado.app.utils.launch
+import io.legado.app.utils.replace
 import io.legado.app.utils.sendToClip
 import io.legado.app.utils.setEdgeEffectColor
 import io.legado.app.utils.share
