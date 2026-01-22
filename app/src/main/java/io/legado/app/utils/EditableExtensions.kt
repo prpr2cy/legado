@@ -17,10 +17,7 @@ internal val IS_ANDROID_8 = Build.VERSION.SDK_INT in 26..27
 internal const val STEP = 500
 
 @PublishedApi
-internal const val DELAY_MS = 10L
-
-@PublishedApi
-internal const val BURST_SIZE = 3
+internal const val DELAY_MS = 30L
 
 @PublishedApi
 internal const val INITIAL_ARRAY_SIZE = 128
@@ -328,7 +325,7 @@ inline fun Editable.insert(
 }
 
 /**
- * 处理指定队列（使用burst优化）
+ * 处理指定队列
  */
 @PublishedApi
 internal fun processQueue(queue: EditableQueue) {
@@ -355,28 +352,22 @@ internal fun processQueue(queue: EditableQueue) {
 
         val editable = queue.getEditable() ?: return
 
-        // 执行一个burst（连续执行3个操作）
-        var executed = 0
+        val operation = queue.operations.removeFirst() ?: return
 
-        while (executed < BURST_SIZE && !queue.operations.isEmpty()) {
-            val operation = queue.operations.removeFirst() ?: break
-
-            try {
-                when (operation.first) {
-                    OP_DELETE -> {
-                        realDeleteMethod.invoke(editable, operation.second, operation.third)
-                    }
-                    OP_INSERT -> {
-                        realInsertMethod.invoke(editable, operation.second, operation.fourth)
-                    }
+        try {
+            when (operation.first) {
+                OP_DELETE -> {
+                    realDeleteMethod.invoke(editable, operation.second, operation.third)
                 }
-                executed++
-            } catch (e: Exception) {
-                AppLog.put("processQueue: 执行操作时异常，类型=${operation.first}, start=${operation.second}, end=${operation.third}", e)
+                OP_INSERT -> {
+                    realInsertMethod.invoke(editable, operation.second, operation.fourth)
+                }
             }
+        } catch (e: Exception) {
+            AppLog.put("processQueue: 执行操作时异常，类型=${operation.first}, start=${operation.second}, end=${operation.third}", e)
         }
 
-        // 如果还有操作，延迟执行下一个burst
+        // 如果还有操作，延迟执行下一个
         if (!queue.operations.isEmpty()) {
             editHandler.postDelayed({ processQueue(queue) }, DELAY_MS)
         } else {
