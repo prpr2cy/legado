@@ -242,7 +242,7 @@ class ContentTextView(context: Context, attrs: AttributeSet?) : View(context, at
             ImageProvider.isTriggerRecycled() &&
             !ImageProvider.isImageAlive(book, column.src)
         ) {
-            val newSize = ImageProvider.maxSize + increaseSize
+            val newSize = ImageProvider.maxSize.toInt() + increaseSize
             if (newSize < maxCacheSize) {
                 ImageProvider.resize(newSize)
                 cacheIncreased = true

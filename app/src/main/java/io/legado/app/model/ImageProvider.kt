@@ -44,22 +44,27 @@ object ImageProvider {
      * 缓存bitmap LruCache实现
      * filePath bitmap
      */
-    private const val M = 1024 * 1024
-    val cacheSize: Int
+    private const val M = 1024L * 1024L
+
+    private const val MAX_VALUE = Int.MAX_VALUE.toLong()
+
+    val cacheSize: Long
         get() {
-            if (AppConfig.bitmapCacheSize <= 0 || AppConfig.bitmapCacheSize >= 2048) {
+            val config = AppConfig.bitmapCacheSize
+            if (config <= 0 || config > 2048) {
+                config = 50
                 AppConfig.bitmapCacheSize = 50
             }
-            return AppConfig.bitmapCacheSize * M
+            return if (config == 2048) MAX_VALUE else config * M
         }
 
-    val maxSize: Int get() = bitmapLruCache.maxSize()
+    val maxSize: Long get() = bitmapLruCache.maxSize().toLong()
 
-    val nowSize: Int get() = bitmapLruCache.size()
+    val nowSize: Long get() = bitmapLruCache.size().toLong()
 
     var triggerRecycled = false
 
-    val bitmapLruCache = object : LruCache<String, Bitmap>(cacheSize) {
+    val bitmapLruCache = object : LruCache<String, Bitmap>(cacheSize.toInt()) {
 
         override fun sizeOf(filePath: String, bitmap: Bitmap): Int {
             return bitmap.byteCount
@@ -82,25 +87,32 @@ object ImageProvider {
         }
     }
 
-    fun resize(size: Int) {
-        val sumSize = size + nowSize
-        AppLog.put("size=${size}, nowSize=${nowSize}, maxSize=${maxSize}, cacheSize=${cacheSize}, setSize=${AppConfig.bitmapCacheSize}")
-        if (sumSize > 2048 * M || sumSize > cacheSize * 10) {
+    fun resize(size: Long) {
+        val sumSize = size + nowSize 
+        if (sumSize > MAX_VALUE) {
             bitmapLruCache.evictAll()
-            val newSize = max(size + 50 * M, cacheSize)
-            bitmapLruCache.resize(newSize)
-            AppLog.put("图片缓存后容量${ sumSize / M }M，将超过2048M或10倍设置容量，已重置为${ newSize / M }M")
+            val newSize = min(max(size + 50L * M, cacheSize), MAX_VALUE)
+            AppLog.put("图片缓存达到2048M，已重置为${newSize / M}M")
+            bitmapLruCache.resize(newSize.toInt())
+        } else if (sumSize > cacheSize * 10L) {
+            bitmapLruCache.evictAll()
+            val newSize = min(max(size + 50L * M, cacheSize), MAX_VALUE)
+            AppLog.put("图片缓存超过10倍设置容量，已重置为${newSize / M}M")
+            bitmapLruCache.resize(newSize.toInt())
         } else {
-            val newSize = min(sumSize + 50 * M, 2048 * M)
-            bitmapLruCache.resize(newSize)
-            AppLog.put("图片缓存容量不够大，自动扩增至${ newSize / M }M")
+            val newSize = min(sumSize + 50L * M, MAX_VALUE)
+            AppLog.put("图片缓存容量不够大，自动扩增至${newSize / M}M")
+            bitmapLruCache.resize(newSize.toInt())
         }
     }
 
-
     fun put(key: String, bitmap: Bitmap) {
-        val byteCount = bitmap.byteCount.toInt()
-        if (byteCount + nowSize > maxSize) {
+        val byteCount = bitmap.byteCount.toLong()
+
+        if (byteCount > MAX_VALUE) {
+            AppLog.put("图片过大${byteCount / M}M，无法缓存")
+            return
+        } else if (byteCount + nowSize > maxSize) {
             resize(byteCount)
         }
         bitmapLruCache.put(key, bitmap)
