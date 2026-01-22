@@ -51,11 +51,12 @@ object ImageProvider {
     val cacheSize: Long
         get() {
             val config = AppConfig.bitmapCacheSize
-            if (config <= 0 || config > 2048) {
-                config = 50
+            return if (config <= 0 || config > 2048) {
                 AppConfig.bitmapCacheSize = 50
-            }
-            return if (config == 2048) MAX_VALUE else config * M
+                50L * M
+            } else if (config == 2048) {
+                MAX_VALUE
+            } else config * M
         }
 
     val maxSize: Long get() = bitmapLruCache.maxSize().toLong()
