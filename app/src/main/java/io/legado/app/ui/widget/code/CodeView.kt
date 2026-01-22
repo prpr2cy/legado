@@ -15,7 +15,6 @@ import android.text.style.BackgroundColorSpan
 import android.text.style.ForegroundColorSpan
 import android.text.style.ReplacementSpan
 import android.util.AttributeSet
-import android.view.View
 import androidx.annotation.ColorInt
 import io.legado.app.constant.AppLog
 import io.legado.app.ui.widget.text.ScrollMultiAutoCompleteTextView
@@ -44,10 +43,10 @@ class CodeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
     private val mSyntaxPatternMap: MutableMap<Pattern, Int> = HashMap()
     private var mIndentCharacterList = mutableListOf('{', '+', '-', '*', '/', '=')
 
-    /* ---------- Android 8.0-8.1 安全文本编辑 ---------- */
+    /* ---------- Android 8.0-8.1 安全复制 ---------- */
     private val isAndroid8 = Build.VERSION.SDK_INT in 26..27
 
-    private fun copyToClipboard(text: String) {
+    private fun sendToClipboard(text: String) {
         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         clipboard.setPrimaryClip(ClipData.newPlainText("CodeView", text))
     }
@@ -67,7 +66,7 @@ class CodeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
     override fun onTextContextMenuItem(id: Int): Boolean {
         if (isAndroid8 && id == android.R.id.copy) {
             val copyText = getSelectedText() ?: return super.onTextContextMenuItem(id)
-            copyToClipboard(copyText)
+            sendToClipboard(copyText)
             setSelection(selectionEnd)
             return true
         }
@@ -90,8 +89,8 @@ class CodeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
         private var insertCount = 0
         */
         private var originalText: String = ""
-        private var insertText: String = ""
         private var isSafeModified = false
+        private var cursorPosition = 0
 
         override fun beforeTextChanged(
             source: CharSequence,
@@ -110,18 +109,27 @@ class CodeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
             before: Int,
             count: Int
         ) {
-            /*
-            changeStart = start
-            deleteCount = before
-            insertCount = count
-            */
-            insertText = source.toString()
-            if (isAndroid8 && originalText.length > 500 && max(before, count) > 500) {
-                isSafeModified = true
-                setLayerType(View.LAYER_TYPE_SOFTWARE, null)
-                AppLog.put("originalText=${originalText}, deleteCount=${before}")
-                AppLog.put("insertText=${insertText}, insertCount=${count}")
-                return
+            if (isSafeModified) return
+            if (!isAndroid8 && !isSafeModified && before > 500) {
+                try {
+                    isSafeModified = true
+                    removeTextChangedListener(this)
+                    val changeStart = start
+                    val deleteCount = before
+                    val insertText = source.toString()
+                    var cursorPosition = changeStart
+                    if (deleteCount > 0) {
+                        originalText.deleteSafe(changeStart, changeStart + deleteCount)
+                    }
+                    if (insertText.length > 0) {
+                        originalText.insertSafe(changeStart, insertText)
+                        cursorPosition += insertText.length
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                } finally {
+                    return
+                }
             }
 
             if (!modified) return
@@ -133,39 +141,17 @@ class CodeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
         }
 
         override fun afterTextChanged(editable: Editable) {
-            originalText = editable.toString()
-            insertText = ""
             if (isSafeModified) {
-                AppLog.put("editable=${editable.toString()}")
-                isSafeModified = false
-                setLayerType(View.LAYER_TYPE_HARDWARE, null)
-                /*
                 try {
-                    removeTextChangedListener(this)
-                    var cursorPosition = changeStart
-                    if (deleteCount > 0) {
-                            changeStart + deleteCount
-                        } else {
-                            
-                        }
-                        editable.deleteSafe(changeStart, )
-                    }
-                    if (insertText.length > 0) {
-                        cursorPosition += insertText.length
-                        editable.insertSafe(changeStart, insertText)
-                    }
-                    setSelection(cursorPosition)
-                    originalText = editable.toString()
-                    insertText = ""
-                    isSafeModified = false
+                    AppLog.put("editable=${editable}")
+                    AppLog.put("originalText=${originalText}")
                 } catch (e: Exception) {
                     e.printStackTrace()
                 } finally {
+                    isSafeModified = false
                     addTextChangedListener(this)
                     return
                 }
-                */
-                return
             }
 
             if (!highlightWhileTextChanging) {
