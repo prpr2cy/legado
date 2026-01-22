@@ -83,9 +83,11 @@ class CodeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
 
         private var highlightStart = 0
         private var highlightCount = 0
+        /*
         private var changeStart = 0
         private var deleteCount = 0
         private var insertCount = 0
+        */
         private var originalText: String = ""
         private var insertText: String = ""
         private var isSafeModified = false
@@ -107,19 +109,21 @@ class CodeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
             before: Int,
             count: Int
         ) {
-            if (!modified) return
-
+            /*
+            changeStart = start
+            deleteCount = before
+            insertCount = count
+            */
             insertText = source.toString()
-            if (!isAndroid8 && insertText != originalText) {
-                changeStart = start
-                deleteCount = before
-                insertCount = count
+            if (!isAndroid8 && originalText.length > 500 && max(before, count) > 500) {
                 isSafeModified = true
-                AppLog.put("originalText=${originalText}, deleteCount=${deleteCount}")
-                AppLog.put("insertText=${insertText}, insertCount=${insertCount}")
+                setLayerType(View.LAYER_TYPE_SOFTWARE, null)
+                AppLog.put("originalText=${originalText}, deleteCount=${before}")
+                AppLog.put("insertText=${insertText}, insertCount=${count}")
                 return
             }
 
+            if (!modified) return
             if (highlightWhileTextChanging && mSyntaxPatternMap.isNotEmpty()) {
                 convertTabs(editableText, start, count)
                 mUpdateHandler.postDelayed(mUpdateRunnable, mUpdateDelayTime.toLong())
@@ -128,11 +132,15 @@ class CodeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
         }
 
         override fun afterTextChanged(editable: Editable) {
+            originalText = editable.toString()
+            insertText = ""
             if (isSafeModified) {
+                AppLog.put("editable=${editable.toString()}")
+                isSafeModified = false
+                setLayerType(View.LAYER_TYPE_HARDWARE, null)
+                /*
                 try {
                     removeTextChangedListener(this)
-                    AppLog.put("editable=${editable.toString()}")
-                    /*
                     var cursorPosition = changeStart
                     if (deleteCount > 0) {
                             changeStart + deleteCount
@@ -146,16 +154,17 @@ class CodeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
                         editable.insertSafe(changeStart, insertText)
                     }
                     setSelection(cursorPosition)
-                    */
+                    originalText = editable.toString()
+                    insertText = ""
+                    isSafeModified = false
                 } catch (e: Exception) {
                     e.printStackTrace()
                 } finally {
-                    //originalText = editable
-                    insertText = ""
-                    isSafeModified = false
                     addTextChangedListener(this)
                     return
                 }
+                */
+                return
             }
 
             if (!highlightWhileTextChanging) {
