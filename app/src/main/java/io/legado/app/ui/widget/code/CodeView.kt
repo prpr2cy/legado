@@ -15,6 +15,7 @@ import android.text.style.BackgroundColorSpan
 import android.text.style.ForegroundColorSpan
 import android.text.style.ReplacementSpan
 import android.util.AttributeSet
+import android.view.View
 import androidx.annotation.ColorInt
 import io.legado.app.constant.AppLog
 import io.legado.app.ui.widget.text.ScrollMultiAutoCompleteTextView
