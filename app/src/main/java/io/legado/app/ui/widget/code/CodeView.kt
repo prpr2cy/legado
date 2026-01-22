@@ -81,6 +81,8 @@ class CodeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
 
     private val mEditorTextWatcher: TextWatcher = object : TextWatcher {
 
+        private var highlightStart = 0
+        private var highlightCount = 0
         private var changeStart = 0
         private var deleteCount = 0
         private var insertCount = 0
@@ -94,17 +96,9 @@ class CodeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
             count: Int,
             after: Int
         ) {
-            if (isSafeModified) return
-
-            changeStart = start
-            deleteCount = count
-            insertCount = after
-
-            if (!isAndroid8) {
-                isSafeModified = true
-                originalText = source.toString()
-                AppLog.put("1: $originalText")
-            }
+            highlightStart = start
+            highlightCount = after
+            originalText = source.toString()
         }
 
         override fun onTextChanged(
@@ -114,9 +108,15 @@ class CodeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
             count: Int
         ) {
             if (!modified) return
-            if (isSafeModified) {
-                insertText = source.subSequence(start, start + count).toString()
-                AppLog.put("2: $insertText")
+
+            insertText = source.toString()
+            if (!isAndroid8 && insertText != originalText) {
+                changeStart = start
+                deleteCount = before
+                insertCount = count
+                isSafeModified = true
+                AppLog.put("originalText=${originalText}, deleteCount=${deleteCount}")
+                AppLog.put("insertText=${insertText}, insertCount=${insertCount}")
                 return
             }
 
@@ -129,13 +129,12 @@ class CodeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
 
         override fun afterTextChanged(editable: Editable) {
             if (isSafeModified) {
-                AppLog.put("3: ${editable.toString()}")
-                /*
                 try {
                     removeTextChangedListener(this)
+                    AppLog.put("editable=${editable.toString()}")
+                    /*
                     var cursorPosition = changeStart
                     if (deleteCount > 0) {
-                        val changeEnd = if (editable == originalText) {
                             changeStart + deleteCount
                         } else {
                             
@@ -147,23 +146,23 @@ class CodeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
                         editable.insertSafe(changeStart, insertText)
                     }
                     setSelection(cursorPosition)
+                    */
                 } catch (e: Exception) {
                     e.printStackTrace()
                 } finally {
-                    originalText = ""
+                    //originalText = editable
                     insertText = ""
                     isSafeModified = false
                     addTextChangedListener(this)
                     return
                 }
-                */
             }
 
             if (!highlightWhileTextChanging) {
                 if (!modified) return
                 cancelHighlighterRender()
                 if (mSyntaxPatternMap.isNotEmpty()) {
-                    convertTabs(editableText, changeStart, insertCount)
+                    convertTabs(editableText, highlightStart, highlightCount)
                     mUpdateHandler.postDelayed(mUpdateRunnable, mUpdateDelayTime.toLong())
                 }
             }
