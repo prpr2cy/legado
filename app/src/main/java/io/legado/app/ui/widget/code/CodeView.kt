@@ -116,7 +116,7 @@ class CodeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
             insertCount = count
             */
             insertText = source.toString()
-            if (!isAndroid8 && originalText.length > 500 && max(before, count) > 500) {
+            if (isAndroid8 && originalText.length > 500 && max(before, count) > 500) {
                 isSafeModified = true
                 setLayerType(View.LAYER_TYPE_SOFTWARE, null)
                 AppLog.put("originalText=${originalText}, deleteCount=${before}")
