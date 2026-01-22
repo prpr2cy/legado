@@ -88,7 +88,7 @@ class CodeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
         private var deleteCount = 0
         private var insertCount = 0
         */
-        private var originalText: String = ""
+        private var originalText: CharSequence = ""
         private var isSafeModified = false
         private var cursorPosition = 0
 
@@ -100,7 +100,7 @@ class CodeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
         ) {
             highlightStart = start
             highlightCount = after
-            originalText = source.toString()
+            originalText = source
         }
 
         override fun onTextChanged(
@@ -116,7 +116,7 @@ class CodeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
                     removeTextChangedListener(this)
                     val changeStart = start
                     val deleteCount = before
-                    val insertText = source.toString()
+                    val insertText = source
                     var cursorPosition = changeStart
                     if (deleteCount > 0) {
                         originalText.deleteSafe(changeStart, changeStart + deleteCount)
