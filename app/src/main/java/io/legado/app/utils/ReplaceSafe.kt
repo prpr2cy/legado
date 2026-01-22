@@ -2,7 +2,6 @@ package io.legado.app.utils
 
 import android.os.Build
 import android.text.Editable
-import java.lang.CharSequence
 import kotlin.math.max
 import kotlin.math.min
 
@@ -13,42 +12,66 @@ inline fun Editable.replace(
 ): Editable {
     val isAndroid8 = Build.VERSION.SDK_INT in 26..27
     val step = 500
-    val min = min(start, end)
-    val max = max(start, end)
-    if (!isAndroid8 || (max - min + text.length <= step)) {
+    val actualStart = min(start, end)
+    val actualEnd = max(start, end)
+    val deleteLength = actualEnd - actualStart
+    val insertLength = text.length
+
+    if (!isAndroid8 || deleteLength + insertLength <= step) {
         @Suppress("INVISIBLE_REFERENCE", "INVISIBLE_MEMBER")
-        replace(start, end, text)
+        this.replace(actualStart, actualEnd, text)
         return this
     }
-    var pos = min
-    var i = 0
-    while (i < text.length) {
-        val size = min(step, text.length - i)
-        val chunk = text.subSequence(i, i + size)
-        replace(pos, pos + size, chunk)
-        pos += size
-        i += size
+
+    if (deleteLength > 0) {
+        this.deleteSafe(actualStart, actualEnd)
     }
-    if (max > post) {
-        deleteSafe(pos, max)
+    if (insertLength > 0) {
+        this.insertSafe(actualStart, text)
     }
     return this
 }
 
-fun Editable.deleteSafe(start: Int, end: Int) {
+fun Editable.deleteSafe(start: Int, end: Int): Editable {
     val isAndroid8 = Build.VERSION.SDK_INT in 26..27
     val step = 500
-    val min = min(start, end)
-    val max = max(start, end)
-    if (!isAndroid8 || max - min <= step) {
-        delete(min, max)
-        return
+    val actualStart = min(start, end)
+    val actualEnd = max(start, end)
+    val deleteLength = actualEnd - actualStart
+
+    if (!isAndroid8 || deleteLength <= step) {
+        this.delete(actualStart, actualEnd)
+        return this
     }
-    var cur = max
-    while (cur > min) {
-        val left = max(min, cur - step)
-        if (left == cur) break
-        delete(left, cur)
+
+    var cur = actualEnd
+    while (cur > actualStart) {
+        val left = max(actualStart, cur - step)
+        if (left >= cur) break
+        this.delete(left, cur)
         cur = left
     }
+    return this
+}
+
+fun Editable.insertSafe(start: Int, text: CharSequence): Editable {
+    val isAndroid8 = Build.VERSION.SDK_INT in 26..27
+    val step = 500
+    val insertLength = text.length
+
+    if (!isAndroid8 || insertLength <= step) {
+        this.insert(start, text)
+        return this
+    }
+
+    var pos = start
+    var i = 0
+    while (i < insertLength) {
+        val chunkSize = min(step, insertLength - i)
+        val chunk = text.subSequence(i, i + chunkSize)
+        this.insert(pos, chunk)
+        pos += chunkSize
+        i += chunkSize
+    }
+    return this
 }
