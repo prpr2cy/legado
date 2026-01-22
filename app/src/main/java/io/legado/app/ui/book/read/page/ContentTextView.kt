@@ -51,11 +51,11 @@ class ContentTextView(context: Context, attrs: AttributeSet?) : View(context, at
     private var drawVisibleImageOnly = false
     private var cacheIncreased = false
     private var longScreenshot = false
-    private val increaseSize = 8 * 1024 * 1024
+    private val increaseSize = 8L * 1024L * 1024L
     private val maxCacheSize = if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.N_MR1) {
-        min(128 * 1024 * 1024, Runtime.getRuntime().maxMemory())
+        min(128L * 1024L * 1024L, Runtime.getRuntime().maxMemory().toLong())
     } else {
-        256 * 1024 * 1024
+        256L * 1024L * 1024L
     }
     var reverseStartCursor = false
     var reverseEndCursor = false
@@ -242,7 +242,7 @@ class ContentTextView(context: Context, attrs: AttributeSet?) : View(context, at
             ImageProvider.isTriggerRecycled() &&
             !ImageProvider.isImageAlive(book, column.src)
         ) {
-            val newSize = ImageProvider.maxSize.toInt() + increaseSize
+            val newSize = ImageProvider.maxSize + increaseSize
             if (newSize < maxCacheSize) {
                 ImageProvider.resize(newSize)
                 cacheIncreased = true
