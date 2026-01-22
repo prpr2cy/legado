@@ -84,6 +84,7 @@ object ImageProvider {
 
     fun resize(size: Int) {
         val sumSize = size + nowSize
+        AppLog.put("size=${size}, nowSize=${nowSize}, maxSize=${maxSize}, cacheSize=${cacheSize}, setSize=${AppConfig.bitmapCacheSize}")
         if (sumSize > 2048 * M || sumSize > cacheSize * 10) {
             bitmapLruCache.evictAll()
             val newSize = max(size + 50 * M, cacheSize)
