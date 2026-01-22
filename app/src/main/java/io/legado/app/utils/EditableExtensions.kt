@@ -26,7 +26,7 @@ internal const val BURST_SIZE = 3
 internal const val INITIAL_ARRAY_SIZE = 128
 
 @PublishedApi
-internal val handler = Handler(Looper.getMainLooper())
+internal val editHandler = Handler(Looper.getMainLooper())
 
 // 获取原始方法
 @PublishedApi
@@ -212,7 +212,7 @@ inline fun Editable.replace(
 
         if (!queue.isProcessing) {
             queue.isProcessing = true
-            handler.post { processQueue(queue) }
+            editHandler.post { processQueue(queue) }
         }
     } catch (e: Exception) {
         AppLog.put("Editable.replace: 添加操作到队列时异常", e)
@@ -262,7 +262,7 @@ inline fun Editable.delete(
 
         if (!queue.isProcessing) {
             queue.isProcessing = true
-            handler.post { processQueue(queue) }
+            editHandler.post { processQueue(queue) }
         }
     } catch (e: Exception) {
         AppLog.put("Editable.delete: 添加操作到队列时异常", e)
@@ -316,7 +316,7 @@ inline fun Editable.insert(
 
         if (!queue.isProcessing) {
             queue.isProcessing = true
-            handler.post { processQueue(queue) }
+            editHandler.post { processQueue(queue) }
         }
     } catch (e: Exception) {
         AppLog.put("Editable.insert: 添加操作到队列时异常", e)
@@ -343,7 +343,7 @@ internal fun processQueue(queue: EditableQueue) {
     }
 
     if (!queue.lock.tryLock()) {
-        handler.postDelayed({ processQueue(queue) }, DELAY_MS)
+        editHandler.postDelayed({ processQueue(queue) }, DELAY_MS)
         return
     }
 
@@ -378,7 +378,7 @@ internal fun processQueue(queue: EditableQueue) {
 
         // 如果还有操作，延迟执行下一个burst
         if (!queue.operations.isEmpty()) {
-            handler.postDelayed({ processQueue(queue) }, DELAY_MS)
+            editHandler.postDelayed({ processQueue(queue) }, DELAY_MS)
         } else {
             queue.isProcessing = false
         }
