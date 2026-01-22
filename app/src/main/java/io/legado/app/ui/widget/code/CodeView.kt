@@ -15,7 +15,6 @@ import android.text.style.BackgroundColorSpan
 import android.text.style.ForegroundColorSpan
 import android.text.style.ReplacementSpan
 import android.util.AttributeSet
-import android.view.View
 import androidx.annotation.ColorInt
 import io.legado.app.ui.widget.text.ScrollMultiAutoCompleteTextView
 import java.util.*
@@ -81,7 +80,6 @@ class CodeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
 
         private var highlightStart = 0
         private var highlightCount = 0
-        private var deleteCount = 0
 
         override fun beforeTextChanged(
             source: CharSequence,
@@ -99,7 +97,6 @@ class CodeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
             before: Int,
             count: Int
         ) {
-            deleteCount = before
             if (!modified) return
             if (highlightWhileTextChanging && mSyntaxPatternMap.isNotEmpty()) {
                 convertTabs(editableText, start, count)
@@ -109,16 +106,6 @@ class CodeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
         }
 
         override fun afterTextChanged(editable: Editable) {
-            if (isAndroid8 && deleteCount > 200) {
-                setLayerType(LAYER_TYPE_SOFTWARE, null)
-                deleteCount = 0
-                post {
-                    requestLayout()
-                }
-                postDelayed({
-                    setLayerType(LAYER_TYPE_HARDWARE, null)
-                }, 200)
-            }
             if (!highlightWhileTextChanging) {
                 if (!modified) return
                 cancelHighlighterRender()
