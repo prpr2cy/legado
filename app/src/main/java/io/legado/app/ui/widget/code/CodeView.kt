@@ -486,7 +486,7 @@ class CodeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
 private val isAndroid8 = Build.VERSION.SDK_INT in 26..27
 private const val SAFE_CHUNK = 200
 
-private fun Editable.deleteSafe(start: Int, end: Int) {
+fun Editable.deleteSafe(start: Int, end: Int) {
     val min = min(start, end)
     val max = max(start, end)
     if (!isAndroid8 || max - min <= SAFE_CHUNK) {
@@ -503,7 +503,7 @@ private fun Editable.deleteSafe(start: Int, end: Int) {
     }
 }
 
-private fun Editable.insertSafe(start: Int, text: CharSequence): Editable {
+fun Editable.insertSafe(start: Int, text: CharSequence): Editable {
     if (!isAndroid8 || text.length <= SAFE_CHUNK) {
         insert(start, text)
         return this
