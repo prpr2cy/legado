@@ -10,32 +10,49 @@ import java.util.concurrent.locks.ReentrantLock
 import kotlin.math.max
 import kotlin.math.min
 
+@PublishedApi
 internal val IS_ANDROID_8 = Build.VERSION.SDK_INT in 26..27
+
+@PublishedApi
 internal const val STEP = 500
+
+@PublishedApi
 internal const val DELAY_MS = 10L
+
+@PublishedApi
 internal const val BURST_SIZE = 3
+
+@PublishedApi
 internal const val INITIAL_ARRAY_SIZE = 128
 
+@PublishedApi
 internal val handler = Handler(Looper.getMainLooper())
 
 // 获取原始方法
+@PublishedApi
 internal val realReplaceMethod by lazy {
     Editable::class.java.getDeclaredMethod("replace", Int::class.java, Int::class.java, CharSequence::class.java)
 }
 
+@PublishedApi
 internal val realDeleteMethod by lazy {
     Editable::class.java.getDeclaredMethod("delete", Int::class.java, Int::class.java)
 }
 
+@PublishedApi
 internal val realInsertMethod by lazy {
     Editable::class.java.getDeclaredMethod("insert", Int::class.java, CharSequence::class.java)
 }
 
 // 操作类型常量
+@PublishedApi
 internal const val OP_DELETE = 0
+
+@PublishedApi
 internal const val OP_INSERT = 1
 
-// 操作数组 
+// 操作数组
+@PublishedApi
 internal class OptimizedOperationArray {
     private var types = IntArray(INITIAL_ARRAY_SIZE)
     private var starts = IntArray(INITIAL_ARRAY_SIZE)
@@ -97,7 +114,8 @@ internal class OptimizedOperationArray {
     }
 }
 
-// 四元组类，用于存储操作数据
+// 四元组类
+@PublishedApi
 internal data class Quadruple<out A, out B, out C, out D>(
     val first: A,
     val second: B,
@@ -105,6 +123,7 @@ internal data class Quadruple<out A, out B, out C, out D>(
     val fourth: D
 )
 
+@PublishedApi
 internal class EditableQueue(val editableRef: WeakReference<Editable>) {
     val operations = OptimizedOperationArray()
     var isProcessing = false
@@ -129,6 +148,7 @@ internal class EditableQueue(val editableRef: WeakReference<Editable>) {
     }
 }
 
+@PublishedApi
 internal val queueMap = mutableMapOf<WeakReference<Editable>, EditableQueue>()
 
 /**
@@ -168,7 +188,6 @@ inline fun Editable.replace(
                 val left = max(actualStart, cur - STEP)
                 if (left >= cur) break
 
-                // 存储精确的起止位置
                 queue.operations.add(OP_DELETE, left, cur)
                 cur = left
             }
@@ -185,7 +204,6 @@ inline fun Editable.replace(
                     text.subSequence(i, i + chunkSize)
                 }
 
-                // INSERT操作start和end相同
                 queue.operations.add(OP_INSERT, pos, pos, chunk)
                 pos += chunkSize
                 i += chunkSize
@@ -238,7 +256,6 @@ inline fun Editable.delete(
             val left = max(actualStart, cur - STEP)
             if (left >= cur) break
 
-            // 存储精确的起止位置
             queue.operations.add(OP_DELETE, left, cur)
             cur = left
         }
@@ -292,7 +309,6 @@ inline fun Editable.insert(
                 text.subSequence(i, i + chunkSize)
             }
 
-            // INSERT操作start和end相同
             queue.operations.add(OP_INSERT, pos, pos, chunk)
             pos += chunkSize
             i += chunkSize
@@ -314,6 +330,7 @@ inline fun Editable.insert(
 /**
  * 处理指定队列（使用burst优化）
  */
+@PublishedApi
 internal fun processQueue(queue: EditableQueue) {
     if (!queue.isValid()) {
         synchronized(queueMap) {
@@ -356,7 +373,6 @@ internal fun processQueue(queue: EditableQueue) {
                 executed++
             } catch (e: Exception) {
                 AppLog.put("processQueue: 执行操作时异常，类型=${operation.first}, start=${operation.second}, end=${operation.third}", e)
-                // 继续执行下一个操作
             }
         }
 
@@ -368,7 +384,6 @@ internal fun processQueue(queue: EditableQueue) {
         }
     } catch (e: Exception) {
         AppLog.put("processQueue: 处理队列时发生未预期异常", e)
-        // 发生异常时停止处理
         queue.isProcessing = false
     } finally {
         if (queue.lock.isHeldByCurrentThread) {
