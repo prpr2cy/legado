@@ -6,14 +6,13 @@ import java.lang.CharSequence
 import kotlin.math.max
 import kotlin.math.min
 
-private val isAndroid8 = Build.VERSION.SDK_INT in 26..27
-private val step = 500
-
 inline fun Editable.replace(
     start: Int,
     end: Int,
     text: CharSequence
 ): Editable {
+    val isAndroid8 = Build.VERSION.SDK_INT in 26..27
+    val step = 500
     val min = min(start, end)
     val max = max(start, end)
     if (!isAndroid8 || (max - min + text.length <= step)) {
@@ -37,6 +36,8 @@ inline fun Editable.replace(
 }
 
 fun Editable.deleteSafe(start: Int, end: Int) {
+    val isAndroid8 = Build.VERSION.SDK_INT in 26..27
+    val step = 500
     val min = min(start, end)
     val max = max(start, end)
     if (!isAndroid8 || max - min <= step) {
