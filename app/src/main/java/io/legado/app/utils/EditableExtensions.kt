@@ -26,7 +26,7 @@ internal const val BURST_SIZE = 3
 internal const val INITIAL_ARRAY_SIZE = 128
 
 @PublishedApi
-internal val editHandler = Handler(Looper.getMainLooper())
+internal val editHandler by lazy { Handler(Looper.getMainLooper()) }
 
 // 获取原始方法
 @PublishedApi
