@@ -243,8 +243,8 @@ class ContentTextView(context: Context, attrs: AttributeSet?) : View(context, at
             !ImageProvider.isImageAlive(book, column.src)
         ) {
             val maxSize = ImageProvider.maxSize
-            if (maxSize < maxCacheSize - increaseSiz) {
-                ImageProvider.resize(maxSize + increaseSiz)
+            if (maxSize < maxCacheSize - increaseSize) {
+                ImageProvider.resize(maxSize + increaseSize)
                 cacheIncreased = true
             }
             return

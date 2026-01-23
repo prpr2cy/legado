@@ -28,7 +28,6 @@ import splitties.init.appCtx
 import java.io.File
 import java.io.FileOutputStream
 import java.util.Collections
-import kotlin.math.ceil
 import kotlin.math.max
 import kotlin.math.min
 
@@ -109,7 +108,7 @@ object ImageProvider {
     }
 
     fun put(key: String, bitmap: Bitmap) {
-        val byteCount = ceil(bitmap.byteCount).toInt()
+        val byteCount = bitmap.byteCount
         if (byteCount > Int.MAX_VALUE - BASE_SIZE) {
             AppLog.put("图片过大${byteCount / M}M，无法缓存")
             return
