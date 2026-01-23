@@ -94,7 +94,7 @@ object ImageProvider {
             val newSize = max(size + BASE_SIZE, cacheSize)
             AppLog.put("图片缓存达到2048M，已重置为${newSize / M}M")
             bitmapLruCache.resize(newSize)
-        } else if (size > cacheSize * 10 - nowSize) {
+        } else if (size > min(cacheSize, Int.MAX_VALUE / 10) * 10 - nowSize) {
             bitmapLruCache.evictAll()
             val newSize = max(size + BASE_SIZE, cacheSize)
             AppLog.put("图片缓存超过10倍设置容量，已重置为${newSize / M}M")
