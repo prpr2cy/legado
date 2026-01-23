@@ -25,14 +25,14 @@ import io.legado.app.ui.book.read.page.entities.column.ImageColumn
 import io.legado.app.ui.book.read.page.entities.column.ReviewColumn
 import io.legado.app.ui.book.read.page.entities.column.TextColumn
 import io.legado.app.utils.*
-import splitties.init.appCtx
 import java.util.LinkedList
 import java.util.Locale
-import kotlin.math.min
-import kotlin.math.max
+import kotlin.collections.ArrayList
 import kotlin.math.ceil
 import kotlin.math.floor
-import kotlin.collections.ArrayList
+import kotlin.math.max
+import kotlin.math.min
+import splitties.init.appCtx
 
 /**
  * 解析内容生成章节和页面

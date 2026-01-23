@@ -23,8 +23,8 @@ import androidx.recyclerview.widget.RecyclerView
 import androidx.viewpager.widget.ViewPager
 import io.legado.app.help.config.AppConfig
 import io.legado.app.lib.theme.TintHelper
-import splitties.systemservices.inputMethodManager
 import java.lang.reflect.Field
+import splitties.systemservices.inputMethodManager
 
 private tailrec fun getCompatActivity(context: Context?): AppCompatActivity? {
     return when (context) {

@@ -7,6 +7,7 @@ import cn.hutool.core.codec.Base64
 import cn.hutool.core.util.HexUtil
 import com.github.khoben.libwoff2dec.Woff2Decoder
 import com.github.liuyueyi.quick.transfer.ChineseUtils
+import com.google.gson.GsonBuilder
 import io.legado.app.constant.AppConst
 import io.legado.app.constant.AppConst.dateFormat
 import io.legado.app.constant.AppLog
@@ -25,13 +26,6 @@ import io.legado.app.model.analyzeRule.QueryTTF
 import io.legado.app.model.analyzeRule.QueryWOFF
 import io.legado.app.utils.*
 import io.legado.app.utils.compress.LibArchiveUtils
-import kotlinx.coroutines.Dispatchers.IO
-import kotlinx.coroutines.async
-import kotlinx.coroutines.runBlocking
-import okio.use
-import org.jsoup.Connection
-import org.jsoup.Jsoup
-import splitties.init.appCtx
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -43,7 +37,13 @@ import java.text.SimpleDateFormat
 import java.util.*
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
-import com.google.gson.GsonBuilder
+import kotlinx.coroutines.Dispatchers.IO
+import kotlinx.coroutines.async
+import kotlinx.coroutines.runBlocking
+import okio.use
+import org.jsoup.Connection
+import org.jsoup.Jsoup
+import splitties.init.appCtx
 
 /**
  * js扩展类, 在js中通过java变量调用

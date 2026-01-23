@@ -11,11 +11,9 @@ data class RowUi(
 ) {
 
     object Type {
-
         const val text = "text"
         const val password = "password"
         const val button = "button"
-
     }
 
     companion object {

@@ -10,9 +10,9 @@ import io.legado.app.help.IntentData
 import io.legado.app.ui.association.VerificationCodeActivity
 import io.legado.app.ui.browser.WebViewActivity
 import io.legado.app.utils.startActivity
-import splitties.init.appCtx
 import java.util.concurrent.locks.LockSupport
 import kotlin.time.Duration.Companion.minutes
+import splitties.init.appCtx
 
 /**
  * 源验证
