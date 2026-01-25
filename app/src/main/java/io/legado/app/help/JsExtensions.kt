@@ -7,7 +7,9 @@ import cn.hutool.core.codec.Base64
 import cn.hutool.core.util.HexUtil
 import com.github.khoben.libwoff2dec.Woff2Decoder
 import com.github.liuyueyi.quick.transfer.ChineseUtils
+import com.google.gson.Gson
 import com.google.gson.GsonBuilder
+import com.google.gson.reflect.TypeToken
 import io.legado.app.constant.AppConst
 import io.legado.app.constant.AppConst.dateFormat
 import io.legado.app.constant.AppLog
@@ -361,10 +363,12 @@ interface JsExtensions : JsEncodeUtils {
      * js实现重定向拦截,网络访问get
      */
     @Suppress("UnnecessaryVariable")
-    fun get(urlStr: String, headers: Map<String, String>): Connection.Response {
+    fun get(url: Any, headers: Any): Connection.Response {
+        val urlStr = url.toString()
+        val headersMap = convertToMap(headers)
         val requestHeaders = if (getSource()?.enabledCookieJar == true) {
-            headers.toMutableMap().apply { put(cookieJarHeader, "1") }
-        } else headers
+            headersMap.toMutableMap().apply { put(cookieJarHeader, "1") }
+        } else headersMap
         val response = Jsoup.connect(urlStr)
             .sslSocketFactory(SSLHelper.unsafeSSLSocketFactory)
             .ignoreContentType(true)
@@ -381,10 +385,12 @@ interface JsExtensions : JsEncodeUtils {
      * js实现重定向拦截,网络访问head,不返回Response Body更省流量
      */
     @Suppress("UnnecessaryVariable")
-    fun head(urlStr: String, headers: Map<String, String>): Connection.Response {
+    fun head(url: Any, headers: Any): Connection.Response {
+        val urlStr = url.toString()
+        val headersMap = convertToMap(headers)
         val requestHeaders = if (getSource()?.enabledCookieJar == true) {
-            headers.toMutableMap().apply { put(cookieJarHeader, "1") }
-        } else headers
+            headersMap.toMutableMap().apply { put(cookieJarHeader, "1") }
+        } else headersMap
         val response = Jsoup.connect(urlStr)
             .sslSocketFactory(SSLHelper.unsafeSSLSocketFactory)
             .ignoreContentType(true)
@@ -401,21 +407,69 @@ interface JsExtensions : JsEncodeUtils {
      * 网络访问post
      */
     @Suppress("UnnecessaryVariable")
-    fun post(urlStr: String, body: String, headers: Map<String, String>): Connection.Response {
+    fun post(urlStr: Any, body: Any, headers: Any): Connection.Response {
+        val urlStr = url.toString()
+        val bodyStr = body.toString()
+        val headersMap = convertToMap(headers)
         val requestHeaders = if (getSource()?.enabledCookieJar == true) {
-            headers.toMutableMap().apply { put(cookieJarHeader, "1") }
-        } else headers
+            headersMap.toMutableMap().apply { put(cookieJarHeader, "1") }
+        } else headersMap
         val response = Jsoup.connect(urlStr)
             .sslSocketFactory(SSLHelper.unsafeSSLSocketFactory)
             .ignoreContentType(true)
             .ignoreHttpErrors(true)
             .followRedirects(false)
             .maxBodySize(0)
-            .requestBody(body)
+            .requestBody(bodyStr)
             .headers(requestHeaders)
             .method(Connection.Method.POST)
             .execute()
         return response
+    }
+
+    fun convertToMap(obj: Any?): Map<String, String> {
+        if (obj == null) return emptyMap()
+        return try {
+            when (obj) {
+                is Map<*, *> -> {
+                    obj.entries.associate { it.key.toString() to it.value.toString() }
+                }
+                is org.mozilla.javascript.Scriptable -> {
+                    mutableMapOf<String, String>().apply {
+                        for (id in obj.ids) {
+                            val key = id.toString()
+                            this[key] = obj.get(key, obj)?.toString() ?: ""
+                        }
+                    }
+                }
+                is CharSequence -> {
+                    val jsonStr = obj.toString().trim()
+                    if (jsonStr.isBlank()) return emptyMap()
+                    val rawMap: Map<String, Any> = Gson().fromJson(
+                        jsonStr,
+                        object : TypeToken<Map<String, Any>>() {}.type
+                    ) ?: return emptyMap()
+                    rawMap.mapValues { (_, v) -> v.toString() }
+                }
+                else -> {
+                    AppLog.put("convertToMap: 不支持的类型 ${obj::class.java.simpleName}")
+                    emptyMap()
+                }
+            }
+        } catch (e: Exception) {
+            AppLog.put("convertToMap 转换失败: ${obj::class.java}, ${e.message}", e)
+            emptyMap()
+        }
+    }
+
+    fun mapToJson(map: Map<String, String>?): String? {
+        if (map.isNullOrEmpty()) {
+            return ""
+        }
+        val gson = GsonBuilder()
+            .disableHtmlEscaping()
+            .create()
+        return gson.toJson(map)
     }
 
     /* Str转ByteArray */
@@ -543,21 +597,9 @@ interface JsExtensions : JsEncodeUtils {
         return ChineseUtils.s2t(text)
     }
 
-    fun mapToJson(map: Map<String, String>?): String? {
-        if (map.isNullOrEmpty()) {
-            return ""
-        }
-        val gson = GsonBuilder()
-            .disableHtmlEscaping()
-            .create()
-        return gson.toJson(map)
-    }
-
     fun getWebViewUA(): String {
         return WebSettings.getDefaultUserAgent(appCtx)
     }
-
-//****************文件操作******************//
 
     /**
      * 获取本地文件
