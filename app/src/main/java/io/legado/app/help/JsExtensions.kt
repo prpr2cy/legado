@@ -411,7 +411,7 @@ interface JsExtensions : JsEncodeUtils {
      * 网络访问post
      */
     @Suppress("UnnecessaryVariable")
-    fun post(urlStr: Any, body: Any, headers: Any): Connection.Response {
+    fun post(url: Any, body: Any, headers: Any): Connection.Response {
         val urlStr = url.toString()
         val bodyStr = body.toString()
         val headersMap = convertToMap(headers)
