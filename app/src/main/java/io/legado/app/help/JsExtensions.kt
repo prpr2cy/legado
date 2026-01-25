@@ -36,15 +36,19 @@ import java.net.URLEncoder
 import java.nio.charset.Charset
 import java.security.MessageDigest
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Date
+import java.util.Locale
+import java.util.SimpleTimeZone
+import java.util.UUID
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.async
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.runBlockingy
 import okio.use
 import org.jsoup.Connection
 import org.jsoup.Jsoup
+import org.mozilla.javascript.Scriptable
 import splitties.init.appCtx
 
 /**
@@ -434,7 +438,7 @@ interface JsExtensions : JsEncodeUtils {
                 is Map<*, *> -> {
                     obj.entries.associate { it.key.toString() to it.value.toString() }
                 }
-                is org.mozilla.javascript.Scriptable -> {
+                is Scriptable -> {
                     mutableMapOf<String, String>().apply {
                         for (id in obj.ids) {
                             val key = id.toString()
