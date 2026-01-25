@@ -26,15 +26,8 @@ import io.legado.app.model.Debug
 import io.legado.app.model.analyzeRule.AnalyzeUrl
 import io.legado.app.model.analyzeRule.QueryTTF
 import io.legado.app.model.analyzeRule.QueryWOFF
+import io.legado.app.utils.*
 import io.legado.app.utils.compress.LibArchiveUtils
-import io.legado.app.utils.createFileReplace
-import io.legado.app.utils.externalCache
-import io.legado.app.utils.fromJsonObject
-import io.legado.app.utils.isAbsUrl
-import io.legado.app.utils.longToastOnUi
-import io.legado.app.utils.stackTraceStr
-import io.legado.app.utils.toStringArray
-import io.legado.app.utils.toastOnUi
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
