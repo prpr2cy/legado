@@ -7,9 +7,6 @@ import cn.hutool.core.codec.Base64
 import cn.hutool.core.util.HexUtil
 import com.github.khoben.libwoff2dec.Woff2Decoder
 import com.github.liuyueyi.quick.transfer.ChineseUtils
-import com.google.gson.Gson
-import com.google.gson.GsonBuilder
-import com.google.gson.reflect.TypeToken
 import io.legado.app.constant.AppConst
 import io.legado.app.constant.AppConst.dateFormat
 import io.legado.app.constant.AppLog
@@ -48,7 +45,6 @@ import kotlinx.coroutines.runBlocking
 import okio.use
 import org.jsoup.Connection
 import org.jsoup.Jsoup
-import org.mozilla.javascript.Scriptable
 import splitties.init.appCtx
 
 /**
@@ -431,49 +427,13 @@ interface JsExtensions : JsEncodeUtils {
         return response
     }
 
-    fun convertToMap(obj: Any?): Map<String, String> {
-        if (obj == null) return emptyMap()
-        return try {
-            when (obj) {
-                is Map<*, *> -> {
-                    obj.entries.associate { it.key.toString() to it.value.toString() }
-                }
-                is Scriptable -> {
-                    mutableMapOf<String, String>().apply {
-                        for (id in obj.ids) {
-                            val key = id.toString()
-                            this[key] = obj.get(key, obj)?.toString() ?: ""
-                        }
-                    }
-                }
-                is CharSequence -> {
-                    val jsonStr = obj.toString().trim()
-                    if (jsonStr.isBlank()) return emptyMap()
-                    val rawMap: Map<String, Any> = Gson().fromJson(
-                        jsonStr,
-                        object : TypeToken<Map<String, Any>>() {}.type
-                    ) ?: return emptyMap()
-                    rawMap.mapValues { (_, v) -> v.toString() }
-                }
-                else -> {
-                    AppLog.put("convertToMap: 不支持的类型 ${obj::class.java.simpleName}")
-                    emptyMap()
-                }
-            }
-        } catch (e: Exception) {
-            AppLog.put("convertToMap 转换失败: ${obj::class.java}, ${e.message}", e)
-            emptyMap()
-        }
+    fun toJsonStr(obj: Any?): String {
+        if (obj.isNullOrEmpty) return ""
+        return toJson(obj)
     }
 
-    fun mapToJson(map: Map<String, String>?): String? {
-        if (map.isNullOrEmpty()) {
-            return ""
-        }
-        val gson = GsonBuilder()
-            .disableHtmlEscaping()
-            .create()
-        return gson.toJson(map)
+    fun toMap(obj: Any?): MutableMap<String, String> {
+        return convertToMap(obj).toMutableMap()
     }
 
     /* Str转ByteArray */
