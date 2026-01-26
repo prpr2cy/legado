@@ -39,7 +39,10 @@ private fun Any?.isNullOrEmpty(): Boolean = when (this) {
 
 private fun Number.toJsonString(): String = when (this) {
     is Long, is Int, is Short, is Byte -> toString()
-    is Double && this % 1.0 == 0.0 -> toLong().toString()
+    is Double -> {
+        if (this % 1.0 == 0.0) toLong().toString()
+        else BigDecimal.valueOf(this).stripTrailingZeros().toPlainString()
+    }
     else -> BigDecimal.valueOf(toDouble()).stripTrailingZeros().toPlainString()
 }
 
@@ -134,7 +137,7 @@ private inline fun <T> collectionToMap(
     valueMapper: (Any?) -> T
 ): Map<String, T> = collectionToMap(array.asList(), valueMapper)
 
-private inline fun <T> parseToMapImpl+(
+private inline fun <T> parseToMapImpl(
     obj: Any?,
     valueMapper: (Any?) -> T
 ): Map<String, T> {
