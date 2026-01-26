@@ -428,12 +428,11 @@ interface JsExtensions : JsEncodeUtils {
     }
 
     fun toJsonStr(obj: Any?): String {
-        if (obj.isNullOrEmpty) return ""
         return toJson(obj)
     }
 
-    fun toMap(obj: Any?): MutableMap<String, String> {
-        return convertToMap(obj).toMutableMap()
+    fun convertToMap(obj: Any?): MutableMap<String, Any?> {
+        return parseToMap(obj).toMutableMap()
     }
 
     /* Str转ByteArray */
