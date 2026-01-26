@@ -48,10 +48,10 @@ private fun Number.toJsonString(): String = when (this) {
 
 private fun processUndefined(raw: Any?): Any? = when (raw) {
     null, undefined -> null
-    is Number -> if (raw is Double && raw % 1.0 == 0.0) {
-        raw.toLong()
-    } else raw
-    is String -> raw.toString()
+    is Number -> {
+        if (raw is Double && raw % 1.0 == 0.0) raw.toLong() else raw
+    }
+    is java.lang.String -> raw.toString()
     is Map<*, *> -> raw.mapValues { (_, v) -> processUndefined(v) }
     is List<*> -> raw.map { processUndefined(it) }
     is Array<*> -> raw.map { processUndefined(it) }
@@ -79,7 +79,7 @@ fun toJsonString(obj: Any?): String = when (obj) {
     null -> "null"
     is Boolean -> obj.toString()
     is Number -> obj.toJsonString()
-    is String -> gson.toJson(obj.toString())
+    is String -> gson.toJson(obj)
     is Map<*, *> -> gson.toJson(processUndefined(obj))
     is List<*> -> gson.toJson(processUndefined(obj))
     is Array<*> -> gson.toJson(processUndefined(obj))
@@ -91,7 +91,7 @@ private fun toAnyValue(raw: Any?): Any? = when (raw) {
     null, undefined -> null
     is Boolean -> raw
     is Number -> if (raw is Double && raw % 1.0 == 0.0) raw.toLong() else raw
-    is String -> raw.toString()
+    is java.lang.String -> raw.toString()
     is Map<*, *> -> raw.entries.associate { it.key.toString() to toAnyValue(it.value) }
     is List<*> -> raw.map { toAnyValue(it) }
     is Array<*> -> raw.map { toAnyValue(it) }
