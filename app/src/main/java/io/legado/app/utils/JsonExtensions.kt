@@ -157,28 +157,28 @@ fun parseToMap(obj: Any?): Map<String, String> {
             }.toMap()
             is NativeObject -> obj.ids.associate {
                 val key = it.toString()
-                key to toJson(obj.get(key, this))
+                key to toJson(obj.get(key, obj))
             }
             is NativeArray -> {
                 val len = obj.length
                 var isEntryList = true
                 for (i in 0 until len) {
-                    val row = obj.get(i, this)
+                    val row = obj.get(i, obj)
                     if (row !is NativeArray || row.length != 2L) {
                         isEntryList = false
                         break
                     }
                 }
                 if (isEntryList) {
-                    (0 until len).associate {
-                        val row = obj.get(it, this) as NativeArray
-                        val key = row.get(0, this)?.toString() ?: it.toString()
-                        val value = toJson(row.get(1, this))
+                    for (i in 0 until len) {
+                        val row = obj.get(i, obj) as NativeArray
+                        val key = row.get(0, row)?.toString() ?: it.toString()
+                        val value = toJson(row.get(1, row))
                         key to value
                     }
                 } else {
-                    (0 until len).associate {
-                        it.toString() to toJson(obj.get(it, this))
+                    for (i in 0 until len) {
+                        it.toString() to toJson(obj.get(i, obj))
                     }
                 }
             }
@@ -226,28 +226,28 @@ private fun flattenValue(value: Any?): Any? = when {
     }.toMap()
     value is NativeObject -> value.ids.associate { id ->
         val key = id.toString()
-        key to flattenValue(value.get(key, this))
+        key to flattenValue(value.get(key, value))
     }
     value is NativeArray -> {
         val len = value.length
         var isEntryList = true
         for (i in 0 until len) {
-            val row = value.get(i, this)
+            val row = value.get(i, value)
             if (row !is NativeArray || row.length != 2L) {
                 isEntryList = false
                 break
             }
         }
         if (isEntryList) {
-            (0 until len).associate { i ->
-                val row = value.get(i, this) as NativeArray
-                val key = row.get(0, this)?.toString() ?: i.toString()
-                val rowValue = flattenValue(row.get(1, this))
-                key to rowValue
+            for (i in 0 until len) {
+                val row = value.get(i, value) as NativeArray
+                val key = row.get(0, row)?.toString() ?: i.toString()
+                val value = flattenValue(row.get(1, row))
+                key to value
             }
         } else {
-            (0 until len).associate { i ->
-                i.toString() to flattenValue(value.get(i, this))
+            for (i in 0 until len) {
+                i.toString() to flattenValue(value.get(i, value))
             }
         }
     }
@@ -294,28 +294,28 @@ fun parseToMapWithAny(obj: Any?): Map<String, Any?> {
             }.toMap()
             is NativeObject -> obj.ids.associate {
                 val key = it.toString()
-                key to flattenValue(obj.get(key, this))
+                key to flattenValue(obj.get(key, obj))
             }
             is NativeArray -> {
                 val len = obj.length
                 var isEntryList = true
                 for (i in 0 until len) {
-                    val row = obj.get(i, this)
+                    val row = obj.get(i, obj)
                     if (row !is NativeArray || row.length != 2L) {
                         isEntryList = false
                         break
                     }
                 }
                 if (isEntryList) {
-                    (0 until len).associate {
-                        val row = obj.get(it, this) as NativeArray
-                        val key = row.get(0, this)?.toString() ?: it.toString()
-                        val value = flattenValue(row.get(1, this))
+                    for (i in 0 until len) {
+                        val row = obj.get(i, obj) as NativeArray
+                        val key = row.get(0, row)?.toString() ?: i.toString()
+                        val value = flattenValue(row.get(1, row))
                         key to value
                     }
                 } else {
-                    (0 until len).associate {
-                        it.toString() to flattenValue(obj.get(it, this))
+                    for (i in 0 until len) {
+                        i.toString() to flattenValue(obj.get(i, obj))
                     }
                 }
             }
