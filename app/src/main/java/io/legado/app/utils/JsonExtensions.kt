@@ -202,12 +202,12 @@ fun parseToMap(obj: Any?): Map<String, String> {
                 }
             }
             else -> {
-                AppLog.put("toMapWithString: 不支持的类型 ${obj!!::class.java.simpleName}")
+                AppLog.put("parseToMap: 不支持的类型 ${obj!!::class.java.simpleName}")
                 emptyMap()
             }
         }
     } catch (e: Exception) {
-        AppLog.put("toMapWithString 转换失败", e)
+        AppLog.put("parseToMap: 转换失败 ${obj!!::class.java.simpleName}", e)
         emptyMap()
     }
 }
@@ -259,7 +259,7 @@ private fun flattenValue(value: Any?): Any? = when (value) {
             }
         }
     }
-    is JsonElement -> when {
+    is JsonElement -> when (value) {
         isJsonNull -> null
         isJsonObject -> value.asJsonObject.entrySet().associate {
             it.key to flattenValue(it.value)
@@ -340,12 +340,12 @@ fun parseToMapWithAny(obj: Any?): Map<String, Any?> {
                 }
             }
             else -> {
-                AppLog.put("toMapWithAny: 不支持的类型 ${obj!!::class.java.simpleName}")
+                AppLog.put("parseToMapWithAny: 不支持的类型 ${obj!!::class.java.simpleName}")
                 emptyMap()
             }
         }
     } catch (e: Exception) {
-        AppLog.put("toMapWithAny 转换失败", e)
+        AppLog.put("parseToMapWithAny: 转换失败 ${obj!!::class.java.simpleName}", e)
         emptyMap()
     }
 }
