@@ -54,7 +54,7 @@ private fun toJsonFragment(value: Any?): String = when (value) {
     else -> {
         val context = Context.getCurrentContext()
         if (context != null) {
-            gson.toJson(Context.toString(context, value))
+            gson.toJson(Context.toString(value))
         } else {
             gson.toJson(value)
         }
@@ -104,6 +104,22 @@ fun NativeArray.toJson(): String = buildString {
     append(']')
 }
 
+fun JsonElement.toJson(): String = when {
+    isJsonNull -> "null"
+    isJsonObject -> gson.toJson(asJsonObject)
+    isJsonArray -> gson.toJson(asJsonArray)
+    isJsonPrimitive -> {
+        val json = asJsonPrimitive
+        when {
+            json.isBoolean -> json.asBoolean.toString()
+            json.isString -> json.asString
+            json.isNumber -> json.asBigDecimal.stripTrailingZeros().toPlainString()
+            else -> json.toString()
+        }
+    }
+    else -> toString()
+}
+
 /**
  * 通用对象转 JSON 字符串
  */
@@ -115,6 +131,7 @@ fun toJson(obj: Any?): String {
         obj is Array<*> -> gson.toJson(obj)
         obj is NativeArray -> obj.toJson()
         obj is NativeObject -> obj.toJson()
+        obj is JsonElement -> obj.toJson()
         else -> obj.toString()
     }
 }
@@ -173,12 +190,11 @@ private fun flattenValue(value: Any?): Any? = when {
         value.isJsonPrimitive -> with(value.asJsonPrimitive) {
             when {
                 isBoolean -> asBoolean
-                isNumber -> asNumber.let {
-                    if (ceil(it.toDouble()) == it.toLong().toDouble()) {
-                        it.toLong()
-                    } else {
-                        it.toDouble()
-                    }
+                isNumber -> {
+                    val num = asNumber
+                    val double = num.toDouble()
+                    val long = num.toLong()
+                    if (ceil(double) == long.toDouble()) long else double
                 }
                 isString -> asString
                 else -> toString()
@@ -190,25 +206,25 @@ private fun flattenValue(value: Any?): Any? = when {
 }
 
 /**
- * 将任意类型转换为 Map<String, Any?>
+ * 将任意类型转换为 Map<String, String>
  */
-fun parseToMap(obj: Any?): Map<String, Any?> {
+fun parseToMap(obj: Any?): Map<String, String> {
     if (obj.isNullOrEmpty()) return emptyMap()
 
     return try {
         when (obj) {
             is Map<*, *> -> obj.entries.associate {
-                it.key.toString() to flattenValue(it.value)
+                it.key.toString() to toJson(it.value)
             }
             is List<*> -> obj.mapIndexed { index, value ->
-                index.toString() to flattenValue(value)
+                index.toString() to toJson(value)
             }.toMap()
             is Array<*> -> obj.mapIndexed { index, value ->
-                index.toString() to flattenValue(value)
+                index.toString() to toJson(value)
             }.toMap()
-            is NativeObject -> obj.ids.associate { id ->
-                val key = id.toString()
-                key to flattenValue(obj.get(key, obj))
+            is NativeObject -> obj.ids.associate {
+                val key = it.toString()
+                key to toJson(obj.get(key, obj))
             }
             is NativeArray -> {
                 val len = obj.length
@@ -221,15 +237,15 @@ fun parseToMap(obj: Any?): Map<String, Any?> {
                     }
                 }
                 if (isEntryList) {
-                    (0 until len).associate { i ->
-                        val row = obj.get(i, obj) as NativeArray
-                        val key = row.get(0, row)?.toString() ?: i.toString()
-                        val value = flattenValue(row.get(1, row))
+                    (0 until len).associate {
+                        val row = obj.get(it, obj) as NativeArray
+                        val key = row.get(0, row)?.toString() ?: it.toString()
+                        val value = toJson(row.get(1, row))
                         key to value
                     }
                 } else {
-                    (0 until len).associate { i ->
-                        i.toString() to flattenValue(obj.get(i, obj))
+                    (0 until len).associate {
+                        it.toString() to toJson(obj.get(it, obj))
                     }
                 }
             }
@@ -240,10 +256,10 @@ fun parseToMap(obj: Any?): Map<String, Any?> {
                 val json = JsonParser.parseString(str)
                 when {
                     json.isJsonObject -> json.asJsonObject.entrySet().associate {
-                        it.key to flattenValue(it.value)
+                        it.key to toJson(it.value)
                     }
-                    json.isJsonArray -> json.asJsonArray.mapIndexed { i, v ->
-                        i.toString() to flattenValue(v)
+                    json.isJsonArray -> json.asJsonArray.mapIndexed { index, value ->
+                        index.toString() to toJson(value)
                     }.toMap()
                     else -> emptyMap()
                 }
