@@ -37,7 +37,7 @@ private fun Any?.isNullOrEmpty(): Boolean = when (this) {
     is Collection<*> -> this.isEmpty()
     is Array<*> -> this.isEmpty()
     is Map<*, *> -> this.isEmpty()
-    is NativeArray -> this.length == 0
+    is NativeArray -> this.length == 0L
     is NativeObject -> this.ids.isEmpty()
     else -> false
 }
@@ -157,28 +157,28 @@ fun parseToMap(obj: Any?): Map<String, String> {
             }.toMap()
             is NativeObject -> obj.ids.associate {
                 val key = it.toString()
-                key to toJson(obj.get(key, obj))
+                key to toJson(obj.get(key, this))
             }
             is NativeArray -> {
                 val len = obj.length
                 var isEntryList = true
                 for (i in 0 until len) {
-                    val row = obj.get(i, obj)
-                    if (row !is NativeArray || row.length != 2) {
+                    val row = obj.get(i, this)
+                    if (row !is NativeArray || row.length != 2L) {
                         isEntryList = false
                         break
                     }
                 }
                 if (isEntryList) {
                     (0 until len).associate {
-                        val row = obj.get(it, obj) as NativeArray
-                        val key = row.get(0, row)?.toString() ?: it.toString()
-                        val value = toJson(row.get(1, row))
+                        val row = obj.get(it, this) as NativeArray
+                        val key = row.get(0, this)?.toString() ?: it.toString()
+                        val value = toJson(row.get(1, this))
                         key to value
                     }
                 } else {
                     (0 until len).associate {
-                        it.toString() to toJson(obj.get(it, obj))
+                        it.toString() to toJson(obj.get(it, this))
                     }
                 }
             }
@@ -198,7 +198,7 @@ fun parseToMap(obj: Any?): Map<String, String> {
                 }
             }
             else -> {
-                AppLog.put("toMapWithString: 不支持的类型 ${obj::class.java.simpleName}")
+                AppLog.put("toMapWithString: 不支持的类型 ${obj!!::class.java.simpleName}")
                 emptyMap()
             }
         }
@@ -226,28 +226,28 @@ private fun flattenValue(value: Any?): Any? = when {
     }.toMap()
     value is NativeObject -> value.ids.associate { id ->
         val key = id.toString()
-        key to flattenValue(value.get(key, value))
+        key to flattenValue(value.get(key, this))
     }
     value is NativeArray -> {
         val len = value.length
         var isEntryList = true
         for (i in 0 until len) {
-            val row = value.get(i, value)
-            if (row !is NativeArray || row.length != 2) {
+            val row = value.get(i, this)
+            if (row !is NativeArray || row.length != 2L) {
                 isEntryList = false
                 break
             }
         }
         if (isEntryList) {
             (0 until len).associate { i ->
-                val row = value.get(i, value) as NativeArray
-                val key = row.get(0, row)?.toString() ?: i.toString()
-                val rowValue = flattenValue(row.get(1, row))
+                val row = value.get(i, this) as NativeArray
+                val key = row.get(0, this)?.toString() ?: i.toString()
+                val rowValue = flattenValue(row.get(1, this))
                 key to rowValue
             }
         } else {
             (0 until len).associate { i ->
-                i.toString() to flattenValue(value.get(i, value))
+                i.toString() to flattenValue(value.get(i, this))
             }
         }
     }
@@ -294,28 +294,28 @@ fun parseToMapWithAny(obj: Any?): Map<String, Any?> {
             }.toMap()
             is NativeObject -> obj.ids.associate {
                 val key = it.toString()
-                key to flattenValue(obj.get(key, obj))
+                key to flattenValue(obj.get(key, this))
             }
             is NativeArray -> {
                 val len = obj.length
                 var isEntryList = true
                 for (i in 0 until len) {
-                    val row = obj.get(i, obj)
-                    if (row !is NativeArray || row.length != 2) {
+                    val row = obj.get(i, this)
+                    if (row !is NativeArray || row.length != 2L) {
                         isEntryList = false
                         break
                     }
                 }
                 if (isEntryList) {
                     (0 until len).associate {
-                        val row = obj.get(it, obj) as NativeArray
-                        val key = row.get(0, row)?.toString() ?: it.toString()
-                        val value = flattenValue(row.get(1, row))
+                        val row = obj.get(it, this) as NativeArray
+                        val key = row.get(0, this)?.toString() ?: it.toString()
+                        val value = flattenValue(row.get(1, this))
                         key to value
                     }
                 } else {
                     (0 until len).associate {
-                        it.toString() to flattenValue(obj.get(it, obj))
+                        it.toString() to flattenValue(obj.get(it, this))
                     }
                 }
             }
@@ -335,7 +335,7 @@ fun parseToMapWithAny(obj: Any?): Map<String, Any?> {
                 }
             }
             else -> {
-                AppLog.put("toMapWithAny: 不支持的类型 ${obj::class.java.simpleName}")
+                AppLog.put("toMapWithAny: 不支持的类型 ${obj!!::class.java.simpleName}")
                 emptyMap()
             }
         }
