@@ -432,7 +432,7 @@ interface JsExtensions : JsEncodeUtils {
     }
 
     fun convertToMap(obj: Any?): MutableMap<String, Any?> {
-        return parseToMap(obj).toMutableMap()
+        return parseToMapWithAny(obj).toMutableMap()
     }
 
     /* Str转ByteArray */
