@@ -39,12 +39,13 @@ private fun Any?.isNullOrEmpty(): Boolean = when (this) {
 
 private fun Number.toJsonString(): String = when (this) {
     is Long, is Int, is Short, is Byte -> toString()
-    is Double && % 1.0 == 0.0 -> toLong().toString()
+    is Double && this % 1.0 == 0.0 -> toLong().toString()
     else -> BigDecimal.valueOf(toDouble()).stripTrailingZeros().toPlainString()
 }
 
 private fun processUndefined(raw: Any?): Any? = when (raw) {
     undefined -> null
+    is String -> raw.toString()
     is Map<*, *> -> raw.mapValues { (_, v) -> processUndefined(v) }
     is List<*> -> raw.map { processUndefined(it) }
     is Array<*> -> raw.map { processUndefined(it) }
@@ -84,6 +85,7 @@ private fun toAnyValue(raw: Any?): Any? = when (raw) {
     null -> null
     is Boolean -> raw
     is Number -> if (raw is Double && raw % 1.0 == 0.0) raw.toLong() else raw
+    is String -> raw.toString()
     is Map<*, *> -> raw.entries.associate { it.key.toString() to toAnyValue(it.value) }
     is List<*> -> raw.map { toAnyValue(it) }
     is Array<*> -> raw.map { toAnyValue(it) }
@@ -94,7 +96,7 @@ private fun toAnyValue(raw: Any?): Any? = when (raw) {
         }
         raw.isJsonArray -> raw.asJsonArray.mapIndexed { index, value ->
             index.toString() to toAnyValue(value)
-        }.toMap()
+        }
         raw.isJsonPrimitive -> with(raw.asJsonPrimitive) {
             when {
                 isBoolean -> asBoolean
@@ -132,7 +134,7 @@ private inline fun <T> collectionToMap(
     valueMapper: (Any?) -> T
 ): Map<String, T> = collectionToMap(array.asList(), valueMapper)
 
-private inline fun <T> parseToMapImpl(
+private inline fun <T> parseToMapImpl+(
     obj: Any?,
     valueMapper: (Any?) -> T
 ): Map<String, T> {
@@ -152,7 +154,7 @@ private inline fun <T> parseToMapImpl(
                         .associate { it.key to valueMapper(it.value) }
                     json.isJsonArray -> json.asJsonArray
                         .mapIndexed { i, v -> i.toString() to valueMapper(v) }
-                            .associate { it.first to it.second }
+                        .associate { it.first to it.second }
                     else -> emptyMap()
                 }
             }
