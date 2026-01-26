@@ -132,7 +132,7 @@ fun JsonElement.toJson(): String = when {
  * 通用对象转 JSON 字符串
  */
 fun toJsonString(obj: Any?): String = when (obj) {
-    obj.isNullOrEmpty() -> ""
+    null -> ""
     is Map<*, *> -> gson.toJson(obj)
     is List<*> -> gson.toJson(obj)
     is Array<*> -> gson.toJson(obj)
