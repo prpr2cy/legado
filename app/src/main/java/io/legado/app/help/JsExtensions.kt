@@ -427,16 +427,20 @@ interface JsExtensions : JsEncodeUtils {
         return response
     }
 
-    fun toJsonStr(obj: Any?): String {
-        return toJson(obj)
+    fun toJson(obj: Any?): String {
+        return toJsonString(obj)
     }
 
     fun convertToMap(obj: Any?): MutableMap<String, String> {
         return parseToMap(obj).toMutableMap()
     }
 
-    fun convertToMapWithAny(obj: Any?): MutableMap<String, Any?> {
-        return parseToMapWithAny(obj).toMutableMap()
+    fun convertToMap(obj: Any?, flag: Boolean): MutableMap<String, Any?> {
+        return if (flag) {
+            parseToMapWithAny(obj).toMutableMap()
+        } else {
+            parseToMap(obj).toMutableMap()
+        }
     }
 
     /* Str转ByteArray */
