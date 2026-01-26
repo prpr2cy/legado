@@ -160,7 +160,7 @@ fun parseToMap(obj: Any?): Map<String, String> {
                 key to toJson(obj.get(key, obj))
             }
             is NativeArray -> {
-                val len = obj.length
+                val len = obj.length.toInt()
                 var isEntryList = true
                 for (i in 0 until len) {
                     val row = obj.get(i, obj)
@@ -229,7 +229,7 @@ private fun flattenValue(value: Any?): Any? = when {
         key to flattenValue(value.get(key, value))
     }
     value is NativeArray -> {
-        val len = value.length
+        val len = value.length.toInt()
         var isEntryList = true
         for (i in 0 until len) {
             val row = value.get(i, value)
@@ -297,7 +297,7 @@ fun parseToMapWithAny(obj: Any?): Map<String, Any?> {
                 key to flattenValue(obj.get(key, obj))
             }
             is NativeArray -> {
-                val len = obj.length
+                val len = obj.length.toInt()
                 var isEntryList = true
                 for (i in 0 until len) {
                     val row = obj.get(i, obj)
