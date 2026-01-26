@@ -117,7 +117,7 @@ fun JsonElement.toJson(): String = when {
     isJsonNull -> "null"
     isJsonObject -> gson.toJson(asJsonObject)
     isJsonArray -> gson.toJson(asJsonArray)
-    isJsonPrimitive -> with(value.asJsonPrimitive) {
+    isJsonPrimitive -> with(asJsonPrimitive) {
         when {
             isBoolean -> asBoolean.toString()
             isString -> asString
@@ -151,19 +151,24 @@ fun parseToMap(obj: Any?): Map<String, String> {
     return try {
         when (obj) {
             is Map<*, *> -> obj.entries.associate {
+                AppLog.put("Map")
                 it.key.toString() to toJsonString(it.value)
             }
             is List<*> -> obj.mapIndexed { index, value ->
+                AppLog.put("List")
                 index.toString() to toJsonString(value)
             }.toMap()
             is Array<*> -> obj.mapIndexed { index, value ->
+                AppLog.put("Array")
                 index.toString() to toJsonString(value)
             }.toMap()
             is NativeObject -> obj.ids.associate {
+                AppLog.put("NativeObject")
                 val key = it.toString()
                 key to toJsonString(obj.get(key, obj))
             }
             is NativeArray -> {
+                AppLog.put("NativeArray")
                 val len = obj.length.toInt()
                 var isEntryList = true
                 for (i in 0 until len) {
@@ -187,6 +192,7 @@ fun parseToMap(obj: Any?): Map<String, String> {
                 }
             }
             is CharSequence -> {
+                AppLog.put("CharSequence")
                 val json = JsonParser.parseString(obj.toString())
                 when {
                     json.isJsonObject -> json.asJsonObject.entrySet().associate {
@@ -289,19 +295,24 @@ fun parseToMapWithAny(obj: Any?): Map<String, Any?> {
     return try {
         when (obj) {
             is Map<*, *> -> obj.entries.associate {
+                AppLog.put("Map")
                 it.key.toString() to flattenValue(it.value)
             }
             is List<*> -> obj.mapIndexed { index, value ->
+                AppLog.put("List")
                 index.toString() to flattenValue(value)
             }.toMap()
             is Array<*> -> obj.mapIndexed { index, value ->
+                AppLog.put("Array")
                 index.toString() to flattenValue(value)
             }.toMap()
             is NativeObject -> obj.ids.associate {
+                AppLog.put("NativeObject")
                 val key = it.toString()
                 key to flattenValue(obj.get(key, obj))
             }
             is NativeArray -> {
+                AppLog.put("NativeArray")
                 val len = obj.length.toInt()
                 var isEntryList = true
                 for (i in 0 until len) {
@@ -325,6 +336,7 @@ fun parseToMapWithAny(obj: Any?): Map<String, Any?> {
                 }
             }
             is CharSequence -> {
+                AppLog.put("CharSequence")
                 val json = JsonParser.parseString(obj.toString())
                 when {
                     json.isJsonObject -> json.asJsonObject.entrySet().associate {
