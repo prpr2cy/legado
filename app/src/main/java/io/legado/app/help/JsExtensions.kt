@@ -365,7 +365,7 @@ interface JsExtensions : JsEncodeUtils {
     @Suppress("UnnecessaryVariable")
     fun get(url: Any, headers: Any): Connection.Response {
         val urlStr = url.toString()
-        val headersMap = convertToMap(headers)
+        val headersMap = parseToMap(headers)
         val requestHeaders = if (getSource()?.enabledCookieJar == true) {
             headersMap.toMutableMap().apply { put(cookieJarHeader, "1") }
         } else headersMap
@@ -387,7 +387,7 @@ interface JsExtensions : JsEncodeUtils {
     @Suppress("UnnecessaryVariable")
     fun head(url: Any, headers: Any): Connection.Response {
         val urlStr = url.toString()
-        val headersMap = convertToMap(headers)
+        val headersMap = parseToMap(headers)
         val requestHeaders = if (getSource()?.enabledCookieJar == true) {
             headersMap.toMutableMap().apply { put(cookieJarHeader, "1") }
         } else headersMap
@@ -410,7 +410,7 @@ interface JsExtensions : JsEncodeUtils {
     fun post(url: Any, body: Any, headers: Any): Connection.Response {
         val urlStr = url.toString()
         val bodyStr = body.toString()
-        val headersMap = convertToMap(headers)
+        val headersMap = parseToMap(headers)
         val requestHeaders = if (getSource()?.enabledCookieJar == true) {
             headersMap.toMutableMap().apply { put(cookieJarHeader, "1") }
         } else headersMap
@@ -431,7 +431,11 @@ interface JsExtensions : JsEncodeUtils {
         return toJson(obj)
     }
 
-    fun convertToMap(obj: Any?): MutableMap<String, Any?> {
+    fun convertToMap(obj: Any?): MutableMap<String, String> {
+        return parseToMap(obj).toMutableMap()
+    }
+
+    fun convertToMapWithAny(obj: Any?): MutableMap<String, Any?> {
         return parseToMapWithAny(obj).toMutableMap()
     }
 
