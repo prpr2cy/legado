@@ -39,6 +39,7 @@ private fun Any?.isNullOrEmpty(): Boolean = when (this) {
 
 private fun Number.toJsonString(): String = when (this) {
     is Long, is Int, is Short, is Byte -> toString()
+    is Double && % 1.0 == 0.0 -> toLong().toString()
     else -> BigDecimal.valueOf(toDouble()).stripTrailingZeros().toPlainString()
 }
 
