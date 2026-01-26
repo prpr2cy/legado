@@ -37,7 +37,7 @@ private fun Any?.isNullOrEmpty(): Boolean = when (this) {
     is Collection<*> -> this.isEmpty()
     is Array<*> -> this.isEmpty()
     is Map<*, *> -> this.isEmpty()
-    is NativeArray -> this.length == 0L
+    is NativeArray -> this.length.toInt() == 0
     is NativeObject -> this.ids.isEmpty()
     else -> false
 }
@@ -47,7 +47,14 @@ private fun Any?.isNullOrEmpty(): Boolean = when (this) {
  */
 private fun toJsonFragment(value: Any?): String = when (value) {
     null -> "null"
-    is Number -> value.toString()
+    is Number -> {
+        val num = it.toDouble()
+        if (num % 1 == 0.0) {
+            it.toLong().toString()
+        } else {
+            num.toString()
+        }
+    }
     is Boolean -> value.toString()
     is String -> gson.toJson(value)
     else -> {
@@ -164,7 +171,7 @@ fun parseToMap(obj: Any?): Map<String, String> {
                 var isEntryList = true
                 for (i in 0 until len) {
                     val row = obj.get(i, obj)
-                    if (row !is NativeArray || row.length != 2L) {
+                    if (row !is NativeArray || row.length.toInt() != 2) {
                         isEntryList = false
                         break
                     }
@@ -183,10 +190,7 @@ fun parseToMap(obj: Any?): Map<String, String> {
                 }
             }
             is CharSequence -> {
-                val str = obj.toString().trim()
-                if (str.isBlank()) return emptyMap()
-
-                val json = JsonParser.parseString(str)
+                val json = JsonParser.parseString(str.toString())
                 when {
                     json.isJsonObject -> json.asJsonObject.entrySet().associate {
                         it.key to toJson(it.value)
@@ -213,7 +217,11 @@ fun parseToMap(obj: Any?): Map<String, String> {
  */
 private fun flattenValue(value: Any?): Any? = when {
     value == null -> null
-    value is Boolean || value is Number -> value
+    value is Boolean -> value
+    value is Number -> {
+        val num = it.toDouble()
+        if (num % 1 == 0.0) num.toLong() else num
+    }
     value is String -> value.toString()
     value is Map<*, *> -> value.entries.associate {
         it.key.toString() to flattenValue(it.value)
@@ -233,7 +241,7 @@ private fun flattenValue(value: Any?): Any? = when {
         var isEntryList = true
         for (i in 0 until len) {
             val row = value.get(i, value)
-            if (row !is NativeArray || row.length != 2L) {
+            if (row !is NativeArray || row.length.toInt() != 2) {
                 isEntryList = false
                 break
             }
@@ -256,15 +264,15 @@ private fun flattenValue(value: Any?): Any? = when {
         value.isJsonObject -> value.asJsonObject.entrySet().associate {
             it.key to flattenValue(it.value)
         }
-        value.isJsonArray -> value.asJsonArray.mapIndexed { i, e ->
-            i.toString() to flattenValue(e)
+        value.isJsonArray -> value.asJsonArray.mapIndexed { i, v ->
+            i.toString() to flattenValue(v)
         }.toMap()
         value.isJsonPrimitive -> with(value.asJsonPrimitive) {
             when {
                 isBoolean -> asBoolean
                 isNumber -> asNumber.let {
                     val num = it.toDouble()
-                    if (num % 1 == 0.0) it.toLong() else num
+                    if (num % 1 == 0.0) num.toLong() else num
                 }
                 isString -> asString
                 else -> toString()
@@ -301,7 +309,7 @@ fun parseToMapWithAny(obj: Any?): Map<String, Any?> {
                 var isEntryList = true
                 for (i in 0 until len) {
                     val row = obj.get(i, obj)
-                    if (row !is NativeArray || row.length != 2L) {
+                    if (row !is NativeArray || row.length.toInt() != 2) {
                         isEntryList = false
                         break
                     }
@@ -320,9 +328,6 @@ fun parseToMapWithAny(obj: Any?): Map<String, Any?> {
                 }
             }
             is CharSequence -> {
-                val str = obj.toString().trim()
-                if (str.isBlank()) return emptyMap()
-
                 val json = JsonParser.parseString(str)
                 when {
                     json.isJsonObject -> json.asJsonObject.entrySet().associate {
