@@ -33,12 +33,13 @@ private val gson by lazy { GsonBuilder().disableHtmlEscaping().create() }
  */
 private fun Any?.isNullOrEmpty(): Boolean = when (this) {
     null -> true
-    is CharSequence -> this.isBlank()
-    is Collection<*> -> this.isEmpty()
-    is Array<*> -> this.isEmpty()
-    is Map<*, *> -> this.isEmpty()
     is NativeArray -> this.length.toInt() == 0
     is NativeObject -> this.ids.isEmpty()
+    is CharSequence -> this.isBlank()
+    is Collection<*> -> this.isEmpty()
+    is Map<*, *> -> this.isEmpty()
+    is List<*> -> this.isEmpty()
+    is Array<*> -> this.isEmpty()
     else -> false
 }
 
@@ -133,12 +134,12 @@ fun JsonElement.toJson(): String = when {
  */
 fun toJsonString(obj: Any?): String = when (obj) {
     null -> ""
-    is Map<*, *> -> gson.toJson(obj)
-    is List<*> -> gson.toJson(obj)
-    is Array<*> -> gson.toJson(obj)
     is NativeArray -> obj.toJson()
     is NativeObject -> obj.toJson()
     is JsonElement -> obj.toJson()
+    is Map<*, *> -> gson.toJson(obj)
+    is List<*> -> gson.toJson(obj)
+    is Array<*> -> gson.toJson(obj)
     else -> obj.toString()
 }
 
@@ -150,18 +151,6 @@ fun parseToMap(obj: Any?): Map<String, String> {
 
     return try {
         when (obj) {
-            is Map<*, *> -> obj.entries.associate {
-                AppLog.put("Map")
-                it.key.toString() to toJsonString(it.value)
-            }
-            is List<*> -> obj.mapIndexed { index, value ->
-                AppLog.put("List")
-                index.toString() to toJsonString(value)
-            }.toMap()
-            is Array<*> -> obj.mapIndexed { index, value ->
-                AppLog.put("Array")
-                index.toString() to toJsonString(value)
-            }.toMap()
             is NativeObject -> obj.ids.associate {
                 AppLog.put("NativeObject")
                 val key = it.toString()
@@ -204,6 +193,18 @@ fun parseToMap(obj: Any?): Map<String, String> {
                     else -> emptyMap()
                 }
             }
+            is Map<*, *> -> obj.entries.associate {
+                AppLog.put("Map")
+                it.key.toString() to toJsonString(it.value)
+            }
+            is List<*> -> obj.mapIndexed { index, value ->
+                AppLog.put("List")
+                index.toString() to toJsonString(value)
+            }.toMap()
+            is Array<*> -> obj.mapIndexed { index, value ->
+                AppLog.put("Array")
+                index.toString() to toJsonString(value)
+            }.toMap()
             else -> {
                 AppLog.put("parseToMap: 不支持的类型 ${obj!!::class.java.simpleName}")
                 emptyMap()
@@ -225,16 +226,6 @@ private fun flattenValue(value: Any?): Any? = when (value) {
         val num = value.toDouble()
         if (num % 1 == 0.0) num.toLong() else num
     }
-    is String -> value.toString()
-    is Map<*, *> -> value.entries.associate {
-        it.key.toString() to flattenValue(it.value)
-    }
-    is List<*> -> value.mapIndexed { i, v ->
-        i.toString() to flattenValue(v)
-    }.toMap()
-    is Array<*> -> value.mapIndexed { i, v ->
-        i.toString() to flattenValue(v)
-    }.toMap()
     is NativeObject -> value.ids.associate {
         val key = it.toString()
         key to flattenValue(value.get(key, value))
@@ -283,6 +274,15 @@ private fun flattenValue(value: Any?): Any? = when (value) {
         }
         else -> value.toString()
     }
+    is Map<*, *> -> value.entries.associate {
+        it.key.toString() to flattenValue(it.value)
+    }
+    is List<*> -> value.mapIndexed { i, v ->
+        i.toString() to flattenValue(v)
+    }.toMap()
+    is Array<*> -> value.mapIndexed { i, v ->
+        i.toString() to flattenValue(v)
+    }.toMap()
     else -> value.toString()
 }
 
@@ -294,18 +294,6 @@ fun parseToMapWithAny(obj: Any?): Map<String, Any?> {
 
     return try {
         when (obj) {
-            is Map<*, *> -> obj.entries.associate {
-                AppLog.put("Map")
-                it.key.toString() to flattenValue(it.value)
-            }
-            is List<*> -> obj.mapIndexed { index, value ->
-                AppLog.put("List")
-                index.toString() to flattenValue(value)
-            }.toMap()
-            is Array<*> -> obj.mapIndexed { index, value ->
-                AppLog.put("Array")
-                index.toString() to flattenValue(value)
-            }.toMap()
             is NativeObject -> obj.ids.associate {
                 AppLog.put("NativeObject")
                 val key = it.toString()
@@ -348,6 +336,18 @@ fun parseToMapWithAny(obj: Any?): Map<String, Any?> {
                     else -> emptyMap()
                 }
             }
+            is Map<*, *> -> obj.entries.associate {
+                AppLog.put("Map")
+                it.key.toString() to flattenValue(it.value)
+            }
+            is List<*> -> obj.mapIndexed { index, value ->
+                AppLog.put("List")
+                index.toString() to flattenValue(value)
+            }.toMap()
+            is Array<*> -> obj.mapIndexed { index, value ->
+                AppLog.put("Array")
+                index.toString() to flattenValue(value)
+            }.toMap()
             else -> {
                 AppLog.put("parseToMapWithAny: 不支持的类型 ${obj!!::class.java.simpleName}")
                 emptyMap()
