@@ -229,10 +229,10 @@ private fun flattenValue(value: Any?): Any? = when {
         key to flattenValue(value.get(key, value))
     }
     value is NativeArray -> {
-        val len = obj.length
+        val len = value.length
         var isEntryList = true
         for (i in 0 until len) {
-            val row = obj.get(i, obj)
+            val row = value.get(i, value)
             if (row !is NativeArray || row.length != 2L) {
                 isEntryList = false
                 break
@@ -240,14 +240,14 @@ private fun flattenValue(value: Any?): Any? = when {
         }
         if (isEntryList) {
             for (i in 0 until len) {
-                val row = obj.get(i, obj) as NativeArray
+                val row = value.get(i, value) as NativeArray
                 val rowKey = row.get(0, row)?.toString() ?: i.toString()
                 val rowValue = flattenValue(row.get(1, row))
                 rowKey to rowValue
             }
         } else {
             for (i in 0 until len) {
-                i.toString() to flattenValue(obj.get(i, obj))
+                i.toString() to flattenValue(value.get(i, value))
             }
         }
     }
