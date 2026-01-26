@@ -9,9 +9,8 @@ import com.jayway.jsonpath.Option
 import com.jayway.jsonpath.ParseContext
 import com.jayway.jsonpath.ReadContext
 import io.legado.app.constant.AppLog
-import org.mozilla.javascript.Context
-import org.mozilla.javascript.NativeArray
-import org.mozilla.javascript.NativeObject
+import java.math.BigDecimal
+import org.mozilla.javascript.Undefined
 
 val jsonPath: ParseContext by lazy {
     JsonPath.using(
@@ -21,340 +20,154 @@ val jsonPath: ParseContext by lazy {
     )
 }
 
-fun ReadContext.readString(path: String): String? = this.read(path, String::class.java)
-fun ReadContext.readBool(path: String): Boolean? = this.read(path, Boolean::class.java)
-fun ReadContext.readInt(path: String): Int? = this.read(path, Int::class.java)
-fun ReadContext.readLong(path: String): Long? = this.read(path, Long::class.java)
+fun ReadContext.readString(path: String): String? = read(path, String::class.java)
+fun ReadContext.readBool(path: String): Boolean? = read(path, Boolean::class.java)
+fun ReadContext.readInt(path: String): Int? = read(path, Int::class.java)
+fun ReadContext.readLong(path: String): Long? = read(path, Long::class.java)
 
 private val gson by lazy { GsonBuilder().disableHtmlEscaping().create() }
+private val undefined = Undefined.instance
 
-/**
- * 扩展函数：检查是否为空
- */
 private fun Any?.isNullOrEmpty(): Boolean = when (this) {
-    null -> true
-    is NativeArray -> this.length.toInt() == 0
-    is NativeObject -> this.ids.isEmpty()
-    is CharSequence -> this.isBlank()
-    is Collection<*> -> this.isEmpty()
-    is Map<*, *> -> this.isEmpty()
-    is List<*> -> this.isEmpty()
-    is Array<*> -> this.isEmpty()
+    null, undefined -> true
+    is CharSequence -> isBlank()
+    is Map<*, *> -> isEmpty()
+    is List<*> -> isEmpty()
+    is Array<*> -> isEmpty()
     else -> false
 }
 
-/**
- * 将 jsValue 转换为 JSON 片段字符串
- */
-private fun toJsonFragment(value: Any?): String = when (value) {
-    null -> "null"
-    is Number -> {
-        val num = value.toDouble()
-        if (num % 1 == 0.0) {
-            num.toLong().toString()
-        } else {
-            num.toString()
-        }
-    }
-    is Boolean -> value.toString()
-    is String -> gson.toJson(value)
-    else -> {
-        val context = Context.getCurrentContext()
-        if (context != null) {
-            gson.toJson(Context.toString(value))
-        } else {
-            gson.toJson(value)
-        }
-    }
+private fun Number.toJsonString(): String = when (this) {
+    is Long, is Int, is Short, is Byte -> toString()
+    else -> BigDecimal.valueOf(toDouble()).stripTrailingZeros().toPlainString()
 }
 
-/**
- * NativeObject 转换为 JSON 字符串
- */
-fun NativeObject.toJson(): String = buildString {
-    append('{')
-    var first = true
-    for (id in ids) {
-        if (!first) append(',')
-        first = false
-        val key = id.toString()
-        val value = get(key, this@toJson)
-        append(gson.toJson(key))
-        append(':')
-        append(
-            when (value) {
-                is NativeArray -> value.toJson()
-                is NativeObject -> value.toJson()
-                else -> toJsonFragment(value)
-            }
-        )
-    }
-    append('}')
+private fun processUndefined(raw: Any?): Any? = when (raw) {
+    undefined -> null
+    is Map<*, *> -> raw.mapValues { (_, v) -> processUndefined(v) }
+    is List<*> -> raw.map { processUndefined(it) }
+    is Array<*> -> raw.map { processUndefined(it) }
+    else -> raw
 }
 
-/**
- * NativeArray 转换为 JSON 字符串
- */
-fun NativeArray.toJson(): String = buildString {
-    append('[')
-    for (i in 0 until length) {
-        if (i > 0) append(',')
-        val value = get(i, this@toJson)
-        append(
-            when (value) {
-                is NativeArray -> value.toJson()
-                is NativeObject -> value.toJson()
-                else -> toJsonFragment(value)
-            }
-        )
-    }
-    append(']')
-}
-
-/**
- * JsonElement 转换为 JSON 字符串
- */
 fun JsonElement.toJson(): String = when {
     isJsonNull -> "null"
-    isJsonObject -> gson.toJson(asJsonObject)
-    isJsonArray -> gson.toJson(asJsonArray)
-    isJsonPrimitive -> with(asJsonPrimitive) {
+    isJsonObject -> asJsonObject.entrySet()
+        .joinToString(",", "{", "}") { "\"${it.key}\":${it.value.toJson()}" }
+    isJsonArray -> asJsonArray
+        .joinToString(",", "[", "]") { it.toJson() }
+    isJsonPrimitive -> asJsonPrimitive.let {
         when {
-            isBoolean -> asBoolean.toString()
-            isString -> asString
-            isNumber -> asBigDecimal.stripTrailingZeros().toPlainString()
-            else -> toString()
+            it.isBoolean -> it.asBoolean.toString()
+            it.isNumber -> it.asBigDecimal.stripTrailingZeros().toPlainString()
+            it.isString -> gson.toJson(it.asString)
+            else -> it.toString()
         }
     }
     else -> toString()
 }
 
-/**
- * 通用对象转 JSON 字符串
- */
 fun toJsonString(obj: Any?): String = when (obj) {
-    null -> ""
-    is NativeArray -> obj.toJson()
-    is NativeObject -> obj.toJson()
+    null -> "null"
+    is Boolean -> obj.toString()
+    is Number -> obj.toJsonString()
+    is String -> gson.toJson(obj)
+    is Map<*, *> -> gson.toJson(processUndefined(obj))
+    is List<*> -> gson.toJson(processUndefined(obj))
+    is Array<*> -> gson.toJson(processUndefined(obj.toList()))
     is JsonElement -> obj.toJson()
-    is Map<*, *> -> gson.toJson(obj)
-    is List<*> -> gson.toJson(obj)
-    is Array<*> -> gson.toJson(obj)
     else -> obj.toString()
 }
 
-/**
- * 将任意类型转换为 Map<String, String>
- */
-fun parseToMap(obj: Any?): Map<String, String> {
-    if (obj.isNullOrEmpty()) return emptyMap()
-
-    return try {
-        when (obj) {
-            is NativeObject -> obj.ids.associate {
-                AppLog.put("NativeObject")
-                val key = it.toString()
-                key to toJsonString(obj.get(key, obj))
-            }
-            is NativeArray -> {
-                AppLog.put("NativeArray")
-                val len = obj.length.toInt()
-                var isEntryList = true
-                for (i in 0 until len) {
-                    val row = obj.get(i, obj)
-                    if (row !is NativeArray || row.length.toInt() != 2) {
-                        isEntryList = false
-                        break
-                    }
-                }
-                if (isEntryList) {
-                    (0 until len).associate {
-                        val row = obj.get(it, obj) as NativeArray
-                        val rowKey = row.get(0, row)?.toString() ?: it.toString()
-                        val rowValue = toJsonString(row.get(1, row))
-                        rowKey to rowValue
-                    }
-                } else {
-                    (0 until len).associate {
-                        it.toString() to toJsonString(obj.get(it, obj))
-                    }
-                }
-            }
-            is CharSequence -> {
-                AppLog.put("CharSequence")
-                val json = JsonParser.parseString(obj.toString())
-                when {
-                    json.isJsonObject -> json.asJsonObject.entrySet().associate {
-                        it.key to toJsonString(it.value)
-                    }
-                    json.isJsonArray -> json.asJsonArray.mapIndexed { index, value ->
-                        index.toString() to toJsonString(value)
-                    }.toMap()
-                    else -> emptyMap()
-                }
-            }
-            is Map<*, *> -> obj.entries.associate {
-                AppLog.put("Map")
-                it.key.toString() to toJsonString(it.value)
-            }
-            is List<*> -> obj.mapIndexed { index, value ->
-                AppLog.put("List")
-                index.toString() to toJsonString(value)
-            }.toMap()
-            is Array<*> -> obj.mapIndexed { index, value ->
-                AppLog.put("Array")
-                index.toString() to toJsonString(value)
-            }.toMap()
-            else -> {
-                AppLog.put("parseToMap: 不支持的类型 ${obj!!::class.java.simpleName}")
-                emptyMap()
-            }
-        }
-    } catch (e: Exception) {
-        AppLog.put("parseToMap: 转换失败 ${obj!!::class.java.simpleName}", e)
-        emptyMap()
-    }
-}
-
-/**
- * 将任意值展平为 Map 可接受的类型
- */
-private fun flattenValue(value: Any?): Any? = when (value) {
+private fun toAnyValue(raw: Any?): Any? = when (raw) {
     null -> null
-    is Boolean -> value
-    is Number -> {
-        val num = value.toDouble()
-        if (num % 1 == 0.0) num.toLong() else num
-    }
-    is NativeObject -> value.ids.associate {
-        val key = it.toString()
-        key to flattenValue(value.get(key, value))
-    }
-    is NativeArray -> {
-        val len = value.length.toInt()
-        var isEntryList = true
-        for (i in 0 until len) {
-            val row = value.get(i, value)
-            if (row !is NativeArray || row.length.toInt() != 2) {
-                isEntryList = false
-                break
-            }
-        }
-        if (isEntryList) {
-            (0 until len).associate {
-                val row = value.get(it, value) as NativeArray
-                val rowKey = row.get(0, row)?.toString() ?: it.toString()
-                val rowValue = flattenValue(row.get(1, row))
-                rowKey to rowValue
-            }
-        } else {
-            (0 until len).associate {
-                it.toString() to flattenValue(value.get(it, value))
-            }
-        }
-    }
+    is Boolean -> raw
+    is Number -> if (raw is Double && raw % 1.0 == 0.0) raw.toLong() else raw
+    is Map<*, *> -> raw.entries.associate { it.key.toString() to toAnyValue(it.value) }
+    is List<*> -> raw.map { toAnyValue(it) }
+    is Array<*> -> raw.map { toAnyValue(it) }
     is JsonElement -> when {
-        value.isJsonNull -> null
-        value.isJsonObject -> value.asJsonObject.entrySet().associate {
-            it.key to flattenValue(it.value)
+        raw.isJsonNull -> null
+        raw.isJsonObject -> raw.asJsonObject.entrySet().associate {
+            it.key to toAnyValue(it.value)
         }
-        value.isJsonArray -> value.asJsonArray.mapIndexed { i, v ->
-            i.toString() to flattenValue(v)
+        raw.isJsonArray -> raw.asJsonArray.mapIndexed { index, value ->
+            index.toString() to toAnyValue(value)
         }.toMap()
-        value.isJsonPrimitive -> with(value.asJsonPrimitive) {
+        raw.isJsonPrimitive -> with(raw.asJsonPrimitive) {
             when {
                 isBoolean -> asBoolean
                 isNumber -> asNumber.let {
-                    val num = it.toDouble()
-                    if (num % 1 == 0.0) num.toLong() else num
+                    if (it is Double && it % 1.0 == 0.0) it.toLong() else it
                 }
                 isString -> asString
                 else -> toString()
             }
         }
-        else -> value.toString()
+        else -> raw
     }
-    is Map<*, *> -> value.entries.associate {
-        it.key.toString() to flattenValue(it.value)
-    }
-    is List<*> -> value.mapIndexed { i, v ->
-        i.toString() to flattenValue(v)
-    }.toMap()
-    is Array<*> -> value.mapIndexed { i, v ->
-        i.toString() to flattenValue(v)
-    }.toMap()
-    else -> value.toString()
+    else -> raw
 }
 
-/**
- * 将任意类型转换为 Map<String, Any?>
- */
-fun parseToMapWithAny(obj: Any?): Map<String, Any?> {
+private inline fun <T> collectionToMap(
+    list: List<*>,
+    valueMapper: (Any?) -> T
+): Map<String, T> {
+    // 如果不是 [[k,v],[k,v]] 形式，就按索引构造
+    val isKvPairs = !list.any { it !is List<*> || it.size != 2 }
+    return if (isKvPairs) {
+        list.associate { item ->
+            val (k, v) = item as List<*>
+            k.toString() to valueMapper(v)
+        }
+    } else {
+        list.mapIndexed { i, v -> i.toString() to valueMapper(v) }
+            .associate { it.first to it.second }
+    }
+}
+
+private inline fun <T> collectionToMap(
+    array: Array<*>,
+    valueMapper: (Any?) -> T
+): Map<String, T> = collectionToMap(array.asList(), valueMapper)
+
+private inline fun <T> parseToMapImpl(
+    obj: Any?,
+    valueMapper: (Any?) -> T
+): Map<String, T> {
     if (obj.isNullOrEmpty()) return emptyMap()
 
     return try {
         when (obj) {
-            is NativeObject -> obj.ids.associate {
-                AppLog.put("NativeObject")
-                val key = it.toString()
-                key to flattenValue(obj.get(key, obj))
+            is Map<*, *> -> obj.entries.associate {
+                it.key.toString() to valueMapper(it.value)
             }
-            is NativeArray -> {
-                AppLog.put("NativeArray")
-                val len = obj.length.toInt()
-                var isEntryList = true
-                for (i in 0 until len) {
-                    val row = obj.get(i, obj)
-                    if (row !is NativeArray || row.length.toInt() != 2) {
-                        isEntryList = false
-                        break
-                    }
-                }
-                if (isEntryList) {
-                    (0 until len).associate {
-                        val row = obj.get(it, obj) as NativeArray
-                        val rowKey = row.get(0, row)?.toString() ?: it.toString()
-                        val rowValue = flattenValue(row.get(1, row))
-                        rowKey to rowValue
-                    }
-                } else {
-                    (0 until len).associate {
-                        it.toString() to flattenValue(obj.get(it, obj))
-                    }
-                }
-            }
+            is List<*> -> collectionToMap(obj, valueMapper)
+            is Array<*> -> collectionToMap(obj, valueMapper)
             is CharSequence -> {
-                AppLog.put("CharSequence")
                 val json = JsonParser.parseString(obj.toString())
                 when {
-                    json.isJsonObject -> json.asJsonObject.entrySet().associate {
-                        it.key to flattenValue(it.value)
-                    }
-                    json.isJsonArray -> json.asJsonArray.mapIndexed { index, value ->
-                        index.toString() to flattenValue(value)
-                    }.toMap()
+                    json.isJsonObject -> json.asJsonObject.entrySet()
+                        .associate { it.key to valueMapper(it.value) }
+                    json.isJsonArray -> json.asJsonArray
+                        .mapIndexed { i, v -> i.toString() to valueMapper(v) }
+                            .associate { it.first to it.second }
                     else -> emptyMap()
                 }
             }
-            is Map<*, *> -> obj.entries.associate {
-                AppLog.put("Map")
-                it.key.toString() to flattenValue(it.value)
-            }
-            is List<*> -> obj.mapIndexed { index, value ->
-                AppLog.put("List")
-                index.toString() to flattenValue(value)
-            }.toMap()
-            is Array<*> -> obj.mapIndexed { index, value ->
-                AppLog.put("Array")
-                index.toString() to flattenValue(value)
-            }.toMap()
             else -> {
-                AppLog.put("parseToMapWithAny: 不支持的类型 ${obj!!::class.java.simpleName}")
+                AppLog.put("parseToMap: 不支持的类型 ${obj?.javaClass?.simpleName.orEmpty()}")
                 emptyMap()
             }
         }
     } catch (e: Exception) {
-        AppLog.put("parseToMapWithAny: 转换失败 ${obj!!::class.java.simpleName}", e)
+        AppLog.put("parseToMap: 转换失败 ${obj?.javaClass?.simpleName.orEmpty()}", e)
         emptyMap()
     }
 }
+
+fun parseToMap(obj: Any?): Map<String, String> =
+    parseToMapImpl(obj) { toJsonString(it) }
+
+fun parseToMapWithAny(obj: Any?): Map<String, Any?> =
+    parseToMapImpl(obj) { toAnyValue(it) }
