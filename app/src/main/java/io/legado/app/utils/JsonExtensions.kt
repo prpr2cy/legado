@@ -117,13 +117,12 @@ fun JsonElement.toJson(): String = when {
     isJsonNull -> "null"
     isJsonObject -> gson.toJson(asJsonObject)
     isJsonArray -> gson.toJson(asJsonArray)
-    isJsonPrimitive -> {
-        val json = asJsonPrimitive
+    isJsonPrimitive -> with(value.asJsonPrimitive) {
         when {
-            json.isBoolean -> json.asBoolean.toString()
-            json.isString -> json.asString
-            json.isNumber -> json.asBigDecimal.stripTrailingZeros().toPlainString()
-            else -> json.toString()
+            isBoolean -> asBoolean.toString()
+            isString -> asString
+            isNumber -> asBigDecimal.stripTrailingZeros().toPlainString()
+            else -> toString()
         }
     }
     else -> toString()
@@ -132,17 +131,15 @@ fun JsonElement.toJson(): String = when {
 /**
  * 通用对象转 JSON 字符串
  */
-fun toJsonString(obj: Any?): String {
-    return when {
-        obj.isNullOrEmpty() -> ""
-        obj is Map<*, *> -> gson.toJson(obj)
-        obj is List<*> -> gson.toJson(obj)
-        obj is Array<*> -> gson.toJson(obj)
-        obj is NativeArray -> obj.toJson()
-        obj is NativeObject -> obj.toJson()
-        obj is JsonElement -> obj.toJson()
-        else -> obj.toString()
-    }
+fun toJsonString(obj: Any?): String = when (obj) {
+    isNullOrEmpty() -> ""
+    is Map<*, *> -> gson.toJson(obj)
+    is List<*> -> gson.toJson(obj)
+    is Array<*> -> gson.toJson(obj)
+    is NativeArray -> obj.toJson()
+    is NativeObject -> obj.toJson()
+    is JsonElement -> obj.toJson()
+    else -> obj.toString()
 }
 
 /**
@@ -261,6 +258,12 @@ private fun flattenValue(value: Any?): Any? = when (value) {
     }
     is JsonElement -> when {
         value.isJsonNull -> null
+        value.isJsonObject -> value.asJsonObject.entrySet().associate {
+            it.key to flattenValue(it.value)
+        }
+        value.isJsonArray -> value.asJsonArray.mapIndexed { i, v ->
+            i.toString() to flattenValue(v)
+        }.toMap()
         value.isJsonPrimitive -> with(value.asJsonPrimitive) {
             when {
                 isBoolean -> asBoolean
@@ -272,12 +275,6 @@ private fun flattenValue(value: Any?): Any? = when (value) {
                 else -> toString()
             }
         }
-        value.isJsonObject -> value.asJsonObject.entrySet().associate {
-            it.key to flattenValue(it.value)
-        }
-        value.isJsonArray -> value.asJsonArray.mapIndexed { i, v ->
-            i.toString() to flattenValue(v)
-        }.toMap()
         else -> value.toString()
     }
     else -> value.toString()
