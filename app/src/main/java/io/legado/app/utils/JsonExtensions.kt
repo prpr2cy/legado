@@ -15,7 +15,6 @@ import com.jayway.jsonpath.ReadContext
 import io.legado.app.constant.AppLog
 import java.lang.reflect.Type
 import java.math.BigDecimal
-import org.mozilla.javascript.Undefined
 
 val jsonPath: ParseContext by lazy {
     JsonPath.using(
@@ -33,13 +32,13 @@ fun ReadContext.readLong(path: String): Long? = read(path, Long::class.java)
 private val gson by lazy {
     GsonBuilder().disableHtmlEscaping()
         .setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE)
-        .registerTypeAdapter(Number::class.java, object : JsonSerializer<Number> {
+        .registerTypeAdapter(Number::class.java, object: JsonSerializer<Number> {
             override fun serialize(src: Number, type: Type, context: JsonSerializationContext): JsonElement {
-                val num = if (src % 1.0 == 0.0) src.toLong() else src 
+                val num = if (src is Double && src % 1.0 == 0.0) src.toLong() else src 
                 return JsonPrimitive(num)
             }
         })
-        .registerTypeAdapter(Double::class.java, object : JsonSerializer<Double> {
+        .registerTypeAdapter(Double::class.java, object: JsonSerializer<Double> {
             override fun serialize(src: Double, type: Type, context: JsonSerializationContext): JsonElement {
                 val num = if (src % 1.0 == 0.0) src.toLong() else src 
                 return JsonPrimitive(num)
@@ -49,10 +48,8 @@ private val gson by lazy {
         .create()
 }
 
-private val undefined = Undefined.instance
-
 private fun Any?.isNullOrEmpty(): Boolean = when (this) {
-    null, undefined -> true
+    null -> true
     is String -> isBlank()
     is CharSequence -> isBlank()
     is Map<*, *> -> isEmpty()
@@ -88,7 +85,7 @@ private fun JsonElement.toJson(): String = when {
 }
 
 private fun toJsonRaw(raw: Any?): Any? = when (raw) {
-    null, undefined -> null
+    null -> null
     is Number -> {
         if (raw is Double && raw % 1.0 == 0.0) raw.toLong() else raw
     }
@@ -100,7 +97,7 @@ private fun toJsonRaw(raw: Any?): Any? = when (raw) {
 }
 
 fun toJsonString(raw: Any?): String = when (raw) {
-    null, undefined -> "null"
+    null -> "null"
     is Boolean -> raw.toString()
     is Number -> raw.toString()
     is String -> gson.toJson(raw)
@@ -113,9 +110,9 @@ fun toJsonString(raw: Any?): String = when (raw) {
 }
 
 private fun toAnyValue(raw: Any?): Any? {
-AppLog.put(raw?.javaClass?:"unkown")
-when (raw) {
-    null, undefined -> null
+AppLog.put(if (raw != null) raw::class.java else "null")
+return when (raw) {
+    null -> null
     is Boolean -> raw
     is Number -> raw
     //if (raw is Double && raw % 1.0 == 0.0) raw.toLong() else raw
