@@ -3,6 +3,9 @@ package io.legado.app.utils
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonElement
 import com.google.gson.JsonParser
+import com.google.gson.JsonPrimitive
+import com.google.gson.JsonSerializer
+import com.google.gson.ToNumberStrategy
 import com.jayway.jsonpath.Configuration
 import com.jayway.jsonpath.JsonPath
 import com.jayway.jsonpath.Option
@@ -25,7 +28,16 @@ fun ReadContext.readBool(path: String): Boolean? = read(path, Boolean::class.jav
 fun ReadContext.readInt(path: String): Int? = read(path, Int::class.java)
 fun ReadContext.readLong(path: String): Long? = read(path, Long::class.java)
 
-private val gson by lazy { GsonBuilder().disableHtmlEscaping().create() }
+private val gson by lazy {
+    GsonBuilder().disableHtmlEscaping()
+        .setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE)
+        .registerTypeAdapter(java.lang.String::class.java, JsonSerializer<java.lang.String> { src, type, context ->
+            JsonPrimitive(src.toString())
+        })
+        .serializeNulls()
+        .create()
+}
+
 private val undefined = Undefined.instance
 
 private fun Any?.isNullOrEmpty(): Boolean = when (this) {
@@ -78,21 +90,21 @@ private fun toJsonRaw(raw: Any?): Any? = when (raw) {
 fun toJsonString(obj: Any?): String = when (obj) {
     null, undefined -> "null"
     is Boolean -> obj.toString()
-    is Number -> obj.toJsonString()
-    is java.lang.String -> gson.toJson(obj.toString())
+    is Number -> obj.toString()
     is String -> gson.toJson(obj)
-    is Map<*, *> -> gson.toJson(toJsonRaw(obj))
-    is List<*> -> gson.toJson(toJsonRaw(obj))
-    is Array<*> -> gson.toJson(toJsonRaw(obj))
-    is JsonElement -> obj.toJson()
+    is Map<*, *> -> gson.toJson(obj)
+    is List<*> -> gson.toJson(obj)
+    is Array<*> -> gson.toJson(obj)
+    is JsonElement -> gson.toJson(obj)
     else -> obj.toString()
 }
 
 private fun toAnyValue(raw: Any?): Any? = when (raw) {
     null, undefined -> null
     is Boolean -> raw
-    is Number -> if (raw is Double && raw % 1.0 == 0.0) raw.toLong() else raw
-    is java.lang.String -> raw.toString()
+    is Number -> raw
+    //if (raw is Double && raw % 1.0 == 0.0) raw.toLong() else raw
+    is String -> raw.toString()
     is Map<*, *> -> raw.entries.associate { it.key.toString() to toAnyValue(it.value) }
     is List<*> -> raw.map { toAnyValue(it) }
     is Array<*> -> raw.map { toAnyValue(it) }
