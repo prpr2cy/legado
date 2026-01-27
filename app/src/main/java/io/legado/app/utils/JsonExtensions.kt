@@ -3,9 +3,6 @@ package io.legado.app.utils
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonElement
 import com.google.gson.JsonParser
-import com.google.gson.JsonPrimitive
-import com.google.gson.JsonSerializationContext
-import com.google.gson.JsonSerializer
 import com.google.gson.ToNumberPolicy
 import com.jayway.jsonpath.Configuration
 import com.jayway.jsonpath.JsonPath
@@ -32,28 +29,6 @@ fun ReadContext.readLong(path: String): Long? = read(path, Long::class.java)
 private val gson by lazy {
     GsonBuilder().disableHtmlEscaping()
         .setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE)
-        .registerTypeAdapter(Number::class.java, object: JsonSerializer<Number> {
-            override fun serialize(src: Number, type: Type, context: JsonSerializationContext): JsonElement {
-                AppLog.put("Number")
-                return JsonPrimitive(
-                    if (src is Double && src % 1.0 == 0.0) src.toLong() else src
-                )
-            }
-        })
-        .registerTypeAdapter(Double::class.java, object: JsonSerializer<Double> {
-            override fun serialize(src: Double, type: Type, context: JsonSerializationContext): JsonElement {
-                AppLog.put("Double")
-                return JsonPrimitive(
-                    if (src % 1.0 == 0.0) src.toLong() else src
-                )
-            }
-        })
-        .registerTypeAdapter(CharSequence::class.java, object: JsonSerializer<CharSequence> {
-            override fun serialize(src: CharSequence, type: Type, context: JsonSerializationContext): JsonElement {
-                AppLog.put("CharSequence")
-                return JsonPrimitive(src.toString())
-            }
-        })
         .serializeNulls()
         .create()
 }
@@ -68,15 +43,24 @@ private fun Any?.isNullOrEmpty(): Boolean = when (this) {
     else -> false
 }
 
+private fun Number.toJsonString(): String = when (this) {
+    is Long, is Int, is Short, is Byte -> toString()
+    is Double -> {
+        if (this % 1.0 == 0.0) toLong().toString()
+        else BigDecimal.valueOf(this).stripTrailingZeros().toPlainString()
+    }
+    else -> BigDecimal.valueOf(toDouble()).stripTrailingZeros().toPlainString()
+}
+
 fun toJsonString(raw: Any?): String = when (raw) {
     null -> "null"
     is Boolean -> raw.toString()
-    is Number -> raw.toString()
+    is Number -> raw.toJsonString()
     is String -> gson.toJson(raw)
     is CharSequence -> gson.toJson(raw.toString())
-    is Map<*, *> -> gson.toJson(raw)
-    is List<*> -> gson.toJson(raw)
-    is Array<*> -> gson.toJson(raw)
+    is Map<*, *> -> gson.toJson(toAnyValue(raw))
+    is List<*> -> gson.toJson(toAnyValue(raw))
+    is Array<*> -> gson.toJson(toAnyValue(raw))
     is JsonElement -> gson.toJson(raw)
     else -> raw.toString()
 }
