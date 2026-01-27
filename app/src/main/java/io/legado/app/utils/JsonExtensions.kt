@@ -36,7 +36,8 @@ private val gson by lazy {
             JsonPrimitive(src.toString())
         })
         .registerTypeAdapter(java.lang.Double::class.java, JsonSerializer<java.lang.Double> { src, type, context ->
-            val num = if (src % 1.0 == 0.0) src.toLong() else src
+            val num = if (src is Double
+                && src % 1.0 == 0.0) src.toLong() else src
             JsonPrimitive(num)
         })
         .serializeNulls()
