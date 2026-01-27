@@ -6,7 +6,6 @@ import com.google.gson.JsonParser
 import com.google.gson.JsonPrimitive
 import com.google.gson.JsonSerializationContext
 import com.google.gson.JsonSerializer
-import com.google.gson.JsonNull
 import com.google.gson.ToNumberPolicy
 import com.jayway.jsonpath.Configuration
 import com.jayway.jsonpath.JsonPath
@@ -33,32 +32,28 @@ fun ReadContext.readLong(path: String): Long? = read(path, Long::class.java)
 private val gson by lazy {
     GsonBuilder().disableHtmlEscaping()
         .setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE)
-        .registerTypeHierarchyAdapter(Any::class.java, object : JsonSerializer<Any> {
-            override fun serialize(src: Any, type: Type, context: JsonSerializationContext): JsonElement {
-                return when (src) {
-                    null -> JsonNull.INSTANCE 
-                    is Boolean -> JsonPrimitive(src)
-                    is Number -> {
-                        val num = if (src is Double && src % 1.0 == 0.0) src.toLong() else src
-                        JsonPrimitive(num)
-                    }
-                    is String -> JsonPrimitive(src)
-                    is CharSequence -> JsonPrimitive(src.toString())
-                    is Map<*, *> -> context.serialize(src)
-                    is List<*> -> context.serialize(src)
-                    is Array<*> -> context.serialize(src.asList())
-                    is JsonElement -> src
-                    else -> {
-                        try {
-                            JsonPrimitive(src.toString())
-                        } catch (e: Exception) {
-                            AppLog.put("Gson serialize: 转换失败 ${src?.javaClass?.name.orEmpty()}", e)
-                            JsonNull.INSTANCE 
-                        }
-                    }
-                }
+        .registerTypeAdapter(Number::class.java, JsonSerializer<Number> {
+            override fun serialize(src: Number, type: Type, context: JsonSerializationContext): JsonElement {
+                AppLog.put("Number")
+                JsonPrimitive(
+                    if (src is Double && src % 1.0 == 0.0) src.toLong() else src
+                )
             }
-        })
+        }
+        .registerTypeAdapter(Double::class.java, JsonSerializer<Double> {
+            override fun serialize(src: Double, type: Type, context: JsonSerializationContext): JsonElement {
+                AppLog.put("Double")
+                JsonPrimitive(
+                    if (src % 1.0 == 0.0) src.toLong() else src
+                )
+            }
+        }
+        .registerTypeAdapter(CharSequence::class.java, JsonSerializer<CharSequence> {
+            override fun serialize(src: CharSequence, type: Type, context: JsonSerializationContext): JsonElement {
+                AppLog.put("CharSequence")
+                JsonPrimitive(src.toString())
+            }
+        }
         .serializeNulls()
         .create()
 }
