@@ -4,15 +4,16 @@ import com.google.gson.GsonBuilder
 import com.google.gson.JsonElement
 import com.google.gson.JsonParser
 import com.google.gson.JsonPrimitive
+import com.google.gson.JsonSerializationContext
 import com.google.gson.JsonSerializer
 import com.google.gson.ToNumberPolicy
-import com.google.gson.Type
 import com.jayway.jsonpath.Configuration
 import com.jayway.jsonpath.JsonPath
 import com.jayway.jsonpath.Option
 import com.jayway.jsonpath.ParseContext
 import com.jayway.jsonpath.ReadContext
 import io.legado.app.constant.AppLog
+import java.lang.reflect.Type
 import java.math.BigDecimal
 import org.mozilla.javascript.Undefined
 
@@ -32,15 +33,15 @@ fun ReadContext.readLong(path: String): Long? = read(path, Long::class.java)
 private val gson by lazy {
     GsonBuilder().disableHtmlEscaping()
         .setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE)
-        .registerTypeAdapter(CharSequence::class.java, object : JsonSerializer<CharSequence> {
-            override fun serialize(src: CharSequence, typeOfSrc: Type, context: JsonSerializationContext): JsonElement {
-                return JsonPrimitive(src.toString())
-            }
-        })
         .registerTypeAdapter(Double::class.java, object : JsonSerializer<Double> {
-            override fun serialize(src: Double, typeOfSrc: Type, context: JsonSerializationContext): JsonElement {
+            override fun serialize(src: Double, type: Type, context: JsonSerializationContext): JsonElement {
                 val num = if (src % 1.0 == 0.0) src.toLong() else src 
                 return JsonPrimitive(num)
+            }
+        })
+        .registerTypeAdapter(CharSequence::class.java, object : JsonSerializer<CharSequence> {
+            override fun serialize(src: CharSequence, type: Type, context: JsonSerializationContext): JsonElement {
+                return JsonPrimitive(src.toString())
             }
         })
         .serializeNulls()
