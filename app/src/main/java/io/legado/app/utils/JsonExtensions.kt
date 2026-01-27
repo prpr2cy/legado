@@ -46,17 +46,19 @@ private fun Any?.isNullOrEmpty(): Boolean = when (this) {
     else -> false
 }
 
+private fun Number.toJsonString(): String = when(this) {
+    is Long, is Int, is Short, is Byte -> toString()
+    is Double -> {
+        if (this % 1.0 == 0.0) toLong().toString()
+        else BigDecimal.valueOf(this).stripTrailingZeros().toPlainString()
+    }
+    else -> BigDecimal.valueOf(toDouble()).stripTrailingZeros().toPlainString()
+}
+
 fun toJsonString(raw: Any?): String = when (raw) {
     null, undefined -> ""
     is Boolean -> raw.toString()
-    is Number -> {
-        is Long, is Int, is Short, is Byte -> raw.toString()
-        is Double -> {
-            if (raw % 1.0 == 0.0) raw.toLong().toString()
-            else BigDecimal.valueOf(raw).stripTrailingZeros().toPlainString()
-        }
-        else -> BigDecimal.valueOf(raw.toDouble()).stripTrailingZeros().toPlainString()
-    }
+    is Number -> raw.toJsonString()
     is String -> raw
     is CharSequence -> raw.toString()
     is Map<*, *> -> gson.toJson(toAnyValue(raw))
