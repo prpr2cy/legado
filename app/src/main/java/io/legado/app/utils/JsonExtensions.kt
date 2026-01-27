@@ -32,16 +32,30 @@ fun ReadContext.readLong(path: String): Long? = read(path, Long::class.java)
 private val gson by lazy {
     GsonBuilder().disableHtmlEscaping()
         .setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE)
-        .registerTypeAdapter(Number::class.java, object: JsonSerializer<Number> {
-            override fun serialize(src: Number, type: Type, context: JsonSerializationContext): JsonElement {
-                val num = if (src is Double && src % 1.0 == 0.0) src.toLong() else src 
-                return JsonPrimitive(num)
-            }
-        })
-        .registerTypeAdapter(Double::class.java, object: JsonSerializer<Double> {
-            override fun serialize(src: Double, type: Type, context: JsonSerializationContext): JsonElement {
-                val num = if (src % 1.0 == 0.0) src.toLong() else src 
-                return JsonPrimitive(num)
+        .registerTypeHierarchyAdapter(Any::class.java, object : JsonSerializer<Any> {
+            override fun serialize(src: Any, type: Type, context: JsonSerializationContext): JsonElement {
+                return when (src) {
+                    null -> JsonNull.INSTANCE 
+                    is Boolean -> JsonPrimitive(src)
+                    is Number -> {
+                        val num = if (src is Double && src % 1.0 == 0.0) src.toLong() else raw
+                        JsonPrimitive(num)
+                    }
+                    is String -> JsonPrimitive(src)
+                    is CharSequence -> JsonPrimitive(src.toString())
+                    is Map<*, *> -> context.serialize(src)
+                    is List<*> -> context.serialize(src)
+                    is Array<*> -> context.serialize(src.asList())
+                    is JsonElement -> src
+                    else -> {
+                        try {
+                            JsonPrimitive(src.toString())
+                        } catch (e: Exception) {
+                            AppLog.put("Gson serialize: 转换失败 ${src?.javaClass?.name.orEmpty()}", e)
+                            JsonNull.INSTANCE 
+                        }
+                    }
+                }
             }
         })
         .serializeNulls()
@@ -56,44 +70,6 @@ private fun Any?.isNullOrEmpty(): Boolean = when (this) {
     is List<*> -> isEmpty()
     is Array<*> -> isEmpty()
     else -> false
-}
-
-private fun Number.toJsonString(): String = when (this) {
-    is Long, is Int, is Short, is Byte -> toString()
-    is Double -> {
-        if (this % 1.0 == 0.0) toLong().toString()
-        else BigDecimal.valueOf(this).stripTrailingZeros().toPlainString()
-    }
-    else -> BigDecimal.valueOf(toDouble()).stripTrailingZeros().toPlainString()
-}
-
-private fun JsonElement.toJson(): String = when {
-    isJsonNull -> "null"
-    isJsonObject -> asJsonObject.entrySet()
-        .joinToString(",", "{", "}") { "\"${it.key}\":${it.value.toJson()}" }
-    isJsonArray -> asJsonArray
-        .joinToString(",", "[", "]") { it.toJson() }
-    isJsonPrimitive -> asJsonPrimitive.let {
-        when {
-            it.isBoolean -> it.asBoolean.toString()
-            it.isNumber -> it.asBigDecimal.stripTrailingZeros().toPlainString()
-            it.isString -> gson.toJson(it.asString)
-            else -> it.toString()
-        }
-    }
-    else -> toString()
-}
-
-private fun toJsonRaw(raw: Any?): Any? = when (raw) {
-    null -> null
-    is Number -> {
-        if (raw is Double && raw % 1.0 == 0.0) raw.toLong() else raw
-    }
-    is CharSequence -> raw.toString()
-    is Map<*, *> -> raw.map { (k, v) -> k.toString() to toJsonRaw(v) }.toMap()
-    is List<*> -> raw.map { toJsonRaw(it) }
-    is Array<*> -> raw.map { toJsonRaw(it) }
-    else -> raw
 }
 
 fun toJsonString(raw: Any?): String = when (raw) {
@@ -112,16 +88,9 @@ fun toJsonString(raw: Any?): String = when (raw) {
 private fun toAnyValue(raw: Any?): Any? = when (raw) {
     null -> null
     is Boolean -> raw
-    is Number -> raw
-    //if (raw is Double && raw % 1.0 == 0.0) raw.toLong() else raw
-    is String -> {
-        AppLog.put("String${raw.toString()}")
-        raw
-    }
-    is CharSequence -> {
-        AppLog.put("CharSequence${raw.toString()}")
-        raw.toString()
-    }
+    is Number -> if (raw is Double && raw % 1.0 == 0.0) raw.toLong() else raw
+    is String -> raw
+    is CharSequence -> raw.toString()
     is Map<*, *> -> raw.entries.associate { it.key.toString() to toAnyValue(it.value) }
     is List<*> -> raw.map { toAnyValue(it) }
     is Array<*> -> raw.map { toAnyValue(it) }
@@ -136,21 +105,16 @@ private fun toAnyValue(raw: Any?): Any? = when (raw) {
         raw.isJsonPrimitive -> with(raw.asJsonPrimitive) {
             when {
                 isBoolean -> asBoolean
-                isNumber -> asNumber
-                /*.let {
+                isNumber -> asNumber.let {
                     if (it is Double && it % 1.0 == 0.0) it.toLong() else it
                 }
-                */
                 isString -> asString
                 else -> raw
             }
         }
         else -> raw
     }
-    else -> {
-        AppLog.put("other${raw.toString()}, ${raw?.javaClass?.simpleName.orEmpty()}")
-        raw
-    }
+    else -> raw
 }
 
 private inline fun <T> collectionToMap(
@@ -200,12 +164,12 @@ private inline fun <T> parseToMapImpl(
                 }
             }
             else -> {
-                AppLog.put("parseToMap: 不支持的类型 ${raw?.javaClass?.simpleName.orEmpty()}")
+                AppLog.put("parseToMap: 不支持的类型 ${raw?.javaClass?.name.orEmpty()}")
                 emptyMap()
             }
         }
     } catch (e: Exception) {
-        AppLog.put("parseToMap: 转换失败 ${raw?.javaClass?.simpleName.orEmpty()}", e)
+        AppLog.put("parseToMap: 转换失败 ${raw?.javaClass?.name.orEmpty()}", e)
         emptyMap()
     }
 }
