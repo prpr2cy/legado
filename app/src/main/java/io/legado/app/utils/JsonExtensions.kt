@@ -115,11 +115,11 @@ private fun toAnyValue(raw: Any?): Any? = when (raw) {
     is Number -> raw
     //if (raw is Double && raw % 1.0 == 0.0) raw.toLong() else raw
     is String -> {
-        App.put("String${raw.toString()}")
+        AppLog.put("String${raw.toString()}")
         raw
     }
     is CharSequence -> {
-        App.put("CharSequence${raw.toString()}")
+        AppLog.put("CharSequence${raw.toString()}")
         raw.toString()
     }
     is Map<*, *> -> raw.entries.associate { it.key.toString() to toAnyValue(it.value) }
@@ -148,7 +148,7 @@ private fun toAnyValue(raw: Any?): Any? = when (raw) {
         else -> raw
     }
     else -> {
-        App.put("other${raw.toString()}, ${raw::Class.java}")
+        AppLog.put("other${raw.toString()}, ${raw?.javaClass?.simpleName.orEmpty()}")
         raw
     }
 }
