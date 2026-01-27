@@ -6,6 +6,7 @@ import com.google.gson.JsonParser
 import com.google.gson.JsonPrimitive
 import com.google.gson.JsonSerializationContext
 import com.google.gson.JsonSerializer
+import com.google.gson.JsonNull
 import com.google.gson.ToNumberPolicy
 import com.jayway.jsonpath.Configuration
 import com.jayway.jsonpath.JsonPath
@@ -38,7 +39,7 @@ private val gson by lazy {
                     null -> JsonNull.INSTANCE 
                     is Boolean -> JsonPrimitive(src)
                     is Number -> {
-                        val num = if (src is Double && src % 1.0 == 0.0) src.toLong() else raw
+                        val num = if (src is Double && src % 1.0 == 0.0) src.toLong() else src
                         JsonPrimitive(num)
                     }
                     is String -> JsonPrimitive(src)
