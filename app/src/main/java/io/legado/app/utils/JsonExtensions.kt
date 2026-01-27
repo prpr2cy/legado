@@ -31,11 +31,11 @@ fun ReadContext.readLong(path: String): Long? = read(path, Long::class.java)
 private val gson by lazy {
     GsonBuilder().disableHtmlEscaping()
         .setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE)
-        .registerTypeAdapter(java.lang.String::class.java, JsonSerializer<java.lang.String> { src, type, context ->
+        .registerTypeAdapter(String::class.java, JsonSerializer<String> { src, type, context ->
             AppLog.put(src.toString())
             JsonPrimitive(src.toString())
         })
-        .registerTypeAdapter(java.lang.Double::class.java, JsonSerializer<java.lang.Double> { src, type, context ->
+        .registerTypeAdapter(Double::class.java, JsonSerializer<Double> { src, type, context ->
             val num = if (src is Double
                 && src % 1.0 == 0.0) src.toLong() else src
             JsonPrimitive(num)
