@@ -10,9 +10,7 @@ import com.jayway.jsonpath.Option
 import com.jayway.jsonpath.ParseContext
 import com.jayway.jsonpath.ReadContext
 import io.legado.app.constant.AppLog
-import java.lang.reflect.Type
 import java.math.BigDecimal
-import org.mozilla.javascript.Undefined
 
 val jsonPath: ParseContext by lazy {
     JsonPath.using(
@@ -33,8 +31,6 @@ private val gson by lazy {
         .serializeNulls()
         .create()
 }
-
-private val undefined = Undefined.instance
 
 private fun Any?.isNullOrEmpty(): Boolean = when (this) {
     null -> true
