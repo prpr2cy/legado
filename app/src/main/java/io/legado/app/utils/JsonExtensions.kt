@@ -109,15 +109,19 @@ fun toJsonString(raw: Any?): String = when (raw) {
     else -> raw.toString()
 }
 
-private fun toAnyValue(raw: Any?): Any? {
-AppLog.put(if (raw != null) raw::class.java else "null")
-return when (raw) {
+private fun toAnyValue(raw: Any?): Any? = when (raw) {
     null -> null
     is Boolean -> raw
     is Number -> raw
     //if (raw is Double && raw % 1.0 == 0.0) raw.toLong() else raw
-    is String -> raw
-    is CharSequence -> raw.toString()
+    is String -> {
+        App.put("String${raw.toString()}")
+        raw
+    }
+    is CharSequence -> {
+        App.put("CharSequence${raw.toString()}")
+        raw.toString()
+    }
     is Map<*, *> -> raw.entries.associate { it.key.toString() to toAnyValue(it.value) }
     is List<*> -> raw.map { toAnyValue(it) }
     is Array<*> -> raw.map { toAnyValue(it) }
@@ -143,8 +147,10 @@ return when (raw) {
         }
         else -> raw
     }
-    else -> raw
-}
+    else -> {
+        App.put("other${raw.toString()}, ${raw::Class.java}")
+        raw
+    }
 }
 
 private inline fun <T> collectionToMap(
