@@ -37,7 +37,7 @@ private val gson by lazy {
 private val undefined = Undefined.instance
 
 private fun Any?.isNullOrEmpty(): Boolean = when (this) {
-    null, undefined -> true
+    null -> true
     is String -> isBlank()
     is CharSequence -> isBlank()
     is Map<*, *> -> isEmpty()
@@ -56,7 +56,7 @@ private fun Number.toJsonString(): String = when(this) {
 }
 
 fun toJsonString(raw: Any?): String = when (raw) {
-    null, undefined -> ""
+    null -> ""
     is Boolean -> raw.toString()
     is Number -> raw.toJsonString()
     is String -> raw
@@ -69,7 +69,7 @@ fun toJsonString(raw: Any?): String = when (raw) {
 }
 
 private fun toAnyValue(raw: Any?): Any? = when (raw) {
-    null, undefined -> null
+    null -> null
     is Boolean -> raw
     is Number -> if (raw is Double && raw % 1.0 == 0.0) raw.toLong() else raw
     is String -> raw
@@ -147,12 +147,12 @@ private inline fun <T> parseToMapImpl(
                 }
             }
             else -> {
-                AppLog.put("parseToMap: 不支持的类型 ${raw?.javaClass?.name.orEmpty()}")
+                AppLog.put("parseToMap 不支持的类型: ${raw?.javaClass?.name.orEmpty()}")
                 emptyMap()
             }
         }
     } catch (e: Exception) {
-        AppLog.put("parseToMap: 转换失败 ${raw?.javaClass?.name.orEmpty()}", e)
+        AppLog.put("parseToMap 转换失败: ${raw?.javaClass?.name.orEmpty()}", e)
         emptyMap()
     }
 }
