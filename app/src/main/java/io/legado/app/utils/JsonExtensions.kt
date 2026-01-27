@@ -33,15 +33,16 @@ fun ReadContext.readLong(path: String): Long? = read(path, Long::class.java)
 private val gson by lazy {
     GsonBuilder().disableHtmlEscaping()
         .setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE)
-        .registerTypeAdapter(Double::class.java, object : JsonSerializer<Double> {
-            override fun serialize(src: Double, type: Type, context: JsonSerializationContext): JsonElement {
+        .registerTypeAdapter(Number::class.java, object : JsonSerializer<Number> {
+            override fun serialize(src: Number, type: Type, context: JsonSerializationContext): JsonElement {
                 val num = if (src % 1.0 == 0.0) src.toLong() else src 
                 return JsonPrimitive(num)
             }
         })
-        .registerTypeAdapter(CharSequence::class.java, object : JsonSerializer<CharSequence> {
-            override fun serialize(src: CharSequence, type: Type, context: JsonSerializationContext): JsonElement {
-                return JsonPrimitive(src.toString())
+        .registerTypeAdapter(Double::class.java, object : JsonSerializer<Double> {
+            override fun serialize(src: Double, type: Type, context: JsonSerializationContext): JsonElement {
+                val num = if (src % 1.0 == 0.0) src.toLong() else src 
+                return JsonPrimitive(num)
             }
         })
         .serializeNulls()
@@ -111,7 +112,9 @@ fun toJsonString(raw: Any?): String = when (raw) {
     else -> raw.toString()
 }
 
-private fun toAnyValue(raw: Any?): Any? = when (raw) {
+private fun toAnyValue(raw: Any?): Any? {
+AppLog.put(raw?.javaClass?:"unkown")
+when (raw) {
     null, undefined -> null
     is Boolean -> raw
     is Number -> raw
@@ -144,6 +147,7 @@ private fun toAnyValue(raw: Any?): Any? = when (raw) {
         else -> raw
     }
     else -> raw
+}
 }
 
 private inline fun <T> collectionToMap(
