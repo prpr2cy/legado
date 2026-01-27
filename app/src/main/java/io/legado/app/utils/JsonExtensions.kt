@@ -6,6 +6,7 @@ import com.google.gson.JsonParser
 import com.google.gson.JsonPrimitive
 import com.google.gson.JsonSerializer
 import com.google.gson.ToNumberPolicy
+import com.google.gson.Type
 import com.jayway.jsonpath.Configuration
 import com.jayway.jsonpath.JsonPath
 import com.jayway.jsonpath.Option
@@ -31,14 +32,16 @@ fun ReadContext.readLong(path: String): Long? = read(path, Long::class.java)
 private val gson by lazy {
     GsonBuilder().disableHtmlEscaping()
         .setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE)
-        .registerTypeAdapter(String::class.java, JsonSerializer<String> { src, type, context ->
-            AppLog.put(src.toString())
-            JsonPrimitive(src.toString())
+        .registerTypeAdapter(CharSequence::class.java, object : JsonSerializer<CharSequence> {
+            override fun serialize(src: CharSequence, typeOfSrc: Type, context: JsonSerializationContext): JsonElement {
+                return JsonPrimitive(src.toString())
+            }
         })
-        .registerTypeAdapter(Double::class.java, JsonSerializer<Double> { src, type, context ->
-            val num = if (src is Double
-                && src % 1.0 == 0.0) src.toLong() else src
-            JsonPrimitive(num)
+        .registerTypeAdapter(Double::class.java, object : JsonSerializer<Double> {
+            override fun serialize(src: Double, typeOfSrc: Type, context: JsonSerializationContext): JsonElement {
+                val num = if (src % 1.0 == 0.0) src.toLong() else src 
+                return JsonPrimitive(num)
+            }
         })
         .serializeNulls()
         .create()
@@ -48,6 +51,7 @@ private val undefined = Undefined.instance
 
 private fun Any?.isNullOrEmpty(): Boolean = when (this) {
     null, undefined -> true
+    is String -> isBlank()
     is CharSequence -> isBlank()
     is Map<*, *> -> isEmpty()
     is List<*> -> isEmpty()
@@ -86,7 +90,7 @@ private fun toJsonRaw(raw: Any?): Any? = when (raw) {
     is Number -> {
         if (raw is Double && raw % 1.0 == 0.0) raw.toLong() else raw
     }
-    is java.lang.String -> raw.toString()
+    is CharSequence -> raw.toString()
     is Map<*, *> -> raw.map { (k, v) -> k.toString() to toJsonRaw(v) }.toMap()
     is List<*> -> raw.map { toJsonRaw(it) }
     is Array<*> -> raw.map { toJsonRaw(it) }
@@ -98,6 +102,7 @@ fun toJsonString(raw: Any?): String = when (raw) {
     is Boolean -> raw.toString()
     is Number -> raw.toString()
     is String -> gson.toJson(raw)
+    is CharSequence -> gson.toJson(raw.toString())
     is Map<*, *> -> gson.toJson(raw)
     is List<*> -> gson.toJson(raw)
     is Array<*> -> gson.toJson(raw)
@@ -110,7 +115,8 @@ private fun toAnyValue(raw: Any?): Any? = when (raw) {
     is Boolean -> raw
     is Number -> raw
     //if (raw is Double && raw % 1.0 == 0.0) raw.toLong() else raw
-    is String -> raw.toString()
+    is String -> raw
+    is CharSequence -> raw.toString()
     is Map<*, *> -> raw.entries.associate { it.key.toString() to toAnyValue(it.value) }
     is List<*> -> raw.map { toAnyValue(it) }
     is Array<*> -> raw.map { toAnyValue(it) }
