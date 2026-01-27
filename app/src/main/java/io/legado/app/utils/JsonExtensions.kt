@@ -5,7 +5,7 @@ import com.google.gson.JsonElement
 import com.google.gson.JsonParser
 import com.google.gson.JsonPrimitive
 import com.google.gson.JsonSerializer
-import com.google.gson.ToNumberStrategy
+import com.google.gson.ToNumberPolicy
 import com.jayway.jsonpath.Configuration
 import com.jayway.jsonpath.JsonPath
 import com.jayway.jsonpath.Option
@@ -87,16 +87,16 @@ private fun toJsonRaw(raw: Any?): Any? = when (raw) {
     else -> raw
 }
 
-fun toJsonString(obj: Any?): String = when (obj) {
+fun toJsonString(raw: Any?): String = when (raw) {
     null, undefined -> "null"
-    is Boolean -> obj.toString()
-    is Number -> obj.toString()
-    is String -> gson.toJson(obj)
-    is Map<*, *> -> gson.toJson(obj)
-    is List<*> -> gson.toJson(obj)
-    is Array<*> -> gson.toJson(obj)
-    is JsonElement -> gson.toJson(obj)
-    else -> obj.toString()
+    is Boolean -> raw.toString()
+    is Number -> raw.toString()
+    is String -> gson.toJson(raw)
+    is Map<*, *> -> gson.toJson(raw)
+    is List<*> -> gson.toJson(raw)
+    is Array<*> -> gson.toJson(raw)
+    is JsonElement -> gson.toJson(raw)
+    else -> raw.toString()
 }
 
 private fun toAnyValue(raw: Any?): Any? = when (raw) {
@@ -119,11 +119,13 @@ private fun toAnyValue(raw: Any?): Any? = when (raw) {
         raw.isJsonPrimitive -> with(raw.asJsonPrimitive) {
             when {
                 isBoolean -> asBoolean
-                isNumber -> asNumber.let {
+                isNumber -> asNumber
+                /*.let {
                     if (it is Double && it % 1.0 == 0.0) it.toLong() else it
                 }
+                */
                 isString -> asString
-                else -> toString()
+                else -> raw
             }
         }
         else -> raw
@@ -154,20 +156,20 @@ private inline fun <T> collectionToMap(
 ): Map<String, T> = collectionToMap(array.asList(), valueMapper)
 
 private inline fun <T> parseToMapImpl(
-    obj: Any?,
+    raw: Any?,
     valueMapper: (Any?) -> T
 ): Map<String, T> {
-    if (obj.isNullOrEmpty()) return emptyMap()
+    if (raw.isNullOrEmpty()) return emptyMap()
 
     return try {
-        when (obj) {
-            is Map<*, *> -> obj.entries.associate {
+        when (raw) {
+            is Map<*, *> -> raw.entries.associate {
                 it.key.toString() to valueMapper(it.value)
             }
-            is List<*> -> collectionToMap(obj, valueMapper)
-            is Array<*> -> collectionToMap(obj, valueMapper)
+            is List<*> -> collectionToMap(raw, valueMapper)
+            is Array<*> -> collectionToMap(raw, valueMapper)
             is CharSequence -> {
-                val json = JsonParser.parseString(obj.toString())
+                val json = JsonParser.parseString(raw.toString())
                 when {
                     json.isJsonObject -> json.asJsonObject.entrySet()
                         .associate { it.key to valueMapper(it.value) }
@@ -178,18 +180,18 @@ private inline fun <T> parseToMapImpl(
                 }
             }
             else -> {
-                AppLog.put("parseToMap: 不支持的类型 ${obj?.javaClass?.simpleName.orEmpty()}")
+                AppLog.put("parseToMap: 不支持的类型 ${raw?.javaClass?.simpleName.orEmpty()}")
                 emptyMap()
             }
         }
     } catch (e: Exception) {
-        AppLog.put("parseToMap: 转换失败 ${obj?.javaClass?.simpleName.orEmpty()}", e)
+        AppLog.put("parseToMap: 转换失败 ${raw?.javaClass?.simpleName.orEmpty()}", e)
         emptyMap()
     }
 }
 
-fun parseToMap(obj: Any?): Map<String, String> =
-    parseToMapImpl(obj) { toJsonString(it) }
+fun parseToMap(raw: Any?): Map<String, String> =
+    parseToMapImpl(raw) { toJsonString(it) }
 
-fun parseToMapWithAny(obj: Any?): Map<String, Any?> =
-    parseToMapImpl(obj) { toAnyValue(it) }
+fun parseToMapWithAny(raw: Any?): Map<String, Any?> =
+    parseToMapImpl(raw) { toAnyValue(it) }
