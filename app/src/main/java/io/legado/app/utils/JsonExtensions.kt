@@ -32,7 +32,7 @@ fun ReadContext.readLong(path: String): Long? = read(path, Long::class.java)
 private val gson by lazy {
     GsonBuilder().disableHtmlEscaping()
         .setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE)
-        .registerTypeAdapter(Number::class.java, JsonSerializer<Number> {
+        .registerTypeAdapter(Number::class.java, object: JsonSerializer<Number> {
             override fun serialize(src: Number, type: Type, context: JsonSerializationContext): JsonElement {
                 AppLog.put("Number")
                 JsonPrimitive(
@@ -40,7 +40,7 @@ private val gson by lazy {
                 )
             }
         })
-        .registerTypeAdapter(Double::class.java, JsonSerializer<Double> {
+        .registerTypeAdapter(Double::class.java, object: JsonSerializer<Double> {
             override fun serialize(src: Double, type: Type, context: JsonSerializationContext): JsonElement {
                 AppLog.put("Double")
                 JsonPrimitive(
@@ -48,7 +48,7 @@ private val gson by lazy {
                 )
             }
         })
-        .registerTypeAdapter(CharSequence::class.java, JsonSerializer<CharSequence> {
+        .registerTypeAdapter(CharSequence::class.java, object: JsonSerializer<CharSequence> {
             override fun serialize(src: CharSequence, type: Type, context: JsonSerializationContext): JsonElement {
                 AppLog.put("CharSequence")
                 JsonPrimitive(src.toString())
