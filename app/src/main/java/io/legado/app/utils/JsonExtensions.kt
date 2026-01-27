@@ -46,19 +46,7 @@ private fun Number.toJsonString(): String = when (this) {
     else -> BigDecimal.valueOf(toDouble()).stripTrailingZeros().toPlainString()
 }
 
-private fun processUndefined(raw: Any?): Any? = when (raw) {
-    null, undefined -> null
-    is Number -> {
-        if (raw is Double && raw % 1.0 == 0.0) raw.toLong() else raw
-    }
-    is java.lang.String -> raw.toString()
-    is Map<*, *> -> raw.mapValues { (_, v) -> processUndefined(v) }
-    is List<*> -> raw.map { processUndefined(it) }
-    is Array<*> -> raw.map { processUndefined(it) }
-    else -> raw
-}
-
-fun JsonElement.toJson(): String = when {
+private fun JsonElement.toJson(): String = when {
     isJsonNull -> "null"
     isJsonObject -> asJsonObject.entrySet()
         .joinToString(",", "{", "}") { "\"${it.key}\":${it.value.toJson()}" }
@@ -75,15 +63,27 @@ fun JsonElement.toJson(): String = when {
     else -> toString()
 }
 
+private fun toJsonRaw(raw: Any?): Any? = when (raw) {
+    null, undefined -> null
+    is Number -> {
+        if (raw is Double && raw % 1.0 == 0.0) raw.toLong() else raw
+    }
+    is java.lang.String -> raw.toString()
+    is Map<*, *> -> raw.map { (k, v) -> k.toString() to toJsonRaw(v) }.toMap()
+    is List<*> -> raw.map { toJsonRaw(it) }
+    is Array<*> -> raw.map { toJsonRaw(it) }
+    else -> raw
+}
+
 fun toJsonString(obj: Any?): String = when (obj) {
-    null -> "null"
+    null, undefined -> "null"
     is Boolean -> obj.toString()
     is Number -> obj.toJsonString()
     is java.lang.String -> gson.toJson(obj.toString())
     is String -> gson.toJson(obj)
-    is Map<*, *> -> gson.toJson(processUndefined(obj))
-    is List<*> -> gson.toJson(processUndefined(obj))
-    is Array<*> -> gson.toJson(processUndefined(obj))
+    is Map<*, *> -> gson.toJson(toJsonRaw(obj))
+    is List<*> -> gson.toJson(toJsonRaw(obj))
+    is Array<*> -> gson.toJson(toJsonRaw(obj))
     is JsonElement -> obj.toJson()
     else -> obj.toString()
 }
