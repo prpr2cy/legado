@@ -32,7 +32,12 @@ private val gson by lazy {
     GsonBuilder().disableHtmlEscaping()
         .setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE)
         .registerTypeAdapter(java.lang.String::class.java, JsonSerializer<java.lang.String> { src, type, context ->
+            AppLog.put(src.toString())
             JsonPrimitive(src.toString())
+        })
+        .registerTypeAdapter(java.lang.Double::class.java, JsonSerializer<java.lang.Double> { src, type, context ->
+            val num = if (src % 1.0 == 0.0) src.toLong() else src
+            JsonPrimitive(num)
         })
         .serializeNulls()
         .create()
