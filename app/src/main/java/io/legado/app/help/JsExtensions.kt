@@ -428,7 +428,7 @@ interface JsExtensions : JsEncodeUtils {
     }
 
     fun toJson(obj: Any?): String {
-        return toJsonString(obj)
+        return if (obj.isNullOrEmpty()) "" else toJsonString(obj)
     }
 
     fun convertToMap(obj: Any?): MutableMap<String, String> {

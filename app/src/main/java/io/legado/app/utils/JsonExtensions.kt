@@ -12,6 +12,7 @@ import com.jayway.jsonpath.ReadContext
 import io.legado.app.constant.AppLog
 import java.lang.reflect.Type
 import java.math.BigDecimal
+import org.mozilla.javascript.Undefined
 
 val jsonPath: ParseContext by lazy {
     JsonPath.using(
@@ -33,8 +34,10 @@ private val gson by lazy {
         .create()
 }
 
-private fun Any?.isNullOrEmpty(): Boolean = when (this) {
-    null -> true
+private val undefined = Undefined.instance
+
+fun Any?.isNullOrEmpty(): Boolean = when (this) {
+    null, undefined -> true
     is String -> isBlank()
     is CharSequence -> isBlank()
     is Map<*, *> -> isEmpty()
@@ -53,7 +56,7 @@ private fun Number.toJsonString(): String = when (this) {
 }
 
 fun toJsonString(raw: Any?): String = when (raw) {
-    null -> "null"
+    null, undefined -> "null"
     is Boolean -> raw.toString()
     is Number -> raw.toJsonString()
     is String -> gson.toJson(raw)
@@ -66,7 +69,7 @@ fun toJsonString(raw: Any?): String = when (raw) {
 }
 
 private fun toAnyValue(raw: Any?): Any? = when (raw) {
-    null -> null
+    null, undefined -> null
     is Boolean -> raw
     is Number -> if (raw is Double && raw % 1.0 == 0.0) raw.toLong() else raw
     is String -> raw
