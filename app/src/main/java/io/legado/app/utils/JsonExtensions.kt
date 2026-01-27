@@ -79,6 +79,7 @@ fun toJsonString(obj: Any?): String = when (obj) {
     null -> "null"
     is Boolean -> obj.toString()
     is Number -> obj.toJsonString()
+    is java.lang.String -> gson.toJson(obj.toString())
     is String -> gson.toJson(obj)
     is Map<*, *> -> gson.toJson(processUndefined(obj))
     is List<*> -> gson.toJson(processUndefined(obj))
