@@ -35,7 +35,7 @@ private val gson by lazy {
         .registerTypeAdapter(Number::class.java, object: JsonSerializer<Number> {
             override fun serialize(src: Number, type: Type, context: JsonSerializationContext): JsonElement {
                 AppLog.put("Number")
-                JsonPrimitive(
+                return JsonPrimitive(
                     if (src is Double && src % 1.0 == 0.0) src.toLong() else src
                 )
             }
@@ -43,7 +43,7 @@ private val gson by lazy {
         .registerTypeAdapter(Double::class.java, object: JsonSerializer<Double> {
             override fun serialize(src: Double, type: Type, context: JsonSerializationContext): JsonElement {
                 AppLog.put("Double")
-                JsonPrimitive(
+                return JsonPrimitive(
                     if (src % 1.0 == 0.0) src.toLong() else src
                 )
             }
@@ -51,7 +51,7 @@ private val gson by lazy {
         .registerTypeAdapter(CharSequence::class.java, object: JsonSerializer<CharSequence> {
             override fun serialize(src: CharSequence, type: Type, context: JsonSerializationContext): JsonElement {
                 AppLog.put("CharSequence")
-                JsonPrimitive(src.toString())
+                return JsonPrimitive(src.toString())
             }
         })
         .serializeNulls()
