@@ -55,12 +55,7 @@ class NumberPickerDialog(context: Context) {
             numberPicker?.let {
                 it.clearFocus()
                 it.hideSoftInput()
-                val inputValue = when {
-                    it.value < minValue -> minValue
-                    it.value > maxValue -> maxValue
-                    else -> it.value
-                }
-                callBack?.invoke(inputValue)
+                callBack?.invoke(it.value.coerceAtLeast(it.minValue))
             }
         }
         builder.setNegativeButton(R.string.cancel, null)
