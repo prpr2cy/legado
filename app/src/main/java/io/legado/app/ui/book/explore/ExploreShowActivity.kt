@@ -177,9 +177,8 @@ class ExploreShowActivity : VMBaseActivity<ActivityExploreShowBinding, ExploreSh
                     .setMinValue(1)
                     .setValue(page)
                     .show { selectedPage ->
-                        val newPage = if (selectedPage <= 0) 1 else selectedPage
-                        if (page != newPage) {
-                            handleJumpToPage(newPage)
+                        if (page != selectedPage) {
+                            handlePageJump(selectedPage)
                         }
                     }
             }
@@ -191,18 +190,18 @@ class ExploreShowActivity : VMBaseActivity<ActivityExploreShowBinding, ExploreSh
         return super.onCompatOptionsItemSelected(item)
     }
 
-    private fun handleJumpToPage(newPage: Int) {
-        if (oldPage == -1 && newPage != 1) {
+    private fun handlePageJump(selectedPage: Int) {
+        if (oldPage == -1 && selectedPage != 1) {
             adapter.addHeaderView { ViewLoadMoreBinding.bind(loadMoreViewTop) }
-        } else if (newPage != 1) {
+        } else if (selectedPage != 1) {
             val layoutParams = loadMoreViewTop.layoutParams
             if (layoutParams?.height == 0) {
                 layoutParams.height = ViewGroup.LayoutParams.WRAP_CONTENT
                 loadMoreViewTop.layoutParams = layoutParams
             }
         }
-        oldPage = newPage
-        viewModel.skipPage(newPage)
+        oldPage = selectedPage
+        viewModel.skipPage(selectedPage)
         isClearAll = true
         adapter.clearItems()
         if (!loadMoreView.hasMore) {
