@@ -52,15 +52,10 @@ class NumberPickerDialog(context: Context) {
 
     fun show(callBack: ((value: Int) -> Unit)?) {
         builder.setPositiveButton(R.string.ok) { _, _ ->
-            numberPicker?.let { np ->
-                np.clearFocus()
-                np.hideSoftInput()
-                np.post {
-                    if (np.value < np.minValue) {
-                        np.value = np.minValue
-                    }
-                    callBack?.invoke(np.value)
-                }
+            numberPicker?.let {
+                it.clearFocus()
+                it.hideSoftInput()
+                callBack?.invoke(it.value)
             }
         }
         builder.setNegativeButton(R.string.cancel, null)
