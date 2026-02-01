@@ -55,7 +55,10 @@ class NumberPickerDialog(context: Context) {
             numberPicker?.let {
                 it.clearFocus()
                 it.hideSoftInput()
-                callBack?.invoke(it.value.coerceAtLeast(it.minValue))
+                if (it.value < it.minValue) {
+                    it.value = it.minValue
+                }
+                callBack?.invoke(it.value)
             }
         }
         builder.setNegativeButton(R.string.cancel, null)
