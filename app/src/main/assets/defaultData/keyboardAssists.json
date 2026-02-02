@@ -80,28 +80,23 @@
     "serialNo": 15
   },
   {
-    "key": "JSON.parse",
-    "value": "JSON.parse()",
+    "key": "encodeURIComponent",
+    "value": "encodeURIComponent",
     "serialNo": 16
   },
   {
-    "key": "JSON.stringify",
-    "value": "JSON.stringify()",
+    "key": "finds",
+    "value": "var finds = [];\nvar push = (title, url, type) => finds.push({\n  title: title,\n  url: url,\n  style: {\n    layout_flexGrow: 1,\n    layout_flexBasisPercent: type\n  }\n});",
     "serialNo": 17
-  },
-  {
-    "key": "encodeURIComponent",
-    "value": "encodeURIComponent()",
-    "serialNo": 18
   },
   {
     "key": "data:;base64",
     "value": "data:;base64,,{\"type\":\"\"}",
-    "serialNo": 19
+    "serialNo": 18
   },
   {
     "key": "useWebView",
     "value": "{\"webView\":true}",
-    "serialNo": 20
+    "serialNo": 19
   }
 ]

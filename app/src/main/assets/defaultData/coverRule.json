@@ -1,5 +1,5 @@
 {
   "enable": true,
-  "searchUrl": "https://api.yousuu.com/api/search?type=title&value={{key}}&page=1&highlight=0&from=search",
-  "coverRule": "@js:java.getString(\"$..books[?(@.author == '\" + book.author + \"')].cover\")"
+  "searchUrl": "https://m.ypshuo.com/api/novel/search?keyword={{key}}&searchType=1&page=1",
+  "coverRule": "@js:String(java.getString(\"$.data.data[?(@.author_name=='\"+book.author+\"')].novel_img\"))||\"https://qidian.qpic.cn/qdbimg/300000/1000000000/300\""
 }
