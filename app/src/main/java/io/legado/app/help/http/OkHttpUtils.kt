@@ -103,9 +103,9 @@ fun ResponseBody.text(
     }
 }
 
-inline fun <T> ResponseBody.unCompress(
-    crossinline success: (InputStream) -> T,
-    response: Response? = null
+fun <T> ResponseBody.unCompress(
+    response: Response? = null,
+    success: (InputStream) -> T
 ): T {
     if (contentType() == "application/zip".toMediaType()) {
         return byteStream().use { byteStream ->
