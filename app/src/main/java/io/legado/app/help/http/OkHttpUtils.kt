@@ -115,6 +115,7 @@ fun <T> ResponseBody.unCompress(success: (InputStream) -> T): T {
         ?.split(',')
         ?.map { it.trim() }
         ?.filter { it.isNotEmpty() }
+        ?.reversed()
         .orEmpty() 
     for (enc in encodings) {
         input = try {
