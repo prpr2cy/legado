@@ -119,13 +119,13 @@ fun <T> ResponseBody.unCompress(
             }
         }
     }
+
     var input: InputStream = byteStream()
-    val encodings = response?.headers["Content-Encoding"].orEmpty()
-        ?.lowercase()
-        ?.split(',')
-        ?.map { it.trim() }
-        ?.filter { it.isNotEmpty() }
-        ?.reversed()
+    val encodings = response?.headers["Content-Encoding"]?.orEmpty()
+        .lowercase().split(',')
+        .map { it.trim() }
+        .filter { it.isNotEmpty() }
+        .reversed()
     for (enc in encodings) {
         try {
             input = when (enc) {
