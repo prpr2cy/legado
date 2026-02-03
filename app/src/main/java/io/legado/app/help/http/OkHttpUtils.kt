@@ -103,7 +103,7 @@ fun ResponseBody.text(
     }
 }
 
-fun <T> ResponseBody.unCompress(
+inline fun <T> ResponseBody.unCompress(
     crossinline success: (InputStream) -> T,
     response: Response? = null
 ): T {
