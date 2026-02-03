@@ -58,7 +58,7 @@ suspend fun OkHttpClient.newCallStrResponse(
     builder: Request.Builder.() -> Unit
 ): StrResponse {
     return newCallResponse(retry, builder).let {
-        StrResponse(it, it.body?.text() ?: it.message)
+        StrResponse(it, it.body?.text(response = it) ?: it.message)
     }
 }
 
@@ -80,8 +80,11 @@ suspend fun Call.await(): Response = suspendCancellableCoroutine { block ->
 
 }
 
-fun ResponseBody.text(encode: String? = null): String {
-    return unCompress {
+fun ResponseBody.text(
+    encode: String? = null,
+    response: Response? = null
+): String {
+    return unCompress(response = response) {
         val responseBytes = Utf8BomUtils.removeUTF8BOM(it.readBytes())
         var charsetName: String? = encode
 
@@ -100,7 +103,10 @@ fun ResponseBody.text(encode: String? = null): String {
     }
 }
 
-fun <T> ResponseBody.unCompress(success: (InputStream) -> T): T {
+fun <T> ResponseBody.unCompress(
+    success: (InputStream) -> T,
+    response: Response? = null
+): T {
     if (contentType() == "application/zip".toMediaType()) {
         return byteStream().use { byteStream ->
             ZipInputStream(byteStream).use {
@@ -110,13 +116,13 @@ fun <T> ResponseBody.unCompress(success: (InputStream) -> T): T {
         }
     }
     var input: InputStream = byteStream()
-    val encodings = response().headers()["Content-Encoding"]
+    val encodings = response?.headers()["Content-Encoding"]
         ?.lowercase()
         ?.split(',')
         ?.map { it.trim() }
         ?.filter { it.isNotEmpty() }
         ?.reversed()
-        .orEmpty() 
+        .orEmpty()
     for (enc in encodings) {
         input = try {
             when (enc) {
@@ -124,12 +130,12 @@ fun <T> ResponseBody.unCompress(success: (InputStream) -> T): T {
                 "deflate" -> InflaterInputStream(input)
                 "br" -> BrotliInputStream(input)
                 "zstd" -> ZstdInputStream(input)
-                else -> input 
+                else -> input
             }
         } catch (e: IOException) {
             throw IOException("Decompress ($enc) failed", e)
         }
-    } 
+    }
     return input.use(success)
 }
 
