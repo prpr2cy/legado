@@ -121,7 +121,7 @@ fun <T> ResponseBody.unCompress(
     }
 
     var input: InputStream = byteStream()
-    val encodings = response?.headers["Content-Encoding"]?.orEmpty()
+    val encodings = response?.headers?.get("Content-Encoding").orEmpty()
         .lowercase().split(',')
         .map { it.trim() }
         .filter { it.isNotEmpty() }
