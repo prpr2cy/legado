@@ -498,19 +498,27 @@ interface JsExtensions : JsEncodeUtils {
         return EncoderUtils.base64Encode(str, flags)
     }
 
-    /* HexString 解码为字节数组 */
+    /* hexString解码为字节数组 */
     fun hexDecodeToByteArray(hex: String): ByteArray? {
         return HexUtil.decodeHex(hex)
     }
 
-    /* hexString 解码为utf8String*/
+    /* hexString解码为字符串 */
     fun hexDecodeToString(hex: String): String? {
         return HexUtil.decodeHexStr(hex)
     }
 
-    /* utf8 编码为hexString */
-    fun hexEncodeToString(utf8: String): String? {
-        return HexUtil.encodeHexStr(utf8)
+    fun hexDecodeToString(hex: String, charset: String): String? {
+        return HexUtil.decodeHexStr(hex, charset(charset))
+    }
+
+    /* 字符串编码为hexString */
+    fun hexEncodeToString(str: String): String? {
+        return HexUtil.encodeHexStr(str)
+    }
+
+    fun hexEncodeToString(str: String, charset: String): String? {
+        return HexUtil.encodeHexStr(str, charset(charset))
     }
 
     /**

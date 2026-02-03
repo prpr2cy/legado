@@ -1,8 +1,18 @@
 package io.legado.app.help.http
 
+import com.github.luben.zstd.ZstdInputStream
 import io.legado.app.utils.EncodingDetect
 import io.legado.app.utils.GSON
 import io.legado.app.utils.Utf8BomUtils
+import java.io.File
+import java.io.IOException
+import java.io.InputStream
+import java.nio.charset.Charset
+import java.util.zip.GZIPInputStream
+import java.util.zip.InflaterInputStream
+import java.util.zip.ZipInputStream
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 import kotlinx.coroutines.suspendCancellableCoroutine
 import okhttp3.Call
 import okhttp3.Callback
@@ -16,13 +26,7 @@ import okhttp3.RequestBody.Companion.asRequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import okhttp3.ResponseBody
-import java.io.File
-import java.io.IOException
-import java.io.InputStream
-import java.nio.charset.Charset
-import java.util.zip.ZipInputStream
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
+import org.brotli.dec.BrotliInputStream
 
 suspend fun OkHttpClient.newCallResponse(
     retry: Int = 0,
@@ -96,17 +100,36 @@ fun ResponseBody.text(encode: String? = null): String {
     }
 }
 
-fun <T> ResponseBody.unCompress(success: (inputStream: InputStream) -> T): T {
-    return if (contentType() == "application/zip".toMediaType()) {
-        byteStream().use { byteStream ->
+fun <T> ResponseBody.unCompress(success: (InputStream) -> T): T {
+    if (contentType() == "application/zip".toMediaType()) {
+        return byteStream().use { byteStream ->
             ZipInputStream(byteStream).use {
-                it.nextEntry
-                success.invoke(it)
+                it.nextEntry ?: throw IOException("Empty ZIP archive")
+                success(it)
             }
         }
-    } else {
-        byteStream().use(success)
     }
+    var input: InputStream = byteStream()
+    val encodings = headers()["Content-Encoding"]
+        ?.lowercase()
+        ?.split(',')
+        ?.map { it.trim() }
+        ?.filter { it.isNotEmpty() }
+        .orEmpty() 
+    for (enc in encodings) {
+        input = try {
+            when (enc) {
+                "gzip" -> GZIPInputStream(input)
+                "deflate" -> InflaterInputStream(input)
+                "br" -> BrotliInputStream(input)
+                "zstd" -> ZstdInputStream(input)
+                else -> input 
+            }
+        } catch (e: IOException) {
+            throw IOException("Decompress ($enc) failed", e)
+        }
+    } 
+    return input.use(success)
 }
 
 fun Request.Builder.addHeaders(headers: Map<String, String>) {

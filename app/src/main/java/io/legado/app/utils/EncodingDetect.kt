@@ -26,7 +26,6 @@ object EncodingDetect {
         return -1
     }
 
-
     fun getHtmlEncode(bytes: ByteArray): String {
         try {
             var head: String? = null
