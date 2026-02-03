@@ -39,6 +39,7 @@ android {
             }
         }
     }
+
     defaultConfig {
         applicationId "io.legado.app"
         minSdk 21
@@ -62,10 +63,12 @@ android {
             }
         }
     }
+
     buildFeatures {
         buildConfig true
         viewBinding true
     }
+
     buildTypes {
         release {
             ndk {
@@ -79,6 +82,7 @@ android {
                     arguments "-DANDROID_STL=c++_shared"
                 }
             }
+
             sourceSets {
                 main {
                     jniLibs.srcDirs = ["src/main/jniLibs"]  // 指定 libomp.so 存放路径
@@ -93,6 +97,7 @@ android {
             shrinkResources false
             proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
         }
+
         debug {
             ndk {
                 //noinspection ChromeOsAbiSupport
@@ -105,6 +110,7 @@ android {
                     arguments "-DANDROID_STL=c++_shared"
                 }
             }
+
             sourceSets {
                 main {
                     jniLibs.srcDirs = ["src/main/jniLibs"]  // 指定 libomp.so 存放路径
@@ -121,6 +127,7 @@ android {
             proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
         }
     }
+
     //noinspection GrDeprecatedAPIUsage
     flavorDimensions = ["mode"]
     productFlavors {
@@ -152,8 +159,13 @@ android {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
+
     packaging {
-        resources.excludes.add("META-INF/*")
+        resources {
+           excludes += "META-INF/*"
+           excludes += "darwin/**"
+           excludes += "win/**"
+        }
     }
 
     sourceSets {
@@ -172,14 +184,14 @@ android {
     // 指定 CMake 路径
     externalNativeBuild {
         cmake {
-            path "src/main/cpp/CMakeLists.txt"
+            path("src/main/cpp/CMakeLists.txt")
             // version "3.22.1"
         }
     }
 }
 
 dependencies {
-    compileOnly "com.android.tools.build:gradle:$agp_version"
+    compileOnly("com.android.tools.build:gradle:$agp_version")
     //noinspection GradleDependency,GradlePackageUpdate
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs_nio:2.0.3")
     testImplementation("junit:junit:4.13.2")
