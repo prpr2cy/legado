@@ -284,7 +284,6 @@ dependencies {
     //压缩解压
     implementation("me.zhanghai.android.libarchive:library:1.0.3")
     implementation("org.brotli:dec:0.1.2")
-    implementation("com.github.luben:zstd-jni-android:1.5.6-3")
 
     //apache
     implementation("org.apache.commons:commons-text:1.12.0")
