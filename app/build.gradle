@@ -307,7 +307,7 @@ dependencies {
     implementation("com.google.firebase:firebase-perf-ktx:20.5.0")
 
     implementation("org.brotli:dec:0.1.2")
-    implementation("com.github.luben:zstd-jni:1.5.6-3")
+    implementation("com.github.luben:zstd-jni-android:1.5.6-3")
     implementation("io.github.khoben.woff2-android:decoder:0.0.1")
     implementation(fileTree(dir: "lib", include: ["*.jar"]))
 
