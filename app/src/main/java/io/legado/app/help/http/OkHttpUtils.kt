@@ -104,7 +104,7 @@ fun ResponseBody.text(
 }
 
 fun <T> ResponseBody.unCompress(
-    success: (InputStream) -> T,
+    crossinline success: (InputStream) -> T,
     response: Response? = null
 ): T {
     if (contentType() == "application/zip".toMediaType()) {
@@ -116,7 +116,7 @@ fun <T> ResponseBody.unCompress(
         }
     }
     var input: InputStream = byteStream()
-    val encodings = response?.headers()["Content-Encoding"]
+    val encodings = response?.headers["Content-Encoding"]
         ?.lowercase()
         ?.split(',')
         ?.map { it.trim() }
