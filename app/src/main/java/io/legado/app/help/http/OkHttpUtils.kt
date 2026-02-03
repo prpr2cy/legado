@@ -103,6 +103,10 @@ fun ResponseBody.text(
     }
 }
 
+fun <T> ResponseBody.unCompress(success: (InputStream) -> T): T {
+    return unCompress(response = null, success = success)
+}
+
 fun <T> ResponseBody.unCompress(
     response: Response? = null,
     success: (InputStream) -> T
@@ -116,13 +120,12 @@ fun <T> ResponseBody.unCompress(
         }
     }
     var input: InputStream = byteStream()
-    val encodings = response?.headers["Content-Encoding"]
+    val encodings = response?.headers["Content-Encoding"].orEmpty()
         ?.lowercase()
         ?.split(',')
         ?.map { it.trim() }
         ?.filter { it.isNotEmpty() }
         ?.reversed()
-        .orEmpty()
     for (enc in encodings) {
         try {
             input = when (enc) {
