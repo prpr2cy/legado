@@ -124,8 +124,8 @@ fun <T> ResponseBody.unCompress(
         ?.reversed()
         .orEmpty()
     for (enc in encodings) {
-        input = try {
-            when (enc) {
+        try {
+            input = when (enc) {
                 "gzip" -> GZIPInputStream(input)
                 "deflate" -> InflaterInputStream(input)
                 "br" -> BrotliInputStream(input)
