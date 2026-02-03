@@ -110,7 +110,7 @@ fun <T> ResponseBody.unCompress(success: (InputStream) -> T): T {
         }
     }
     var input: InputStream = byteStream()
-    val encodings = headers()["Content-Encoding"]
+    val encodings = response().headers()["Content-Encoding"]
         ?.lowercase()
         ?.split(',')
         ?.map { it.trim() }
