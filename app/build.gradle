@@ -226,7 +226,7 @@ dependencies {
     //google
     implementation("com.google.android.material:material:1.11.0")
     implementation("com.google.android.flexbox:flexbox:3.0.0")
-    implementation("com.google.code.gson:gson:2.10.1")
+    implementation("com.google.code.gson:gson:2.13.2")
 
     //lifecycle
     implementation("androidx.lifecycle:lifecycle-common-java8:$lifecycle_version")
@@ -258,7 +258,7 @@ dependencies {
 
     //规则相关
     implementation("org.jsoup:jsoup:1.16.2")
-    implementation("com.jayway.jsonpath:json-path:2.9.0")
+    implementation("com.jayway.jsonpath:json-path:2.10.0")
     implementation("cn.wanghaomiao:JsoupXpath:2.5.3")
     implementation(project(path: ":modules:book"))
 
