@@ -159,6 +159,7 @@ object ChapterProvider {
         chapterSize: Int,
     ): TextChapter {
         val contents = bookContent.textList
+        val imgStyle = book.getImageStyle()
         val textPages = arrayListOf<TextPage>()
         val stringBuilder = StringBuilder()
         var absStartX = paddingLeft
@@ -186,7 +187,7 @@ object ChapterProvider {
             durY += titleBottomSpacing
         }
         contents.forEach { content ->
-            if (book.getImageStyle().equals(Book.imgStyleText, true)) {
+            if (imgStyle.equals(Book.imgStyleText, true)) {
                 //图片样式为文字嵌入类型
                 var text = content.replace(srcReplaceChar, "▣")
                 val srcList = LinkedList<String>()
@@ -238,7 +239,7 @@ object ChapterProvider {
                     }
                     setTypeImage(
                         book, matcher.group(1)!!,
-                        absStartX, durY, textPages, stringBuilder, book.getImageStyle()
+                        absStartX, durY, textPages, stringBuilder, imgStyle
                     ).let {
                         absStartX = it.first
                         durY = it.second
@@ -552,6 +553,7 @@ object ChapterProvider {
                 stringBuilder.append("\n")
             }
             calcTextLinePosition(textPages, textLine, stringBuilder.length)
+            textPages.last().addLine(textLine)
             textLine.upTopBottom(durY, textHeight, fontMetrics)
             val textPage = textPages.last()
             textPage.addLine(textLine)
