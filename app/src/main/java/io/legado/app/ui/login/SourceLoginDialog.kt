@@ -105,6 +105,8 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true) {
                                         source.getLoginJs()?.let { loginJS ->
                                             source.evalJS("$loginJS\n$buttonFunctionJS") {
                                                 put("result", getLoginData(loginUi))
+                                                put("book", viewModel.book)
+                                                put("chapter", viewModel.chapter)
                                             }
                                         }
                                     }.onFailure { e ->
