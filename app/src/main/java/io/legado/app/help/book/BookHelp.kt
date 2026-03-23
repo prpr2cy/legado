@@ -169,7 +169,7 @@ object BookHelp {
             val bytes = analyzeUrl.getByteArrayAwait()
             //某些图片被加密，需要进一步解密
             ImageUtils.decode(
-                src, bytes, isCover = false, bookSource, book
+                src, bytes, isCover = false, bookSource, book, chapter
             )?.let {
                 if (!checkImage(it)) {
                     throw NoStackTraceException("数据异常")

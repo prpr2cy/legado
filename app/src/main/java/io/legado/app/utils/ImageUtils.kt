@@ -1,12 +1,13 @@
 package io.legado.app.utils
 
 import io.legado.app.constant.AppLog
-import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BaseSource
+import io.legado.app.data.entities.Book
+import io.legado.app.data.entities.BookChapter
 import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.RssSource
-import java.io.InputStream
 import java.io.ByteArrayInputStream
+import java.io.InputStream
 
 /**
  * 加密图片解密工具
@@ -19,16 +20,17 @@ object ImageUtils {
      */
     fun decode(
         src: String, bytes: ByteArray, isCover: Boolean,
-        source: BaseSource?, book: Book? = null
+        source: BaseSource?, book: Book? = null, chapter: BookChapter? = null
     ): ByteArray? {
         val ruleJs = getRuleJs(source, isCover)
         if (ruleJs.isNullOrBlank()) return bytes
         //解密库hutool.crypto ByteArray|InputStream -> ByteArray
         return kotlin.runCatching {
             source?.evalJS(ruleJs) {
-                put("book", book)
-                put("result", bytes)
                 put("src", src)
+                put("result", bytes)
+                put("book", book)
+                put("chapter", chapter)
             } as ByteArray
         }.onFailure {
             AppLog.putDebug("${src}解密错误", it)
@@ -37,16 +39,17 @@ object ImageUtils {
 
     fun decode(
         src: String, inputStream: InputStream, isCover: Boolean,
-        source: BaseSource?, book: Book? = null
+        source: BaseSource?, book: Book? = null, chapter: BookChapter? = null
     ): InputStream? {
         val ruleJs = getRuleJs(source, isCover)
         if (ruleJs.isNullOrBlank()) return inputStream
         //解密库hutool.crypto ByteArray|InputStream -> ByteArray
         return kotlin.runCatching {
             val bytes = source?.evalJS(ruleJs) {
-                put("book", book)
-                put("result", inputStream)
                 put("src", src)
+                put("result", inputStream)
+                put("book", book)
+                put("chapter", chapter)
             } as ByteArray
             ByteArrayInputStream(bytes)
         }.onFailure {
