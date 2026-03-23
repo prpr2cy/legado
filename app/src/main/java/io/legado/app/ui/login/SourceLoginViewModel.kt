@@ -3,6 +3,7 @@ package io.legado.app.ui.login
 import android.app.Application
 import android.content.Intent
 import io.legado.app.base.BaseViewModel
+import io.legado.app.constant.BookType
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.BaseSource
 import io.legado.app.data.entities.Book

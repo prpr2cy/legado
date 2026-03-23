@@ -17,7 +17,12 @@ import androidx.lifecycle.lifecycleScope
 import com.jaredrummler.android.colorpicker.ColorPickerDialogListener
 import io.legado.app.BuildConfig
 import io.legado.app.R
-import io.legado.app.constant.*
+import io.legado.app.constant.AppConst
+import io.legado.app.constant.AppLog
+import io.legado.app.constant.BookType
+import io.legado.app.constant.EventBus
+import io.legado.app.constant.PreferKey
+import io.legado.app.constant.Status
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.Book
 import io.legado.app.data.entities.BookChapter
@@ -1111,6 +1116,7 @@ class ReadBookActivity : BaseReadBookActivity(),
             startActivity<SourceLoginActivity> {
                 putExtra("type", "bookSource")
                 putExtra("key", it.bookSourceUrl)
+                putExtra("bookType", BookType.text)
             }
         }
     }

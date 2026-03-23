@@ -112,6 +112,7 @@ class AudioPlayActivity :
                 startActivity<SourceLoginActivity> {
                     putExtra("type", "bookSource")
                     putExtra("key", it.bookSourceUrl)
+                    putExtra("bookType", BookType.audio)
                 }
             }
             R.id.menu_wake_lock -> AppConfig.audioPlayUseWakeLock = !AppConfig.audioPlayUseWakeLock
