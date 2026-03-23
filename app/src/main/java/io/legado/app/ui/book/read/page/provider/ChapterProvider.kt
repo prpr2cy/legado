@@ -552,8 +552,7 @@ object ChapterProvider {
             if (textLine.isParagraphEnd) {
                 stringBuilder.append("\n")
             }
-            calcTextLinePosition(textPages, textLine, stringBuilder.length)
-            textPages.last().addLine(textLine)
+            calcTextLinePosition(textPages, textLine, sbLength)
             textLine.upTopBottom(durY, textHeight, fontMetrics)
             val textPage = textPages.last()
             textPage.addLine(textLine)
