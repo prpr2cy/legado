@@ -35,7 +35,7 @@ object ImageLoader {
     }
 
     fun loadBitmap(context: Context, path: String?): RequestBuilder<Bitmap> {
-        val requestManager = Glide.with(context).asBitmap()
+        val requestManager = Glide.with(context).`as`(Bitmap::class.java)
         return when {
             path.isNullOrEmpty() -> requestManager.load(path)
             path.isDataUrl() -> requestManager.load(path)
