@@ -317,7 +317,7 @@ data class Book(
     }
 
     fun save() {
-        if (appDb.bookDao.has(bookUrl)) {
+        if (appDb.bookDao.has(bookUrl) == true) {
             appDb.bookDao.update(this)
         } else {
             appDb.bookDao.insert(this)

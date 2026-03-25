@@ -231,11 +231,11 @@ object ChapterProvider {
                         sb.append(text.substring(start, matcher.start()))
                     }
                     val imgSrc = matcher.group(1)!!
-                    var imgStyle = AppPattern.imgStyRegex.find(imgSrc)
-                        ?.groupValues?.get(1)?.trim().uppercase()
-                    if (imgStyle == null || !allowedStyles.contains(imgStyle)) {
-                        imgStyle = imageStyle
-                    }
+                    val imgStyle = AppPattern.imgStyRegex.find(imgSrc)
+                        ?.groupValues?.get(1)
+                        ?.trim()?.uppercase()
+                        ?.takeIf { allowedStyles.contains(it) }
+                        ?: imageStyle
                     if (imgStyle.equals(Book.imgStyleText, true)) {
                         srcList.add(imgSrc)
                         sb.append(srcReplaceChar)
