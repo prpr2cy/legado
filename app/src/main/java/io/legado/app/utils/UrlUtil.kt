@@ -158,9 +158,9 @@ object UrlUtil {
             if (dataUriSuffixRegex.containsMatchIn(input)) {
                 val mimeType = dataUriSuffixRegex.find(input)
                     ?.groupValues?.get(1) ?: ""
-                mimeType.substringAfterLast("/")
+                mimeType.substringAfterLast("/", "")
                     .substringBefore("+")
-                    .substringAfterLast("-", "")
+                    .substringAfterLast("-")
                     .lowercase()
             } else {
                 CustomUrl(input).getUrl()
