@@ -148,32 +148,98 @@ object UrlUtil {
         }
     }
 
+    // MIME 扩展名映射
+    private val MIME_TO_EXT = mapOf(
+        // 图片
+        "image/jpg" to "jpg",
+        "image/jpeg" to "jpg",
+        "image/png" to "png",
+        "image/x-png" to "png",
+        "image/icon" to "ico",
+        "image/x-icon" to "ico",
+        "image/bmp" to "bmp",
+        "image/gif" to "gif",
+        "image/avif" to "avif",
+        "image/heic" to "heic",
+        "image/heif" to "heif",
+        "image/tiff" to "tiff",
+        "image/x-tiff" to "tiff",
+        "image/apng" to "apng",
+        "image/webp" to "webp",
+        "image/svg+xml" to "svg",
+
+        // 音频
+        "audio/mpeg" to "mp3",
+        "audio/x-mpeg" to "mp3",
+        "audio/wav" to "wav",
+        "audio/x-wav" to "wav",
+        "audio/aac" to "aac",
+        "audio/ogg" to "ogg",
+        "audio/mp4" to "m4a",
+        "audio/x-m4a" to "m4a",
+        "audio/flac" to "flac",
+        "audio/x-flac" to "flac",
+        "audio/webm" to "weba",
+
+        // 视频
+        "video/mp4" to "mp4",
+        "video/mpeg" to "mpeg",
+        "video/webm" to "webm",
+        "video/ogg" to "ogv",
+        "video/x-msvideo" to "avi",
+        "video/quicktime" to "mov",
+
+        // 文档
+        "text/plain" to "txt",
+        "text/xml" to "xml",
+        "text/html" to "html",
+        "text/javascript" to "js",
+        "text/css" to "css",
+        "text/markdown" to "md",
+        "application/pdf" to "pdf",
+        "application/json" to "json",
+        "application/xml" to "xml",
+        "application/javascript" to "js",
+        "application/zip" to "zip",
+        "application/gzip" to "gz",
+        "application/x-tar" to "tar",
+        "application/octet-stream" to "bin",
+        "application/xhtml+xml" to "xhtml"
+    )
+
     private val fileSuffixRegex = Regex("^[a-z\\d]+$", RegexOption.IGNORE_CASE)
 
-    private val dataUriSuffixRegex = Regex("data:[^;]+;base64,", RegexOption.IGNORE_CASE)
+    private val dataUriSuffixRegex = Regex("data:([^;,]+)", RegexOption.IGNORE_CASE)
 
     /* 获取合法的文件后缀 */
     fun getSuffix(str: String, default: String? = null): String {
         val suffix = str.let { input ->
             if (dataUriSuffixRegex.containsMatchIn(input)) {
-                val mineType = dataUriSuffixRegex.find(input)?.value ?: ""
-                mineType.substringAfter("data:")
-                    .substringBefore(";")
-                    .substringAfterLast("/", "")
+                val mimeType = dataUriSuffixRegex.find(input)
+                    ?.groupValues?.get(1)
+                    ?.lowercase() ?: ""
+                MIME_TO_EXT[mimeType]
+                    ?: mimeType.substringAfterLast("/")
+                        .substringBefore("+")
+                        .substringAfterLast("-", "")
+                }
             } else {
                 CustomUrl(input).getUrl()
                     .substringBefore("?")
                     .substringAfterLast("/")
                     .substringBefore("#")
                     .substringAfterLast(".", "")
+                    .lowercase()
             }
         }
         //检查截取的后缀字符是否合法 [a-zA-Z0-9]
         return if (suffix.length > 5 || !suffix.matches(fileSuffixRegex)) {
-            AppLog.put("Cannot find legal suffix:\n target: $str\n suffix: $suffix")
+            if (default == null) {
+                AppLog.put("Cannot find legal suffix:\n target: $str\n suffix: $suffix")
+            }
             default ?: "ext"
         } else {
-            suffix.lowercase()
+            suffix
         }
     }
 
