@@ -222,7 +222,6 @@ object UrlUtil {
                     ?: mimeType.substringAfterLast("/")
                         .substringBefore("+")
                         .substringAfterLast("-", "")
-                }
             } else {
                 CustomUrl(input).getUrl()
                     .substringBefore("?")
