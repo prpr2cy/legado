@@ -207,9 +207,9 @@ object UrlUtil {
         "application/xhtml+xml" to "xhtml"
     )
 
-    private val fileSuffixRegex = Regex("^[a-z\\d]+$", RegexOption.IGNORE_CASE)
-
     private val dataUriSuffixRegex = Regex("data:([^;,]+)", RegexOption.IGNORE_CASE)
+
+    private val fileSuffixRegex = Regex("^[a-z\\d]+$", RegexOption.IGNORE_CASE)
 
     /* 获取合法的文件后缀 */
     fun getSuffix(str: String, default: String? = null): String {
