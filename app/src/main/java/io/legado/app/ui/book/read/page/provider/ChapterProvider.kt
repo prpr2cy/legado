@@ -268,25 +268,25 @@ object ChapterProvider {
                     }
                     start = matcher.end()
                 }
-                if (start < content.length) {
-                    sb.append(content.substring(start, content.length))
-                    val textAfter = sb.toString()
-                    if (textAfter.isNotBlank()) {
-                        setTypeText(
-                            book,
-                            absStartX,
-                            durY,
-                            if (AppConfig.enableReview) textAfter + reviewChar else textAfter,
-                            textPages,
-                            stringBuilder,
-                            contentPaint,
-                            contentPaintTextHeight,
-                            contentPaintFontMetrics,
-                            srcList = srcList.ifEmpty { null }
-                        ).let {
-                            absStartX = it.first
-                            durY = it.second
-                        }
+                if (start < text.length) {
+                    sb.append(text.substring(start, text.length))
+                }
+                val textAfter = sb.toString()
+                if (textAfter.isNotBlank()) {
+                    setTypeText(
+                        book,
+                        absStartX,
+                        durY,
+                        if (AppConfig.enableReview) textAfter + reviewChar else textAfter,
+                        textPages,
+                        stringBuilder,
+                        contentPaint,
+                        contentPaintTextHeight,
+                        contentPaintFontMetrics,
+                        srcList = srcList.ifEmpty { null }
+                    ).let {
+                        absStartX = it.first
+                        durY = it.second
                     }
                 }
             }
