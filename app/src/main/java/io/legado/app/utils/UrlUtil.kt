@@ -148,7 +148,7 @@ object UrlUtil {
         }
     }
 
-    private val dataUriSuffixRegex = Regex("data:([^;,]+)", RegexOption.IGNORE_CASE)
+    private val dataUriSuffixRegex = Regex("data:([^;]+);base64,", RegexOption.IGNORE_CASE)
 
     private val fileSuffixRegex = Regex("^[a-z\\d]+$", RegexOption.IGNORE_CASE)
 

@@ -159,7 +159,8 @@ object ChapterProvider {
         chapterSize: Int,
     ): TextChapter {
         val contents = bookContent.textList
-        val imgStyle = book.getImageStyle()
+        val imageStyle = book.getImageStyle()
+        val isTextImageStyle = imageStyle.equals(Book.imgStyleText, true)
         val textPages = arrayListOf<TextPage>()
         val stringBuilder = StringBuilder()
         var absStartX = paddingLeft
@@ -187,9 +188,9 @@ object ChapterProvider {
             durY += titleBottomSpacing
         }
         contents.forEach { content ->
-            if (imgStyle.equals(Book.imgStyleText, true)) {
+            var text = content.replace(srcReplaceChar, "▣")
+            if (isTextImageStyle) {
                 //图片样式为文字嵌入类型
-                var text = content.replace(srcReplaceChar, "▣")
                 val srcList = LinkedList<String>()
                 val sb = StringBuffer()
                 val matcher = AppPattern.imgPattern.matcher(text)
@@ -217,46 +218,70 @@ object ChapterProvider {
                     durY = it.second
                 }
             } else {
-                val matcher = AppPattern.imgPattern.matcher(content)
                 var start = 0
+                val srcList = LinkedList<String>()
+                val sb = StringBuffer()
+                val matcher = AppPattern.imgPattern.matcher(text)
                 while (matcher.find()) {
-                    val text = content.substring(start, matcher.start())
-                    if (text.isNotBlank()) {
-                        setTypeText(
+                    if (start < matcher.start()) {
+                        sb.append(text.substring(start, matcher.start()))
+                    }
+                    val imgSrc = matcher.group(1)!!
+                    val imgStyle = AppPattern.imgStyRegex.find(imgSrc)
+                        ?.groupValues?.get(1)?.trim()
+                        ?: imageStyle
+                    if (imgStyle == "TEXT") {
+                        srcList.add(imgSrc)
+                        sb.append(srcReplaceChar)
+                    } else {
+                        val textBefore = sb.toString()
+                        if (textBefore.isNotBlank()) {
+                            setTypeText(
+                                book,
+                                absStartX,
+                                durY,
+                                textBefore,
+                                textPages,
+                                stringBuilder,
+                                contentPaint,
+                                contentPaintTextHeight,
+                                contentPaintFontMetrics,
+                                srcList = srcList
+                            ).let {
+                                absStartX = it.first
+                                durY = it.second
+                            }
+                        }
+                        setTypeImage(
                             book,
+                            imgSrc,
                             absStartX,
                             durY,
-                            text,
                             textPages,
                             stringBuilder,
-                            contentPaint,
-                            contentPaintTextHeight,
-                            contentPaintFontMetrics
+                            imgStyle
                         ).let {
                             absStartX = it.first
                             durY = it.second
                         }
                     }
-                    setTypeImage(
-                        book, matcher.group(1)!!,
-                        absStartX, durY, textPages, stringBuilder, imgStyle
-                    ).let {
-                        absStartX = it.first
-                        durY = it.second
-                    }
                     start = matcher.end()
                 }
                 if (start < content.length) {
-                    val text = content.substring(start, content.length)
-                    if (text.isNotBlank()) {
+                    sb.append(content.substring(start, content.length))
+                    val textAfter = sb.toString()
+                    if (textAfter.isNotBlank()) {
                         setTypeText(
-                            book, absStartX, durY,
-                            if (AppConfig.enableReview) text + reviewChar else text,
+                            book,
+                            absStartX,
+                            durY,
+                            if (AppConfig.enableReview) textAfter + reviewChar else textAfter,
                             textPages,
                             stringBuilder,
                             contentPaint,
                             contentPaintTextHeight,
-                            contentPaintFontMetrics
+                            contentPaintFontMetrics,
+                            srcList = srcList.ifEmpty { null }
                         ).let {
                             absStartX = it.first
                             durY = it.second
