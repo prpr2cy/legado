@@ -251,6 +251,7 @@ object ChapterProvider {
                                 absStartX = it.first
                                 durY = it.second
                             }
+                            sb.setLength(0)
                         }
                         setTypeImage(
                             book,
