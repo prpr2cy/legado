@@ -1,7 +1,13 @@
 package io.legado.app.data.entities
 
 import android.os.Parcelable
-import androidx.room.*
+import androidx.room.ColumnInfo
+import androidx.room.Entity
+import androidx.room.Ignore
+import androidx.room.Index
+import androidx.room.PrimaryKey
+import androidx.room.TypeConverter
+import androidx.room.TypeConverters
 import io.legado.app.constant.AppPattern
 import io.legado.app.constant.BookType
 import io.legado.app.constant.PageAnim
@@ -284,12 +290,14 @@ data class Book(
      * 迁移旧的书籍的一些信息到新的书籍中
      */
     fun migrateTo(newBook: Book, toc: List<BookChapter>): Book {
-        newBook.durChapterIndex = BookHelp
-            .getDurChapter(durChapterIndex, durChapterTitle, toc, totalChapterNum)
-        newBook.durChapterTitle = toc[newBook.durChapterIndex].getDisplayTitle(
-            ContentProcessor.get(newBook.name, newBook.origin).getTitleReplaceRules()
-        )
-        newBook.durChapterPos = durChapterPos
+        if (toc.isNotEmpty()) {
+            newBook.durChapterIndex = BookHelp
+                .getDurChapter(durChapterIndex, durChapterTitle, toc, totalChapterNum)
+            newBook.durChapterTitle = toc[newBook.durChapterIndex].getDisplayTitle(
+                ContentProcessor.get(newBook.name, newBook.origin).getTitleReplaceRules()
+            )
+            newBook.durChapterPos = durChapterPos
+        }
         newBook.durChapterTime = durChapterTime
         newBook.group = group
         newBook.order = order
@@ -309,7 +317,7 @@ data class Book(
     }
 
     fun save() {
-        if (appDb.bookDao.has(bookUrl) == true) {
+        if (appDb.bookDao.has(bookUrl)) {
             appDb.bookDao.update(this)
         } else {
             appDb.bookDao.insert(this)

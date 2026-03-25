@@ -45,6 +45,10 @@ object ChapterProvider {
     //用于评论按钮的替换
     const val reviewChar = "▨"
 
+    private val allowedStyles = setOf(
+        Book.imgStyleDefault, Book.imgStyleFull, Book.imgStyleText
+    )
+
     private val isScroll: Boolean
         get() {
             return ReadBook.pageAnim() == 3
@@ -227,10 +231,12 @@ object ChapterProvider {
                         sb.append(text.substring(start, matcher.start()))
                     }
                     val imgSrc = matcher.group(1)!!
-                    val imgStyle = AppPattern.imgStyRegex.find(imgSrc)
-                        ?.groupValues?.get(1)?.trim()
-                        ?: imageStyle
-                    if (imgStyle == "TEXT") {
+                    var imgStyle = AppPattern.imgStyRegex.find(imgSrc)
+                        ?.groupValues?.get(1)?.trim().uppercase()
+                    if (imgStyle == null || !allowedStyles.contains(imgStyle)) {
+                        imgStyle = imageStyle
+                    }
+                    if (imgStyle.equals(Book.imgStyleText, true)) {
                         srcList.add(imgSrc)
                         sb.append(srcReplaceChar)
                     } else {
@@ -323,7 +329,7 @@ object ChapterProvider {
         y: Float,
         textPages: ArrayList<TextPage>,
         stringBuilder: StringBuilder,
-        imageStyle: String?,
+        imgStyle: String?,
     ): Pair<Int, Float> {
         var absStartX = x
         var durY = y
@@ -337,7 +343,7 @@ object ChapterProvider {
         if (size.width > 0 && size.height > 0) {
             var height = size.height
             var width = size.width
-            when (imageStyle?.toUpperCase(Locale.ROOT)) {
+            when (imgStyle?.toUpperCase(Locale.ROOT)) {
                 Book.imgStyleFull -> {
                     width = disPlayWidth
                     height = width * size.height / size.width
