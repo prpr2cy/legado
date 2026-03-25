@@ -63,7 +63,9 @@ object ImageUtils {
     ): String? {
         return when (source) {
             is BookSource ->
-                if (isCover) source.coverDecodeJs else source.getContentRule().imageDecode
+                if (isCover) source.coverDecodeJs
+                else source.getContentRule().imageDecode
+
             is RssSource -> source.coverDecodeJs
             else -> null
         }

@@ -6,8 +6,7 @@ import com.bumptech.glide.load.model.ModelLoaderFactory
 import com.bumptech.glide.load.model.MultiModelLoaderFactory
 import java.io.InputStream
 
-
-object OkHttpModeLoaderFactory : ModelLoaderFactory<GlideUrl?, InputStream?> {
+object OkHttpModeLoaderFactory: ModelLoaderFactory<GlideUrl?, InputStream?> {
 
     override fun build(multiFactory: MultiModelLoaderFactory): ModelLoader<GlideUrl?, InputStream?> {
         return OkHttpModelLoader
