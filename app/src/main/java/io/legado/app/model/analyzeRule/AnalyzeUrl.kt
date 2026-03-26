@@ -684,7 +684,7 @@ class AnalyzeUrl(
         /**
         * 是否忽略外部请求头
         **/
-        private var ignore: Any? = null
+        private var ignore: Any? = null,
         /**
          * 是否使用webView
          **/
