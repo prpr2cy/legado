@@ -4,6 +4,7 @@ import com.bumptech.glide.load.Option
 import com.bumptech.glide.load.Options
 import com.bumptech.glide.load.model.GlideUrl
 import com.bumptech.glide.load.model.ModelLoader
+import io.legado.app.help.source.SourceHelp
 import io.legado.app.model.analyzeRule.AnalyzeUrl
 import io.legado.app.utils.isAbsUrl
 
@@ -22,8 +23,11 @@ object OkHttpModelLoader : ModelLoader<GlideUrl?, InputStream?> {
     ): ModelLoader.LoadData<InputStream?> {
         val cacheKey = model.toString()
         var modelWithHeader = model
+        val source = options.get(sourceOriginOption)?.let { sourceUrl ->
+            SourceHelp.getSource(sourceUrl)
+        }
         if (cacheKey.isAbsUrl()) {
-            modelWithHeader = AnalyzeUrl(cacheKey).getGlideUrl()
+            modelWithHeader = AnalyzeUrl(cacheKey, source = source).getGlideUrl()
         }
         return ModelLoader.LoadData(modelWithHeader, OkHttpStreamFetcher(modelWithHeader, options))
     }
