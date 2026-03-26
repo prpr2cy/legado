@@ -4,7 +4,6 @@ import com.bumptech.glide.load.Option
 import com.bumptech.glide.load.Options
 import com.bumptech.glide.load.model.GlideUrl
 import com.bumptech.glide.load.model.ModelLoader
-import io.legado.app.data.entities.BaseSource
 import io.legado.app.help.source.SourceHelp
 import io.legado.app.model.analyzeRule.AnalyzeUrl
 import io.legado.app.utils.isAbsUrl
@@ -14,7 +13,6 @@ object OkHttpModelLoader : ModelLoader<GlideUrl?, InputStream?> {
 
     val loadOnlyWifiOption = Option.memory("loadOnlyWifi", false)
     val sourceOriginOption = Option.memory<String>("sourceOrigin")
-    val sourceOption = Option.memory("source", null)
 
     override fun buildLoadData(
         model: GlideUrl,
@@ -30,8 +28,7 @@ object OkHttpModelLoader : ModelLoader<GlideUrl?, InputStream?> {
         if (cacheKey.isAbsUrl()) {
             modelWithHeader = AnalyzeUrl(cacheKey, source = source).getGlideUrl()
         }
-        options.set(sourceOption, source)
-        return ModelLoader.LoadData(modelWithHeader, OkHttpStreamFetcher(modelWithHeader, options))
+        return ModelLoader.LoadData(modelWithHeader, OkHttpStreamFetcher(modelWithHeader, options, source))
     }
 
     override fun handles(model: GlideUrl): Boolean {

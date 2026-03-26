@@ -26,12 +26,15 @@ import java.io.IOException
 import java.io.InputStream
 
 
-class OkHttpStreamFetcher(private val url: GlideUrl, private val options: Options) :
-    DataFetcher<InputStream>, okhttp3.Callback {
+class OkHttpStreamFetcher(
+    private val url: GlideUrl,
+    private val options: Options,
+    private val source: BaseSource? = null
+) : DataFetcher<InputStream>, okhttp3.Callback {
     private var stream: InputStream? = null
     private var responseBody: ResponseBody? = null
     private var callback: DataFetcher.DataCallback<in InputStream>? = null
-    private var source: BaseSource? = null
+    // private var source: BaseSource? = null
 
     @Volatile
     private var call: Call? = null
@@ -52,7 +55,6 @@ class OkHttpStreamFetcher(private val url: GlideUrl, private val options: Option
         }
         val requestBuilder: Request.Builder = Request.Builder().url(url.toStringUrl())
         val headerMap = HashMap<String, String>()
-        source = options.get(OkHttpModelLoader.sourceOption)
         /*
         options.get(OkHttpModelLoader.sourceOriginOption)?.let { sourceUrl ->
             source = SourceHelp.getSource(sourceUrl)
