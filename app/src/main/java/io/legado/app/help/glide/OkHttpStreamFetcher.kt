@@ -52,17 +52,17 @@ class OkHttpStreamFetcher(private val url: GlideUrl, private val options: Option
         }
         val requestBuilder: Request.Builder = Request.Builder().url(url.toStringUrl())
         val headerMap = HashMap<String, String>()
-        /*
         options.get(OkHttpModelLoader.sourceOriginOption)?.let { sourceUrl ->
             source = SourceHelp.getSource(sourceUrl)
+            /*
             source?.getHeaderMap(true)?.let {
                 headerMap.putAll(it)
             }
             if (source?.enabledCookieJar == true) {
                 headerMap[cookieJarHeader] = "1"
             }
+            */
         }
-        */
         headerMap.putAll(url.headers)
         requestBuilder.addHeaders(headerMap)
         val request: Request = requestBuilder.build()
