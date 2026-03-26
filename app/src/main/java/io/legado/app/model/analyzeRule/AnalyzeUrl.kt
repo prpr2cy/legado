@@ -65,7 +65,7 @@ class AnalyzeUrl(
         private set
     var type: String? = null
         private set
-    var ignore: Boolean = false
+    var header: Boolean = true
         private set
     val headerMap = HashMap<String, String>()
     private var urlNoQuery: String = ""
@@ -186,8 +186,8 @@ class AnalyzeUrl(
         if (urlNoOption.length != ruleUrl.length) {
             GSON.fromJsonObject<UrlOption>(ruleUrl.substring(urlMatcher.end())).getOrNull()
                 ?.let { option ->
-                    ignore = option.getIgnore()
-                    if (ignore == true) {
+                    header = option.getHeader()
+                    if (header == false) {
                         headerMap.clear()
                         headerMap[UA_NAME] = AppConfig.userAgent
                     }
@@ -405,7 +405,7 @@ class AnalyzeUrl(
         }
         val concurrentRecord = getConcurrentRecord()
         try {
-            if (ignore != true) {
+            if (header == true) {
                 setCookie()
             }
             val strResponse: StrResponse
@@ -493,7 +493,7 @@ class AnalyzeUrl(
     suspend fun getResponseAwait(): Response {
         val concurrentRecord = getConcurrentRecord()
         try {
-            if (ignore != true) {
+            if (header == true) {
                 setCookie()
             }
             val response = getProxyClient(proxy).newCallResponse(retry) {
@@ -646,7 +646,7 @@ class AnalyzeUrl(
      *获取处理过阅读定义的urlOption和cookie的GlideUrl
      */
     fun getGlideUrl(): GlideUrl {
-        if (ignore != true) {
+        if (header == true) {
             setCookie()
         }
         return GlideUrl(url, GlideHeaders(headerMap))
@@ -682,9 +682,9 @@ class AnalyzeUrl(
          **/
         private var type: String? = null,
         /**
-        * 是否忽略外部请求头
+        * 是否添加 source 请求头
         **/
-        private var ignore: Any? = null,
+        private var header: Any? = null,
         /**
          * 是否使用webView
          **/
@@ -743,14 +743,17 @@ class AnalyzeUrl(
             return type
         }
 
-        fun setIgnore(value: Boolean?) {
-            ignore = value == true
+        fun setHeader(value: Any?) {
+            header = when (value) {
+                false, "false", "ignore" -> false // 忽略 source 请求头
+                else -> true // 添加 source 请求头
+            }
         }
 
-        fun getIgnore(): Boolean {
-            return when (ignore) {
-                true, "true" -> true
-                else -> false
+        fun getHeader(): Boolean {
+            return when (header) {
+                false, "false", "ignore" -> false // 忽略 source 请求头
+                else -> true // 添加 source 请求头
             }
         }
 
