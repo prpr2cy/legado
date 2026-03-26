@@ -186,8 +186,8 @@ class AnalyzeUrl(
         if (urlNoOption.length != ruleUrl.length) {
             GSON.fromJsonObject<UrlOption>(ruleUrl.substring(urlMatcher.end())).getOrNull()
                 ?.let { option ->
-                    ignore = option.getIgnore() == true
-                    if (ignore != true) {
+                    ignore = option.getIgnore()
+                    if (ignore == true) {
                         headerMap.clear()
                         headerMap[UA_NAME] = AppConfig.userAgent
                     }
@@ -682,6 +682,10 @@ class AnalyzeUrl(
          **/
         private var type: String? = null,
         /**
+        * 是否忽略外部请求头
+        **/
+        private var ignore: Any? = null
+        /**
          * 是否使用webView
          **/
         private var webView: Any? = null,
@@ -743,8 +747,11 @@ class AnalyzeUrl(
             ignore = value == true
         }
 
-        fun getIgnore(): Boolean? {
-            return ignore
+        fun getIgnore(): Boolean {
+            return when (ignore) {
+                true, "true" -> true
+                else -> false
+            }
         }
 
         fun useWebView(): Boolean {
