@@ -65,6 +65,8 @@ class AnalyzeUrl(
         private set
     var type: String? = null
         private set
+    var ignore: Boolean = false
+        private set
     val headerMap = HashMap<String, String>()
     private var urlNoQuery: String = ""
     private var queryStr: String? = null
@@ -184,8 +186,8 @@ class AnalyzeUrl(
         if (urlNoOption.length != ruleUrl.length) {
             GSON.fromJsonObject<UrlOption>(ruleUrl.substring(urlMatcher.end())).getOrNull()
                 ?.let { option ->
-                    val optionType = option.getType()
-                    if (optionType?.equals("ignore", true) == true) {
+                    ignore = option.getIgnore() == true
+                    if (ignore != true) {
                         headerMap.clear()
                         headerMap[UA_NAME] = AppConfig.userAgent
                     }
@@ -198,7 +200,7 @@ class AnalyzeUrl(
                     option.getBody()?.let {
                         body = it
                     }
-                    type = optionType
+                    type = option.getType()
                     charset = option.getCharset()
                     retry = option.getRetry()
                     useWebView = option.useWebView()
@@ -403,7 +405,7 @@ class AnalyzeUrl(
         }
         val concurrentRecord = getConcurrentRecord()
         try {
-            if (type?.equals("ignore", true) == true) {
+            if (ignore != true) {
                 setCookie()
             }
             val strResponse: StrResponse
@@ -491,7 +493,7 @@ class AnalyzeUrl(
     suspend fun getResponseAwait(): Response {
         val concurrentRecord = getConcurrentRecord()
         try {
-            if (type?.equals("ignore", true) == true) {
+            if (ignore != true) {
                 setCookie()
             }
             val response = getProxyClient(proxy).newCallResponse(retry) {
@@ -644,7 +646,7 @@ class AnalyzeUrl(
      *获取处理过阅读定义的urlOption和cookie的GlideUrl
      */
     fun getGlideUrl(): GlideUrl {
-        if (type?.equals("ignore", true) == true) {
+        if (ignore != true) {
             setCookie()
         }
         return GlideUrl(url, GlideHeaders(headerMap))
@@ -735,6 +737,14 @@ class AnalyzeUrl(
 
         fun getType(): String? {
             return type
+        }
+
+        fun setIgnore(value: Boolean?) {
+            ignore = value == true
+        }
+
+        fun getIgnore(): Boolean? {
+            return ignore
         }
 
         fun useWebView(): Boolean {
