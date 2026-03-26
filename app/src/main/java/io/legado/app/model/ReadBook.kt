@@ -202,10 +202,10 @@ object ReadBook : CoroutineScope by MainScope() {
             curTextChapter = nextTextChapter
             nextTextChapter = null
             if (curTextChapter == null) {
-                AppLog.putDebug("moveToNextChapter-章节未加载,开始加载")
+                // AppLog.putDebug("moveToNextChapter-章节未加载,开始加载")
                 loadContent(durChapterIndex, upContent, resetPageOffset = false)
             } else if (upContent) {
-                AppLog.putDebug("moveToNextChapter-章节已加载,刷新视图")
+                // AppLog.putDebug("moveToNextChapter-章节已加载,刷新视图")
                 callBack?.upContent()
             }
             if (AppConfig.preDownloadNum > 0) {
@@ -213,7 +213,7 @@ object ReadBook : CoroutineScope by MainScope() {
             }
             saveRead()
             callBack?.upMenuView()
-            AppLog.putDebug("moveToNextChapter-curPageChanged()")
+            // AppLog.putDebug("moveToNextChapter-curPageChanged()")
             curPageChanged()
             return true
         } else {
@@ -237,7 +237,7 @@ object ReadBook : CoroutineScope by MainScope() {
             } else if (upContent) {
                 callBack?.upContent()
             }
-            //loadContent(durChapterIndex.minus(1), upContent, false)
+            // loadContent(durChapterIndex.minus(1), upContent, false)
             saveRead()
             callBack?.upMenuView()
             curPageChanged()
@@ -322,7 +322,7 @@ object ReadBook : CoroutineScope by MainScope() {
         }
         if (AppConfig.preDownloadNum > 0) {
             loadContent(durChapterIndex + 1, resetPageOffset = resetPageOffset)
-            //loadContent(durChapterIndex - 1, resetPageOffset = resetPageOffset)
+            // loadContent(durChapterIndex - 1, resetPageOffset = resetPageOffset)
         }
     }
 
