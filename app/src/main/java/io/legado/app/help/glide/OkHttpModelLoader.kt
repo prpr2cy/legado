@@ -28,7 +28,10 @@ object OkHttpModelLoader : ModelLoader<GlideUrl?, InputStream?> {
         if (cacheKey.isAbsUrl()) {
             modelWithHeader = AnalyzeUrl(cacheKey, source = source).getGlideUrl()
         }
-        return ModelLoader.LoadData(modelWithHeader, OkHttpStreamFetcher(modelWithHeader, options, source))
+        return ModelLoader.LoadData(
+            modelWithHeader,
+            OkHttpStreamFetcher(modelWithHeader, options, source)
+        )
     }
 
     override fun handles(model: GlideUrl): Boolean {

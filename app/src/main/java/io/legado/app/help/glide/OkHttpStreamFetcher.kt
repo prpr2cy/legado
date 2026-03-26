@@ -30,7 +30,7 @@ class OkHttpStreamFetcher(
     private val url: GlideUrl,
     private val options: Options,
     private val source: BaseSource? = null
-) : DataFetcher<InputStream>, okhttp3.Callback {
+): DataFetcher<InputStream>, okhttp3.Callback {
     private var stream: InputStream? = null
     private var responseBody: ResponseBody? = null
     private var callback: DataFetcher.DataCallback<in InputStream>? = null
