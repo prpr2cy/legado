@@ -184,6 +184,11 @@ class AnalyzeUrl(
         if (urlNoOption.length != ruleUrl.length) {
             GSON.fromJsonObject<UrlOption>(ruleUrl.substring(urlMatcher.end())).getOrNull()
                 ?.let { option ->
+                    val optionType = option.getType()
+                    if (optionType?.equals("ignore", true) == true) {
+                        headerMap.clear()
+                        headerMap[UA_NAME] = AppConfig.userAgent
+                    }
                     option.getMethod()?.let {
                         if (it.equals("POST", true)) method = RequestMethod.POST
                     }
@@ -193,7 +198,7 @@ class AnalyzeUrl(
                     option.getBody()?.let {
                         body = it
                     }
-                    type = option.getType()
+                    type = optionType
                     charset = option.getCharset()
                     retry = option.getRetry()
                     useWebView = option.useWebView()
@@ -398,7 +403,9 @@ class AnalyzeUrl(
         }
         val concurrentRecord = getConcurrentRecord()
         try {
-            setCookie()
+            if (type?.equals("ignore", true) == true) {
+                setCookie()
+            }
             val strResponse: StrResponse
             if (this.useWebView && useWebView) {
                 strResponse = when (method) {
@@ -484,7 +491,9 @@ class AnalyzeUrl(
     suspend fun getResponseAwait(): Response {
         val concurrentRecord = getConcurrentRecord()
         try {
-            setCookie()
+            if (type?.equals("ignore", true) == true) {
+                setCookie()
+            }
             val response = getProxyClient(proxy).newCallResponse(retry) {
                 addHeaders(headerMap)
                 when (method) {
@@ -635,7 +644,9 @@ class AnalyzeUrl(
      *获取处理过阅读定义的urlOption和cookie的GlideUrl
      */
     fun getGlideUrl(): GlideUrl {
-        setCookie()
+        if (type?.equals("ignore", true) == true) {
+            setCookie()
+        }
         return GlideUrl(url, GlideHeaders(headerMap))
     }
 
