@@ -8,7 +8,13 @@ import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
-import android.webkit.*
+import android.webkit.ConsoleMessage
+import android.webkit.CookieManager
+import android.webkit.SslErrorHandler
+import android.webkit.WebChromeClient
+import android.webkit.WebResourceRequest
+import android.webkit.WebView
+import android.webkit.WebViewClient
 import androidx.activity.addCallback
 import androidx.activity.viewModels
 import androidx.core.view.size
@@ -20,12 +26,20 @@ import io.legado.app.databinding.ActivityWebViewBinding
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.http.CookieStore
 import io.legado.app.help.source.SourceVerificationHelp
+import io.legado.app.help.WebCacheManager
+import io.legado.app.help.WebJsExtensions
 import io.legado.app.lib.dialogs.SelectItem
 import io.legado.app.lib.theme.accentColor
 import io.legado.app.model.Download
 import io.legado.app.ui.association.OnLineImportActivity
 import io.legado.app.ui.file.HandleFileContract
-import io.legado.app.utils.*
+import io.legado.app.utils.ACache
+import io.legado.app.utils.gone
+import io.legado.app.utils.invisible
+import io.legado.app.utils.longSnackbar
+import io.legado.app.utils.openUrl
+import io.legado.app.utils.sendToClip
+import io.legado.app.utils.startActivity
 import io.legado.app.utils.viewbindingdelegate.viewBinding
 import java.net.URLDecoder
 
@@ -54,6 +68,13 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
             if (html.isNullOrEmpty()) {
                 binding.webView.loadUrl(url, headerMap)
             } else {
+                if (viewModel.localHtml) {
+                    viewModel.source?.let {
+                        val webJsExtensions = WebJsExtensions(it)
+                        binding.webView.addJavascriptInterface(webJsExtensions, "java")
+                        binding.webView.addJavascriptInterface(WebCacheManager, "cache")
+                    }
+                }
                 binding.webView.loadDataWithBaseURL(url, html, "text/html", "utf-8", url)
             }
         }
@@ -232,23 +253,20 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
         }
 
         private fun shouldOverrideUrlLoading(url: Uri): Boolean {
-            when (url.scheme) {
-                "http", "https" -> {
-                    return false
-                }
-
+            return when (url.scheme) {
+                "http", "https" -> false
                 "legado", "yuedu" -> {
                     startActivity<OnLineImportActivity> {
                         data = url
                     }
-                    return true
+                    true
                 }
 
                 else -> {
                     binding.root.longSnackbar("跳转其它应用", "确认") {
                         openUrl(url)
                     }
-                    return true
+                    true
                 }
             }
         }

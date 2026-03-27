@@ -287,10 +287,10 @@ class AnalyzeRule(
     /**
      * 获取Element
      */
-    fun getElement(ruleStr: String): Any? {
+    fun getElement(ruleStr: String, mContent: Any? = null): Any? {
         if (TextUtils.isEmpty(ruleStr)) return null
         var result: Any? = null
-        val content = this.content
+        val content = mContent ?: this.content
         val ruleList = splitSourceRule(ruleStr, true)
         if (content != null && ruleList.isNotEmpty()) {
             result = content
@@ -322,9 +322,9 @@ class AnalyzeRule(
      * 获取列表
      */
     @Suppress("UNCHECKED_CAST")
-    fun getElements(ruleStr: String): List<Any> {
+    fun getElements(ruleStr: String, mContent: Any? = null): List<Any> {
         var result: Any? = null
-        val content = this.content
+        val content = mContent ?: this.content
         val ruleList = splitSourceRule(ruleStr, true)
         if (content != null && ruleList.isNotEmpty()) {
             result = content

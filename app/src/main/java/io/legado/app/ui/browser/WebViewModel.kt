@@ -17,6 +17,7 @@ import io.legado.app.help.CacheManager
 import io.legado.app.help.IntentData
 import io.legado.app.help.http.newCallResponseBody
 import io.legado.app.help.http.okHttpClient
+import io.legado.app.help.source.SourceHelp
 import io.legado.app.help.source.SourceVerificationHelp
 import io.legado.app.model.analyzeRule.AnalyzeUrl
 import io.legado.app.utils.ACache
@@ -31,13 +32,16 @@ import java.io.File
 import java.util.Date
 
 class WebViewModel(application: Application) : BaseViewModel(application) {
+    var source: BaseSource? = null
+    var sourceOrigin: String = ""
+    var sourceName: String = ""
     var intent: Intent? = null
     var baseUrl: String = ""
     var html: String? = null
+    var localHtml: Boolean = false
     val headerMap: HashMap<String, String> = hashMapOf()
     var sourceVerificationEnable: Boolean = false
     var refetchAfterSuccess: Boolean = true
-    var sourceOrigin: String = ""
 
     fun initData(
         intent: Intent,
@@ -47,12 +51,15 @@ class WebViewModel(application: Application) : BaseViewModel(application) {
             this@WebViewModel.intent = intent
             val url = intent.getStringExtra("url")
                 ?: throw NoStackTraceException("url不能为空")
+            if (url.startsWith("data:text/html")) {
+                localHtml = true
+            }
             sourceOrigin = intent.getStringExtra("sourceOrigin") ?: ""
+            sourceName = intent.getStringExtra("sourceName") ?: ""
             sourceVerificationEnable = intent.getBooleanExtra("sourceVerificationEnable", false)
             refetchAfterSuccess = intent.getBooleanExtra("refetchAfterSuccess", true)
-            val source: BaseSource? = appDb.bookSourceDao.getBookSource(sourceOrigin)
-            val headerMapF = source?.getHeaderMap(true) ?: IntentData.get<Map<String, String>>(url)
-            val analyzeUrl = AnalyzeUrl(url, headerMapF = headerMapF)
+            source = SourceHelp.getSource(sourceOrigin)
+            val analyzeUrl = AnalyzeUrl(url, source = source)
             baseUrl = analyzeUrl.url
             headerMap.putAll(analyzeUrl.headerMap)
             if (analyzeUrl.isPost()) {
@@ -108,7 +115,7 @@ class WebViewModel(application: Application) : BaseViewModel(application) {
         if (refetchAfterSuccess) {
             execute {
                 val url = intent!!.getStringExtra("url")!!
-                val source = appDb.bookSourceDao.getBookSource(sourceOrigin)
+                val source = SourceHelp.getSource(sourceOrigin)
                 html = AnalyzeUrl(
                     url,
                     headerMapF = headerMap,

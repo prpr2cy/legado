@@ -13,6 +13,7 @@ import io.legado.app.constant.AppLog
 import io.legado.app.constant.AppPattern
 import io.legado.app.data.entities.BaseSource
 import io.legado.app.exception.NoStackTraceException
+import io.legado.app.help.config.AppConfig
 import io.legado.app.help.http.BackstageWebView
 import io.legado.app.help.http.CookieManager.cookieJarHeader
 import io.legado.app.help.http.CookieStore
@@ -122,7 +123,7 @@ interface JsExtensions : JsEncodeUtils {
             kotlin.runCatching {
                 analyzeUrl.getStrResponseAwait()
             }.onFailure {
-                AppLog.put("ajax($urlStr,$header) error\n${it.localizedMessage}", it)
+                AppLog.put("connect($urlStr,$header) error\n${it.localizedMessage}", it)
             }.getOrElse {
                 StrResponse(analyzeUrl.url, it.stackTraceStr)
             }
@@ -232,6 +233,8 @@ interface JsExtensions : JsEncodeUtils {
     fun importBytes(path: String): ByteArray {
         val result = when {
             path.startsWith("http") -> cacheBytes(path)
+            path.isUri() -> Uri.parse(path).readBytes(appCtx)
+            path.startsWith("/storage") -> FileUtils.readBytes(path)
             else -> readFile(path)
         }
         if (result?.size!! <= 0) throw NoStackTraceException("$path 内容获取失败或者为空")
@@ -461,9 +464,7 @@ interface JsExtensions : JsEncodeUtils {
         return String(bytes, charset(charset))
     }
 
-    /**
-     * js实现base64解码,不能删
-     */
+    /* base64解码为字符串 */
     fun base64Decode(str: String?): String {
         return Base64.decodeStr(str)
     }
@@ -476,6 +477,7 @@ interface JsExtensions : JsEncodeUtils {
         return EncoderUtils.base64Decode(str, flags)
     }
 
+    /* base64解码为字节数组 */
     fun base64DecodeToByteArray(str: String?): ByteArray? {
         if (str.isNullOrBlank()) {
             return null
@@ -490,17 +492,13 @@ interface JsExtensions : JsEncodeUtils {
         return EncoderUtils.base64DecodeToByteArray(str, flags)
     }
 
+    /* 字符串编码为base64 */
     fun base64Encode(str: String): String? {
         return EncoderUtils.base64Encode(str, 2)
     }
 
     fun base64Encode(str: String, flags: Int): String? {
         return EncoderUtils.base64Encode(str, flags)
-    }
-
-    /* hexString解码为字节数组 */
-    fun hexDecodeToByteArray(hex: String): ByteArray? {
-        return HexUtil.decodeHex(hex)
     }
 
     /* hexString解码为字符串 */
@@ -512,13 +510,14 @@ interface JsExtensions : JsEncodeUtils {
         return HexUtil.decodeHexStr(hex, charset(charset))
     }
 
+    /* hexString解码为字节数组 */
+    fun hexDecodeToByteArray(hex: String): ByteArray? {
+        return HexUtil.decodeHex(hex)
+    }
+
     /* 字符串编码为hexString */
     fun hexEncodeToString(str: String): String? {
         return HexUtil.encodeHexStr(str)
-    }
-
-    fun hexEncodeToString(str: String, charset: String): String? {
-        return HexUtil.encodeHexStr(str, charset(charset))
     }
 
     /**

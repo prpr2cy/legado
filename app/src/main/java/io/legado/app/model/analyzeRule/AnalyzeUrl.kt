@@ -65,8 +65,6 @@ class AnalyzeUrl(
         private set
     var type: String? = null
         private set
-    var header: Boolean = true
-        private set
     val headerMap = HashMap<String, String>()
     private var urlNoQuery: String = ""
     private var queryStr: String? = null
@@ -75,6 +73,7 @@ class AnalyzeUrl(
     private var method = RequestMethod.GET
     private var proxy: String? = null
     private var retry: Int = 0
+    private var useHeader: Boolean = true
     private var useWebView: Boolean = false
     private var webJs: String? = null
     private val enabledCookieJar = source?.enabledCookieJar ?: false
@@ -186,8 +185,8 @@ class AnalyzeUrl(
         if (urlNoOption.length != ruleUrl.length) {
             GSON.fromJsonObject<UrlOption>(ruleUrl.substring(urlMatcher.end())).getOrNull()
                 ?.let { option ->
-                    header = option.getHeader()
-                    if (header == false) {
+                    useHeader = option.useHeader()
+                    if (useHeader == false) {
                         headerMap.clear()
                         headerMap[UA_NAME] = AppConfig.userAgent
                     }
@@ -405,7 +404,7 @@ class AnalyzeUrl(
         }
         val concurrentRecord = getConcurrentRecord()
         try {
-            if (header == true) {
+            if (useHeader == true) {
                 setCookie()
             }
             val strResponse: StrResponse
@@ -493,7 +492,7 @@ class AnalyzeUrl(
     suspend fun getResponseAwait(): Response {
         val concurrentRecord = getConcurrentRecord()
         try {
-            if (header == true) {
+            if (useHeader == true) {
                 setCookie()
             }
             val response = getProxyClient(proxy).newCallResponse(retry) {
@@ -646,7 +645,7 @@ class AnalyzeUrl(
      *获取处理过阅读定义的urlOption和cookie的GlideUrl
      */
     fun getGlideUrl(): GlideUrl {
-        if (header == true) {
+        if (useHeader == true) {
             setCookie()
         }
         return GlideUrl(url, GlideHeaders(headerMap))
@@ -682,9 +681,9 @@ class AnalyzeUrl(
          **/
         private var type: String? = null,
         /**
-        * 是否添加 source 请求头
+        * 是否使用 source 请求头
         **/
-        private var header: Any? = null,
+        private var header: Any? = true,
         /**
          * 是否使用webView
          **/
@@ -743,29 +742,26 @@ class AnalyzeUrl(
             return type
         }
 
-        fun setHeader(value: Any?) {
-            header = when (value) {
-                false, "false", "ignore" -> false // 忽略 source 请求头
-                else -> true // 添加 source 请求头
-            }
+        fun useHeader(boolean: Boolean) {
+            header = boolean == true
         }
 
-        fun getHeader(): Boolean {
+        fun useHeader(): Boolean {
             return when (header) {
-                false, "false", "ignore" -> false // 忽略 source 请求头
-                else -> true // 添加 source 请求头
-            }
-        }
-
-        fun useWebView(): Boolean {
-            return when (webView) {
-                null, "", false, "false" -> false
+                null, "", false, "false", "ignore", "none" -> false // 忽略 source 请求头
                 else -> true
             }
         }
 
         fun useWebView(boolean: Boolean) {
             webView = if (boolean) true else null
+        }
+
+        fun useWebView(): Boolean {
+            return when (webView) {
+                null, "", false, "false", "ignore", "none" -> false
+                else -> true
+            }
         }
 
         fun setHeaders(value: String?) {

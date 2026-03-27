@@ -22,7 +22,7 @@ object SourceHelp {
                     EncoderUtils.base64Decode(it)
                 }.toHashSet()
         } catch (e: Exception) {
-            return@lazy hashSetOf<String>()
+            return@lazy emptySet()
         }
     }
 
