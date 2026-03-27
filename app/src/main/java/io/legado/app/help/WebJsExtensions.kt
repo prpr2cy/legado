@@ -117,13 +117,13 @@ class WebJsExtensions(source: BaseSource?) {
         return runBlocking {
             kotlin.runCatching {
                 val options = GSON.fromJsonObject<Map<String, Any>>(option).getOrNull()
-                    ?: emptyMap()
+                    ?: emptyMap<String, Any>()
                 var method = options["method"]?.toString()?.uppercase()
-                val body = options["body"]?.let {
-                    when (it) {
-                        is String -> it
-                        is Number, is Boolean -> it.toString()
-                        else -> GSON.toJson(it)
+                val body = options["body"]?.let { value ->
+                    when (value) {
+                        is String -> value
+                        is Number, is Boolean -> value.toString()
+                        else -> GSON.toJson(value)
                     }
                 }
                 if (method == null) {
@@ -132,7 +132,7 @@ class WebJsExtensions(source: BaseSource?) {
                 val headers = (options["headers"] as? Map<*, *>)
                     ?.mapKeys { it.key.toString() }
                     ?.mapValues { it.value?.toString() ?: "" }
-                    ?: emptyMap()
+                    ?: emptyMap<String, String>()
                 val timeout = (options["timeout"] as? Number)?.toInt() ?: 30000
                 val connect = Jsoup.connect(url)
                     .sslSocketFactory(SSLHelper.unsafeSSLSocketFactory)
