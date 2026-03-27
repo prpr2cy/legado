@@ -9,8 +9,12 @@ import io.legado.app.data.entities.RssSource
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.RuleComplete
 import io.legado.app.help.http.CookieStore
-import io.legado.app.utils.*
-
+import io.legado.app.utils.GSON
+import io.legado.app.utils.fromJsonObject
+import io.legado.app.utils.getClipText
+import io.legado.app.utils.printOnDebug
+import io.legado.app.utils.stackTraceStr
+import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.Dispatchers
 
 
@@ -33,11 +37,17 @@ class RssSourceEditViewModel(application: Application) : BaseViewModel(applicati
 
     fun save(source: RssSource, success: ((RssSource) -> Unit)) {
         execute {
-            if (source.sourceName.isBlank() || source.sourceName.isBlank()) {
+            if (source.sourceUrl.isBlank() || source.sourceName.isBlank()) {
                 throw NoStackTraceException(context.getString(R.string.non_null_name_url))
+            }
+            if (source.equal(rssSource ?: RssSource())) {
+                return@execute source
             }
             rssSource?.let {
                 appDb.rssSourceDao.delete(it)
+                if (it.sourceUrl != source.sourceUrl) {
+                    appDb.cacheDao.deleteSourceVariables(it.sourceUrl)
+                }
             }
             appDb.rssSourceDao.insert(source)
             rssSource = source

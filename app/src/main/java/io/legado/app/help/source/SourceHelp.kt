@@ -6,6 +6,7 @@ import io.legado.app.data.appDb
 import io.legado.app.data.entities.BaseSource
 import io.legado.app.data.entities.BookSource
 import io.legado.app.data.entities.RssSource
+import io.legado.app.model.ReadBook
 import io.legado.app.utils.EncoderUtils
 import io.legado.app.utils.NetworkUtils
 import io.legado.app.utils.splitNotBlank
@@ -15,6 +16,7 @@ import splitties.init.appCtx
 object SourceHelp {
 
     private val handler = Handler(Looper.getMainLooper())
+
     private val list18Plus by lazy {
         try {
             return@lazy String(appCtx.assets.open("18PlusList.txt").readBytes())
@@ -28,6 +30,9 @@ object SourceHelp {
 
     fun getSource(key: String?): BaseSource? {
         key ?: return null
+        if (ReadBook.bookSource?.bookSourceUrl == key) {
+            return ReadBook.bookSource
+        }
         return appDb.bookSourceDao.getBookSource(key)
             ?: appDb.rssSourceDao.getByKey(key)
     }
@@ -61,6 +66,9 @@ object SourceHelp {
     }
 
     private fun is18Plus(url: String?): Boolean {
+        if (list18Plus.isEmpty()) {
+            return false
+        }
         url ?: return false
         val baseUrl = NetworkUtils.getBaseUrl(url) ?: return false
         kotlin.runCatching {

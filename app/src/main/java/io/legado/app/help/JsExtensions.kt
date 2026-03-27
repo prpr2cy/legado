@@ -861,7 +861,7 @@ interface JsExtensions : JsEncodeUtils {
 
                 else -> return null
             }
-            if (key != null) CacheManager.put(key, qTTF)
+            if (key != null) CacheManager.putQueryTTF(key, qTTF)
             return qTTF
         } catch (e: Exception) {
             AppLog.put("[queryTTF] 获取字体处理类出错", e)
@@ -914,7 +914,7 @@ interface JsExtensions : JsEncodeUtils {
 
                 else -> return null
             }
-            if (key != null) CacheManager.put(key, qTTF)
+            if (key != null) CacheManager.putQueryTTF(key, qTTF)
             return qTTF
         } catch (e: Exception) {
             AppLog.put("[QueryWOFF] 获取字体处理类出错", e)
@@ -967,7 +967,7 @@ interface JsExtensions : JsEncodeUtils {
 
                 else -> return null
             }
-            if (key != null) CacheManager.put(key, qTTF)
+            if (key != null) CacheManager.putQueryTTF(key, qTTF)
             return qTTF
         } catch (e: Exception) {
             AppLog.put("[QueryWOFF] 获取字体处理类出错", e)

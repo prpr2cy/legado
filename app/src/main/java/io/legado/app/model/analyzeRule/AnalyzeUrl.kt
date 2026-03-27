@@ -748,7 +748,7 @@ class AnalyzeUrl(
 
         fun useHeader(): Boolean {
             return when (header) {
-                null, "", false, "false", "ignore", "none" -> false // 忽略 source 请求头
+                null, 0, false, "", "false", "ignore", "none" -> false // 忽略 source 请求头
                 else -> true
             }
         }
@@ -759,7 +759,7 @@ class AnalyzeUrl(
 
         fun useWebView(): Boolean {
             return when (webView) {
-                null, "", false, "false", "ignore", "none" -> false
+                null, 0, false, "", "false", "ignore", "none" -> false
                 else -> true
             }
         }

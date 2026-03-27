@@ -1,21 +1,22 @@
 package io.legado.app.help
 
 import android.webkit.JavascriptInterface
+import androidx.annotation.Keep
 import cn.hutool.core.codec.Base64
-import cn.hutool.core.codec.HexUtil
+import cn.hutool.core.util.HexUtil
 import cn.hutool.crypto.digest.DigestUtil
 import cn.hutool.crypto.digest.HMac
 import cn.hutool.crypto.symmetric.SymmetricCrypto
 import io.legado.app.constant.AppConst
 import io.legado.app.constant.AppLog
 import io.legado.app.data.entities.BaseSource
-import io.legado.app.help.CacheManager
 import io.legado.app.help.crypto.AsymmetricCrypto
 import io.legado.app.help.crypto.Sign
-import io.legado.app.help.http.CookieStore
 import io.legado.app.help.http.SSLHelper
 import io.legado.app.model.analyzeRule.AnalyzeUrl
+import io.legado.app.utils.fromJsonObject
 import io.legado.app.utils.GSON
+import io.legado.app.utils.longToastOnUi
 import io.legado.app.utils.toastOnUi
 import java.lang.ref.WeakReference
 import java.util.UUID
@@ -80,7 +81,7 @@ class WebJsExtensions(source: BaseSource?) {
         return runBlocking {
             kotlin.runCatching {
                 val analyzeUrl = AnalyzeUrl(urlStr, source = getSource())
-                analyzeUrl.getStrResponseAwait().body
+                analyzeUrl.getStrResponseAwait().body ?: ""
             }.onFailure {
                 AppLog.put("ajax(${urlStr}) error\n${it.localizedMessage}", it)
             }.getOrElse {
@@ -96,11 +97,11 @@ class WebJsExtensions(source: BaseSource?) {
                 val analyzeUrl = AnalyzeUrl(urlStr, source = getSource())
                 val response = analyzeUrl.getStrResponseAwait()
                 val result = mapOf(
-                    "url" to response.url,
-                    "body" to response.body,
-                    "headers" to response.headers.toMultimap(),
-                    "code" to response.code,
-                    "message" to response.message
+                    "url" to response.url().toString(),
+                    "body" to response.body(),
+                    "headers" to response.headers().toMultimap(),
+                    "code" to response.code(),
+                    "message" to response.message()
                 )
                 GSON.toJson(result)
             }.onFailure {
@@ -156,7 +157,7 @@ class WebJsExtensions(source: BaseSource?) {
                 )
                 GSON.toJson(result)
             }.onFailure {
-                AppLog.put("${method}($url) error\n${it.localizedMessage}", it)
+                AppLog.put("fetch($url) error\n${it.localizedMessage}", it)
             }.getOrElse {
                 it.stackTraceToString()
             }
@@ -295,7 +296,7 @@ class WebJsExtensions(source: BaseSource?) {
 
     @JavascriptInterface
     fun getKey(url: String, key: String): String {
-        CookieStore.getKey(url, key)
+        return CookieStore.getKey(url, key)
     }
 
     @JavascriptInterface

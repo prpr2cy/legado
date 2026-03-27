@@ -13,7 +13,16 @@ import io.legado.app.help.http.CookieStore
 import io.legado.app.help.http.newCallStrResponse
 import io.legado.app.help.http.okHttpClient
 import io.legado.app.help.storage.ImportOldData
-import io.legado.app.utils.*
+import io.legado.app.utils.GSON
+import io.legado.app.utils.fromJsonArray
+import io.legado.app.utils.fromJsonObject
+import io.legado.app.utils.getClipText
+import io.legado.app.utils.isAbsUrl
+import io.legado.app.utils.isJsonArray
+import io.legado.app.utils.isJsonObject
+import io.legado.app.utils.jsonPath
+import io.legado.app.utils.printOnDebug
+import io.legado.app.utils.toastOnUi
 import kotlinx.coroutines.Dispatchers
 
 
@@ -47,6 +56,9 @@ class BookSourceEditViewModel(application: Application) : BaseViewModel(applicat
             bookSource?.let {
                 appDb.bookSourceDao.delete(it)
                 SourceConfig.removeSource(it.bookSourceUrl)
+                if (it.bookSourceUrl != source.bookSourceUrl) {
+                    appDb.cacheDao.deleteSourceVariables(it.bookSourceUrl)
+                }
             }
             source.lastUpdateTime = System.currentTimeMillis()
             appDb.bookSourceDao.insert(source)
