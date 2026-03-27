@@ -68,19 +68,17 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
             val headerMap = viewModel.headerMap
             initWebView(url, headerMap)
             val html = viewModel.html
+            if (viewModel.localHtml) {
+                AppLog.put("localHtml")
+            }
+            viewModel.source?.let {
+                val webJsExtensions = WebJsExtensions(it)
+                binding.webView.addJavascriptInterface(webJsExtensions, "java")
+                binding.webView.addJavascriptInterface(WebCacheManager, "cache")
+            }
             if (html.isNullOrEmpty()) {
-                AppLog.put("html is empty")
                 binding.webView.loadUrl(url, headerMap)
             } else {
-                AppLog.put("html not empty")
-                if (viewModel.localHtml) {
-                    AppLog.put("has source activity")
-                    viewModel.source?.let {
-                        val webJsExtensions = WebJsExtensions(it)
-                        binding.webView.addJavascriptInterface(webJsExtensions, "java")
-                        binding.webView.addJavascriptInterface(WebCacheManager, "cache")
-                    }
-                }
                 binding.webView.loadDataWithBaseURL(url, html, "text/html", "utf-8", url)
             }
         }
