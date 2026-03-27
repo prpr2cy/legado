@@ -32,9 +32,6 @@ import java.io.File
 import java.util.Date
 
 class WebViewModel(application: Application) : BaseViewModel(application) {
-    var source: BaseSource? = null
-    var sourceOrigin: String = ""
-    var sourceName: String = ""
     var intent: Intent? = null
     var baseUrl: String = ""
     var html: String? = null
@@ -42,6 +39,9 @@ class WebViewModel(application: Application) : BaseViewModel(application) {
     val headerMap: HashMap<String, String> = hashMapOf()
     var sourceVerificationEnable: Boolean = false
     var refetchAfterSuccess: Boolean = true
+    var sourceOrigin: String = ""
+    var sourceName: String = ""
+    var source: BaseSource? = null
 
     fun initData(
         intent: Intent,
@@ -54,6 +54,7 @@ class WebViewModel(application: Application) : BaseViewModel(application) {
             if (url.startsWith("data:text/html")) {
                 localHtml = true
             }
+            context.toastOnUi(localHtml)
             sourceOrigin = intent.getStringExtra("sourceOrigin") ?: ""
             sourceName = intent.getStringExtra("sourceName") ?: ""
             sourceVerificationEnable = intent.getBooleanExtra("sourceVerificationEnable", false)

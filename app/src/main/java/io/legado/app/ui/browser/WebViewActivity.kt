@@ -8,7 +8,6 @@ import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
-import android.webkit.ConsoleMessage
 import android.webkit.CookieManager
 import android.webkit.SslErrorHandler
 import android.webkit.WebChromeClient
@@ -42,6 +41,7 @@ import io.legado.app.utils.sendToClip
 import io.legado.app.utils.startActivity
 import io.legado.app.utils.viewbindingdelegate.viewBinding
 import java.net.URLDecoder
+import io.legado.app.constant.AppLog
 
 class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
 
@@ -66,9 +66,12 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
             initWebView(url, headerMap)
             val html = viewModel.html
             if (html.isNullOrEmpty()) {
+                AppLog.put("html is empty")
                 binding.webView.loadUrl(url, headerMap)
             } else {
+                AppLog.put("html not empty")
                 if (viewModel.localHtml) {
+                    AppLog.put("has source activity")
                     viewModel.source?.let {
                         val webJsExtensions = WebJsExtensions(it)
                         binding.webView.addJavascriptInterface(webJsExtensions, "java")
@@ -117,6 +120,12 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
     @SuppressLint("SetJavaScriptEnabled")
     private fun initWebView(url: String, headerMap: HashMap<String, String>) {
         binding.progressBar.fontColor = accentColor
+        viewModel.source?.let {
+            AppLog.put("has source init")
+            val webJsExtensions = WebJsExtensions(it)
+            binding.webView.addJavascriptInterface(webJsExtensions, "java")
+            binding.webView.addJavascriptInterface(WebCacheManager, "cache")
+        }
         binding.webView.webChromeClient = CustomWebChromeClient()
         binding.webView.webViewClient = CustomWebViewClient()
         binding.webView.settings.apply {
