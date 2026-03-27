@@ -67,7 +67,7 @@ object BookContent {
             }.getOrNull()
             if (!title.isNullOrBlank()) {
                 bookChapter.title = title
-                appDb.bookChapterDao.upDate(bookChapter)
+                appDb.bookChapterDao.update(bookChapter)
             }
         }
         var contentData = analyzeContent(

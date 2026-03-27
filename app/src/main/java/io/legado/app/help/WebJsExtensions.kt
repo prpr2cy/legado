@@ -12,6 +12,7 @@ import io.legado.app.constant.AppLog
 import io.legado.app.data.entities.BaseSource
 import io.legado.app.help.crypto.AsymmetricCrypto
 import io.legado.app.help.crypto.Sign
+import io.legado.app.help.http.CookieStore
 import io.legado.app.help.http.SSLHelper
 import io.legado.app.model.analyzeRule.AnalyzeUrl
 import io.legado.app.utils.fromJsonObject
@@ -130,8 +131,8 @@ class WebJsExtensions(source: BaseSource?) {
                     method = if (body != null) "POST" else "GET"
                 }
                 val headers = (options["headers"] as? Map<*, *>)
-                    ?.mapKeys { it.key.toString() }
-                    ?.mapValues { it.value?.toString() ?: "" }
+                    ?.mapKeys { entry -> entry.key.toString() }
+                    ?.mapValues { entry -> entry.value?.toString() ?: "" }
                     ?: emptyMap<String, String>()
                 val timeout = (options["timeout"] as? Number)?.toInt() ?: 30000
                 val connect = Jsoup.connect(url)
@@ -157,7 +158,7 @@ class WebJsExtensions(source: BaseSource?) {
                 )
                 GSON.toJson(result)
             }.onFailure {
-                AppLog.put("fetch($url) error\n${it.localizedMessage}", it)
+                AppLog.put("fetch(${url}) error\n${it.localizedMessage}", it)
             }.getOrElse {
                 it.stackTraceToString()
             }
