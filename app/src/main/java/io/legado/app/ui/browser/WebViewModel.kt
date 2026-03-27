@@ -54,7 +54,6 @@ class WebViewModel(application: Application) : BaseViewModel(application) {
             if (url.startsWith("data:text/html")) {
                 localHtml = true
             }
-            context.toastOnUi(localHtml)
             sourceOrigin = intent.getStringExtra("sourceOrigin") ?: ""
             sourceName = intent.getStringExtra("sourceName") ?: ""
             sourceVerificationEnable = intent.getBooleanExtra("sourceVerificationEnable", false)

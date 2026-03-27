@@ -8,10 +8,11 @@ import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
-import android.webkit.CookieManager
 import android.webkit.SslErrorHandler
+import android.webkit.URLUtil
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
+import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.addCallback
@@ -38,8 +39,10 @@ import io.legado.app.utils.invisible
 import io.legado.app.utils.longSnackbar
 import io.legado.app.utils.openUrl
 import io.legado.app.utils.sendToClip
+import io.legado.app.utils.setDarkeningAllowed
 import io.legado.app.utils.startActivity
 import io.legado.app.utils.viewbindingdelegate.viewBinding
+import io.legado.app.utils.visible
 import java.net.URLDecoder
 import io.legado.app.constant.AppLog
 
@@ -120,12 +123,6 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
     @SuppressLint("SetJavaScriptEnabled")
     private fun initWebView(url: String, headerMap: HashMap<String, String>) {
         binding.progressBar.fontColor = accentColor
-        viewModel.source?.let {
-            AppLog.put("has source init")
-            val webJsExtensions = WebJsExtensions(it)
-            binding.webView.addJavascriptInterface(webJsExtensions, "java")
-            binding.webView.addJavascriptInterface(WebCacheManager, "cache")
-        }
         binding.webView.webChromeClient = CustomWebChromeClient()
         binding.webView.webViewClient = CustomWebViewClient()
         binding.webView.settings.apply {
@@ -142,8 +139,7 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
                 userAgentString = it
             }
         }
-        val cookieManager = CookieManager.getInstance()
-        cookieManager.setCookie(url, CookieStore.getCookie(url))
+        CookieStore.setWebCookie(url, CookieStore.getCookie(url))
         binding.webView.setOnLongClickListener {
             val hitTestResult = binding.webView.hitTestResult
             if (hitTestResult.type == WebView.HitTestResult.IMAGE_TYPE ||
@@ -239,9 +235,8 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
 
         override fun onPageFinished(view: WebView?, url: String?) {
             super.onPageFinished(view, url)
-            val cookieManager = CookieManager.getInstance()
             url?.let {
-                CookieStore.setCookie(it, cookieManager.getCookie(it))
+                CookieStore.setCookie(it, CookieStore.getWebCookie(it))
             }
             view?.title?.let { title ->
                 if (title != url && title != view.url && title.isNotBlank()) {
@@ -272,7 +267,7 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
                 }
 
                 else -> {
-                    binding.root.longSnackbar("跳转其它应用", "确认") {
+                    binding.root.longSnackbar(R.string.jump_to_another_app, R.string.confirm) {
                         openUrl(url)
                     }
                     true
