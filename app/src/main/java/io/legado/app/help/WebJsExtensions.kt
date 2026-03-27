@@ -98,11 +98,12 @@ class WebJsExtensions(source: BaseSource?) {
                 val analyzeUrl = AnalyzeUrl(urlStr, source = getSource())
                 val response = analyzeUrl.getStrResponseAwait()
                 val result = mapOf(
+                    "code" to response.code(),
+                    "message" to response.message(),
                     "url" to response.url().toString(),
                     "body" to response.body(),
                     "headers" to response.headers().toMultimap(),
-                    "code" to response.code(),
-                    "message" to response.message()
+                    "cookies" to response.headers().values("set-cookie")
                 )
                 GSON.toJson(result)
             }.onFailure {
@@ -149,12 +150,12 @@ class WebJsExtensions(source: BaseSource?) {
                 }
                 val response = connect.execute()
                 val result = mapOf(
+                    "code" to response.statusCode(),
+                    "message" to response.statusMessage(),
                     "url" to response.url().toString(),
                     "body" to response.body(),
                     "headers" to response.headers(),
-                    "cookies" to response.cookies(),
-                    "code" to response.statusCode(),
-                    "message" to response.statusMessage()
+                    "cookies" to response.cookies()
                 )
                 GSON.toJson(result)
             }.onFailure {
@@ -163,6 +164,21 @@ class WebJsExtensions(source: BaseSource?) {
                 it.stackTraceToString()
             }
         }
+    }
+
+    @JavascriptInterface
+    fun importScript(path: String): String {
+        return JsExtensions.importScript(path)
+    }
+
+    @JavascriptInterface
+    fun strToBytes(str: String, charset: String): ByteArray {
+        return str.toByteArray(charset(charset))
+    }
+
+    @JavascriptInterface
+    fun bytesToStr(bytes: ByteArray, charset: String): String {
+        return String(bytes, charset(charset))
     }
 
     @JavascriptInterface

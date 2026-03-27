@@ -157,7 +157,7 @@ object UrlUtil {
         val suffix = str.let { input ->
             if (dataUriSuffixRegex.containsMatchIn(input)) {
                 val mimeType = dataUriSuffixRegex.find(input)
-                    ?.groupValues?.get(1) ?: ""
+                    ?.groupValues[1] ?: ""
                 mimeType.substringAfterLast("/", "")
                     .substringBefore("+")
                     .substringAfterLast("-")

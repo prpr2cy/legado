@@ -44,7 +44,6 @@ import io.legado.app.utils.startActivity
 import io.legado.app.utils.viewbindingdelegate.viewBinding
 import io.legado.app.utils.visible
 import java.net.URLDecoder
-import io.legado.app.constant.AppLog
 
 class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
 
@@ -69,12 +68,11 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
             initWebView(url, headerMap)
             val html = viewModel.html
             if (viewModel.localHtml) {
-                AppLog.put("localHtml")
-            }
-            viewModel.source?.let {
-                val webJsExtensions = WebJsExtensions(it)
-                binding.webView.addJavascriptInterface(webJsExtensions, "java")
-                binding.webView.addJavascriptInterface(WebCacheManager, "cache")
+                viewModel.source?.let {
+                    val webJsExtensions = WebJsExtensions(it)
+                    binding.webView.addJavascriptInterface(webJsExtensions, "java")
+                    binding.webView.addJavascriptInterface(WebCacheManager, "cache")
+                }
             }
             if (html.isNullOrEmpty()) {
                 binding.webView.loadUrl(url, headerMap)
