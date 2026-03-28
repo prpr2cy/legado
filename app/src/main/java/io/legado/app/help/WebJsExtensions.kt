@@ -414,7 +414,7 @@ class WebJsExtensions(
                         p0 ?: throw NoStackTraceException("error null")
                     )?.let { result ->
                         when(result) {
-                            is null, Boolean, Number, String -> result
+                            null, is Boolean, is Number, is String -> result
                             is ByteArray -> Base64.encode(result)
                             is IntArray -> GSON.toJson(result)
                             is LongArray -> GSON.toJson(result)

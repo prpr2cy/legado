@@ -150,7 +150,7 @@ class AnalyzeUrl(
                 val jsEval = evalJS(it) ?: ""
                 when (jsEval) {
                     is String -> jsEval
-                    is Double && jsEval % 1.0 == 0.0 -> String.format("%.0f", jsEval)
+                    is Double if jsEval % 1.0 == 0.0 -> String.format("%.0f", jsEval)
                     else -> jsEval.toString()
                 }
             }
