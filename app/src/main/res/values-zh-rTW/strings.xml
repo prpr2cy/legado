@@ -1140,4 +1140,5 @@
     <string name="menu_page">第 %d 頁</string>
     <string name="change_page">跳轉頁數</string>
     <string name="refresh_explore">刷新發現</string>
+    <string name="show_web_log">輸出日誌</string>
 </resources>

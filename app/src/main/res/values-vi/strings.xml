@@ -877,6 +877,7 @@
     <string name="pref_anti_alias_summary">Chống răng cưa khi vẽ ảnh</string>
     <string name="upload_url">tải lên url</string>
     <string name="download_url_rule">Quy tắc URL tải xuống(downloadUrls)</string>
+    <string name="respondTime">Thời gian phản hồi: %1$d ms</string>
     <string name="export_success">xuất thành công</string>
     <string name="path">đường dẫn</string>
     <string name="direct_link_upload_rule">Quy tắc tải lên liên kết trực tiếp</string>
@@ -1099,8 +1100,7 @@
     <string name="only_latest_backup_s">Sao lưu cục bộ chỉ giữ tệp sao lưu mới nhất</string>
      <string name="auto_backup_enabled_t">Sao lưu tự động</string>
      <string name="auto_backup_enabled_s">Sau khi thiết lập sao lưu, sao lưu sẽ được thực hiện tự động mỗi khi bạn thoát khỏi ứng dụng</string>
-     <string name="webdav_application_authorization_error">Không thể cấp quyền cho ứng dụng WebDav</string>
-     <string name="respondTime">Thời gian phản hồi: %1$d mili giây</string>
+    <string name="webdav_application_authorization_error">Không thể ủy quyền ứng dụng WebDav</string>
     <string name="load_word_count">Tải số từ</string>
     <string name="replace_exclude_scope">Phạm vi loại trừ, tên sách tùy chọn hoặc URL nguồn sách</string>
     <string name="format_js_rule">Quy tắc định dạng (formatJs)</string>
@@ -1137,4 +1137,5 @@
     <string name="menu_page">Trang %d</string>
     <string name="change_page">Chuyển đến trang</string>
     <string name="refresh_explore">Làm mới khám phá</string>
+    <string name="show_web_log">Ghi nhật ký đầu ra</string>
 </resources>
