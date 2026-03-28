@@ -28,6 +28,9 @@ import io.legado.app.help.http.CookieStore
 import io.legado.app.help.source.SourceVerificationHelp
 import io.legado.app.help.WebCacheManager
 import io.legado.app.help.WebJsExtensions
+import io.legado.app.help.WebJsExtensions.Companion.JS_INJECTION2
+import io.legado.app.help.WebJsExtensions.Companion.nameCache
+import io.legado.app.help.WebJsExtensions.Companion.nameJava
 import io.legado.app.lib.dialogs.SelectItem
 import io.legado.app.lib.theme.accentColor
 import io.legado.app.model.Download
@@ -46,6 +49,10 @@ import io.legado.app.utils.visible
 import java.net.URLDecoder
 
 class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
+    companion object {
+        // 是否输出日志
+        var sessionShowWebLog = false
+    }
 
     override val binding by viewBinding(ActivityWebViewBinding::inflate)
     override val viewModel by viewModels<WebViewModel>()
@@ -60,6 +67,9 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
     }
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
+        binding.webView.post {
+            binding.webView.clearHistory()
+        }
         binding.titleBar.title = intent.getStringExtra("title") ?: getString(R.string.loading)
         binding.titleBar.subtitle = intent.getStringExtra("sourceName")
         viewModel.initData(intent) {
@@ -69,9 +79,10 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
             val html = viewModel.html
             if (viewModel.localHtml) {
                 viewModel.source?.let {
-                    val webJsExtensions = WebJsExtensions(it)
-                    binding.webView.addJavascriptInterface(webJsExtensions, "java")
-                    binding.webView.addJavascriptInterface(WebCacheManager, "cache")
+                    val webJsExtensions = WebJsExtensions(it, this, binding.webView)
+                    binding.webView.addJavascriptInterface(webJsExtensions, nameJava)
+                    binding.webView.addJavascriptInterface(WebCacheManager, nameCache)
+                    binding.webView.evaluateJavascript(JS_INJECTION, null)
                 }
             }
             if (html.isNullOrEmpty()) {
@@ -80,6 +91,7 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
                 binding.webView.loadDataWithBaseURL(url, html, "text/html", "utf-8", url)
             }
         }
+        binding.webView.clearHistory()
         onBackPressedDispatcher.addCallback(this) {
             if (binding.customWebView.size > 0) {
                 customWebViewCallback?.onCustomViewHidden()
@@ -99,8 +111,14 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
         return super.onCompatCreateOptionsMenu(menu)
     }
 
+    override fun onPrepareOptionsMenu(menu: Menu): Boolean {
+        menu.findItem(R.id.menu_show_web_log)?.isChecked = sessionShowWebLog
+        return super.onPrepareOptionsMenu(menu)
+    }
+
     override fun onCompatOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
+            R.id.menu_web_refresh -> binding.webView.reload()
             R.id.menu_open_in_browser -> openUrl(viewModel.baseUrl)
             R.id.menu_copy_url -> sendToClip(viewModel.baseUrl)
             R.id.menu_ok -> {
@@ -111,6 +129,10 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
                 } else {
                     finish()
                 }
+            }
+            R.id.menu_show_web_log -> {
+                sessionShowWebLog = !sessionShowWebLog
+                item.isChecked = sessionShowWebLog
             }
         }
         return super.onCompatOptionsItemSelected(item)
@@ -208,6 +230,21 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
             binding.llView.visible()
             requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         }
+
+        /* 监听网页日志 */
+        override fun onConsoleMessage(consoleMessage: ConsoleMessage): Boolean {
+            viewModel.source?.let { source ->
+                if (sessionShowWebLog) {
+                    val messageLevel = consoleMessage.messageLevel().name
+                    val message = consoleMessage.message()
+                    AppLog.put("${source.getTag()}${messageLevel}: $message",
+                        NoStackTraceException("\n${message}\n- Line ${consoleMessage.lineNumber()} of ${consoleMessage.sourceId()}"))
+                    return true
+                }
+            }
+            return false
+        }
+
     }
 
     inner class CustomWebViewClient : WebViewClient() {

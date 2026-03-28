@@ -41,7 +41,9 @@ import java.util.UUID
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import kotlinx.coroutines.Dispatchers.IO
-import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.asFlow
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import okio.use
 import org.jsoup.Connection
@@ -70,8 +72,8 @@ interface JsExtensions : JsEncodeUtils {
             url.toString()
         }
         return runBlocking {
+            val analyzeUrl = AnalyzeUrl(urlStr, source = getSource())
             kotlin.runCatching {
-                val analyzeUrl = AnalyzeUrl(urlStr, source = getSource())
                 analyzeUrl.getStrResponseAwait().body
             }.onFailure {
                 AppLog.put("ajax(${urlStr}) error\n${it.localizedMessage}", it)
@@ -86,17 +88,10 @@ interface JsExtensions : JsEncodeUtils {
      */
     fun ajaxAll(urlList: Array<String>): Array<StrResponse?> {
         return runBlocking {
-            val asyncArray = Array(urlList.size) {
-                async(IO) {
-                    val url = urlList[it]
-                    val analyzeUrl = AnalyzeUrl(url, source = getSource())
-                    analyzeUrl.getStrResponseAwait()
-                }
-            }
-            val resArray = Array<StrResponse?>(urlList.size) {
-                asyncArray[it].await()
-            }
-            resArray
+            urlList.asFlow().mapAsync(AppConfig.threadCount) { url ->
+                val analyzeUrl = AnalyzeUrl(url, source = getSource())
+                analyzeUrl.getStrResponseAwait()
+            }.flowOn(IO).toList().toTypedArray()
         }
     }
 
@@ -119,7 +114,11 @@ interface JsExtensions : JsEncodeUtils {
     fun connect(urlStr: String, header: String?): StrResponse {
         return runBlocking {
             val headerMap = GSON.fromJsonObject<Map<String, String>>(header).getOrNull()
-            val analyzeUrl = AnalyzeUrl(urlStr, headerMapF = headerMap, source = getSource())
+            val analyzeUrl = AnalyzeUrl(
+                urlStr,
+                headerMapF = headerMap,
+                source = getSource()
+            )
             kotlin.runCatching {
                 analyzeUrl.getStrResponseAwait()
             }.onFailure {
@@ -326,10 +325,17 @@ interface JsExtensions : JsEncodeUtils {
             File(FileUtils.getCachePath()),
             "${MD5Utils.md5Encode16(url)}.${type}"
         )
-        val file = File(path).createFileReplace()
+        val file = File(path)
+        file.delete()
         analyzeUrl.getInputStream().use { iStream ->
-            FileOutputStream(file).use { oStream ->
-                iStream.copyTo(oStream)
+            file.createFileReplace()
+            try {
+                file.outputStream().buffered().use { oStream ->
+                    iStream.copyTo(oStream)
+                }
+            } catch (e: Throwable) {
+                file.delete()
+                throw e
             }
         }
         return path.substring(FileUtils.getCachePath().length)
@@ -343,8 +349,8 @@ interface JsExtensions : JsEncodeUtils {
      * @return 相对路径
      */
     @Deprecated(
-        "Depreted",
-        ReplaceWith("downloadFile(url: String)")
+        "Deprecated",
+        ReplaceWith("downloadFile(url)")
     )
     fun downloadFile(content: String, url: String): String {
         val type = AnalyzeUrl(url, source = getSource()).type ?: return ""
@@ -586,8 +592,10 @@ interface JsExtensions : JsEncodeUtils {
      */
     fun getFile(path: String): File {
         val cachePath = appCtx.externalCache.absolutePath
-        val aPath = if (path.startsWith(File.separator)) {
-            /*cachePath +*/ path
+        val aPath = if (path.startsWith("/storage"))
+            path
+        } else if (path.startsWith(File.separator)) {
+            cachePath + path
         } else {
             cachePath + File.separator + path
         }

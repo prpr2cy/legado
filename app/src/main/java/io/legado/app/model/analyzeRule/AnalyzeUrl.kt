@@ -65,7 +65,7 @@ class AnalyzeUrl(
         private set
     var type: String? = null
         private set
-    val headerMap = HashMap<String, String>()
+    val headerMap = LinkedHashMap<String, String>()
     private var urlNoQuery: String = ""
     private var queryStr: String? = null
     private val fieldMap = LinkedHashMap<String, String>()
@@ -148,9 +148,9 @@ class AnalyzeUrl(
             //替换所有内嵌{{js}}
             val url = analyze.innerRule("{{", "}}") {
                 val jsEval = evalJS(it) ?: ""
-                when {
-                    jsEval is String -> jsEval
-                    jsEval is Double && jsEval % 1.0 == 0.0 -> String.format("%.0f", jsEval)
+                when (jsEval) {
+                    is String -> jsEval
+                    is Double && jsEval % 1.0 == 0.0 -> String.format("%.0f", jsEval)
                     else -> jsEval.toString()
                 }
             }
@@ -191,7 +191,11 @@ class AnalyzeUrl(
                         headerMap[UA_NAME] = AppConfig.userAgent
                     }
                     option.getMethod()?.let {
-                        if (it.equals("POST", true)) method = RequestMethod.POST
+                        method = when (it.uppercase()) {
+                            "POST" -> RequestMethod.POST
+                            "HEAD" -> RequestMethod.HEAD
+                            else -> RequestMethod.GET
+                        }
                     }
                     option.getHeaderMap()?.forEach { entry ->
                         headerMap[entry.key.toString()] = entry.value.toString()
@@ -214,17 +218,18 @@ class AnalyzeUrl(
         }
         urlNoQuery = url
         when (method) {
-            RequestMethod.GET -> {
-                val pos = url.indexOf('?')
-                if (pos != -1) {
-                    analyzeFields(url.substring(pos + 1))
-                    urlNoQuery = url.substring(0, pos)
-                }
-            }
 
             RequestMethod.POST -> body?.let {
                 if (!it.isJson() && !it.isXml() && headerMap["Content-Type"].isNullOrEmpty()) {
                     analyzeFields(it)
+                }
+            }
+
+            else -> {
+                val pos = url.indexOf('?')
+                if (pos != -1) {
+                    analyzeFields(url.substring(pos + 1))
+                    urlNoQuery = url.substring(0, pos)
                 }
             }
         }
@@ -467,6 +472,8 @@ class AnalyzeUrl(
                 }
             }
             return strResponse
+        } catch (e: Exception) {
+            return StrResponse(url, e.message)
         } finally {
             //saveCookie()
             fetchEnd(concurrentRecord)
@@ -783,8 +790,8 @@ class AnalyzeUrl(
         fun setBody(value: String?) {
             body = when {
                 value.isNullOrBlank() -> null
-                value.isJsonObject() -> GSON.fromJsonObject<Map<String, Any>>(value)
-                value.isJsonArray() -> GSON.fromJsonArray<Map<String, Any>>(value)
+                value.isJsonObject() -> GSON.fromJsonObject<Map<String, Any>>(value).getOrNull()
+                value.isJsonArray() -> GSON.fromJsonArray<Map<String, Any>>(value).getOrNull()
                 else -> value
             }
         }

@@ -45,21 +45,20 @@ class AnalyzeRule(
     private var analyzeByJSoup: AnalyzeByJSoup? = null
     private var analyzeByJSonPath: AnalyzeByJSonPath? = null
 
-    private var objectChangedXP = false
-    private var objectChangedJS = false
-    private var objectChangedJP = false
-
     private val stringRuleCache = hashMapOf<String, List<SourceRule>>()
 
     @JvmOverloads
     fun setContent(content: Any?, baseUrl: String? = null): AnalyzeRule {
         if (content == null) throw AssertionError("内容不可空（Content cannot be null）")
         this.content = content
-        isJSON = content.toString().isJson()
+        isJSON = when (content) {
+            is Node -> false
+            else -> content.toString().isJson()
+        }
         setBaseUrl(baseUrl)
-        objectChangedXP = true
-        objectChangedJS = true
-        objectChangedJP = true
+        analyzeByXPath = null
+        analyzeByJSoup = null
+        analyzeByJSonPath = null
         return this
     }
 
@@ -71,6 +70,9 @@ class AnalyzeRule(
     }
 
     fun setRedirectUrl(url: String): URL? {
+        if (url.isDataUrl()) {
+            return redirectUrl
+        }
         try {
             redirectUrl = URL(url)
         } catch (e: Exception) {
@@ -86,9 +88,8 @@ class AnalyzeRule(
         return if (o != content) {
             AnalyzeByXPath(o)
         } else {
-            if (analyzeByXPath == null || objectChangedXP) {
+            if (analyzeByXPath == null) {
                 analyzeByXPath = AnalyzeByXPath(content!!)
-                objectChangedXP = false
             }
             analyzeByXPath!!
         }
@@ -101,9 +102,8 @@ class AnalyzeRule(
         return if (o != content) {
             AnalyzeByJSoup(o)
         } else {
-            if (analyzeByJSoup == null || objectChangedJS) {
+            if (analyzeByJSoup == null) {
                 analyzeByJSoup = AnalyzeByJSoup(content!!)
-                objectChangedJS = false
             }
             analyzeByJSoup!!
         }
@@ -116,9 +116,8 @@ class AnalyzeRule(
         return if (o != content) {
             AnalyzeByJSonPath(o)
         } else {
-            if (analyzeByJSonPath == null || objectChangedJP) {
+            if (analyzeByJSonPath == null) {
                 analyzeByJSonPath = AnalyzeByJSonPath(content!!)
-                objectChangedJP = false
             }
             analyzeByJSonPath!!
         }
@@ -153,9 +152,16 @@ class AnalyzeRule(
                     sourceRule.rule
                 } else {
                     // 键值直接访问
-                    result[sourceRule.rule]?.toString()
-                }?.let {
-                    replaceRegex(it, sourceRule)
+                    result[sourceRule.rule]
+                }
+                result?.let {
+                    if (sourceRule.replaceRegex.isNotEmpty() && it is List<*>) {
+                        result = it.map { v ->
+                            replaceRegex(v.toString(), sourceRule)
+                        }
+                    } else if (sourceRule.replaceRegex.isNotEmpty()) {
+                        result = replaceRegex(result.toString(), sourceRule)
+                    }
                 }
             } else {
                 for (sourceRule in ruleList) {
@@ -173,7 +179,7 @@ class AnalyzeRule(
                         }
                         if (sourceRule.replaceRegex.isNotEmpty() && result is List<*>) {
                             val newList = ArrayList<String>()
-                            for (item in result as List<*>) {
+                            for (item in result) {
                                 newList.add(replaceRegex(item.toString(), sourceRule))
                             }
                             result = newList
@@ -186,12 +192,12 @@ class AnalyzeRule(
         }
         if (result == null) return null
         if (result is String) {
-            result = (result as String).split("\n")
+            result = result.split("\n")
         }
         if (isUrl) {
             val urlList = ArrayList<String>()
             if (result is List<*>) {
-                for (url in result as List<*>) {
+                for (url in result) {
                     val absoluteURL = NetworkUtils.getAbsoluteURL(redirectUrl, url.toString())
                     if (absoluteURL.isNotEmpty() && !urlList.contains(absoluteURL)) {
                         urlList.add(absoluteURL)
@@ -415,13 +421,8 @@ class AnalyzeRule(
      */
     fun splitSourceRuleCacheString(ruleStr: String?) : List<SourceRule> {
         if (ruleStr.isNullOrEmpty()) return emptyList()
-        val cacheRule = stringRuleCache[ruleStr]
-        return if (cacheRule != null) {
-            cacheRule
-        } else {
-            val rules = splitSourceRule(ruleStr)
-            stringRuleCache[ruleStr] = rules
-            rules
+        return stringRuleCache.getOrPut(ruleStr) {
+            splitSourceRule(ruleStr)
         }
     }
 
@@ -776,20 +777,6 @@ class AnalyzeRule(
     }
 
     /**
-     * 刷新详情页
-     */
-    fun refreshBook() {
-        val bookSource = source as? BookSource
-        val book = book as? Book
-        if (bookSource == null || book == null) return
-        runBlocking {
-            withTimeout(1800000) {
-                WebBook.getBookInfoAwait(bookSource, book)
-            }
-        }
-    }
-
-    /**
      * 更新tocUrl,有些书源目录url定期更新,可以在js调用更新
      */
     fun refreshTocUrl() {
@@ -808,6 +795,21 @@ class AnalyzeRule(
         private val evalPattern =
             Pattern.compile("@get:\\{[^}]+?\\}|\\{\\{[\\w\\W]*?\\}\\}", Pattern.CASE_INSENSITIVE)
         private val regexPattern = Pattern.compile("\\$\\d{1,2}")
+
+        fun AnalyzeRule.setRuleData(ruleData: RuleDataInterface?): AnalyzeRule {
+            this.ruleData = ruleData
+            return this
+        }
+
+        fun AnalyzeRule.setNextChapterUrl(nextChapterUrl: String?): AnalyzeRule {
+            this.nextChapterUrl = nextChapterUrl
+            return this
+        }
+
+        fun AnalyzeRule.setChapter(chapter: BookChapter?): AnalyzeRule {
+            this.chapter = chapter
+            return this
+        }
     }
 
 }

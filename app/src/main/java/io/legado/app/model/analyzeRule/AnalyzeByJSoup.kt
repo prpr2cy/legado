@@ -16,6 +16,10 @@ import org.seimicrawler.xpath.JXNode
 @Keep
 class AnalyzeByJSoup(doc: Any) {
 
+    companion object {
+        private val nullSet = setOf(null)
+    }
+
     private var element: Element = parse(doc)
 
     private fun parse(doc: Any): Element {
@@ -90,7 +94,7 @@ class AnalyzeByJSoup(doc: Any) {
                     if (sourceRule.isCss) {
                         val lastIndex = ruleStrX.lastIndexOf('@')
                         getResultLast(
-                            element.select(ruleStrX.substring(0, lastIndex)),
+                            element.select(ruleStrX.take(lastIndex)),
                             ruleStrX.substring(lastIndex + 1)
                         )
                     } else {
@@ -102,7 +106,7 @@ class AnalyzeByJSoup(doc: Any) {
                     if (ruleAnalyzes.elementsType == "||") break
                 }
             }
-            if (results.size > 0) {
+            if (results.isNotEmpty()) {
                 if ("%%" == ruleAnalyzes.elementsType) {
                     for (i in results[0].indices) {
                         for (temp in results) {
@@ -139,7 +143,7 @@ class AnalyzeByJSoup(doc: Any) {
             for (ruleStr in ruleStrS) {
                 val tempS = temp.select(ruleStr)
                 elementsList.add(tempS)
-                if (tempS.size > 0 && ruleAnalyzes.elementsType == "||") {
+                if (tempS.isNotEmpty() && ruleAnalyzes.elementsType == "||") {
                     break
                 }
             }
@@ -172,7 +176,7 @@ class AnalyzeByJSoup(doc: Any) {
                 }
             }
         }
-        if (elementsList.size > 0) {
+        if (elementsList.isNotEmpty()) {
             if ("%%" == ruleAnalyzes.elementsType) {
                 for (i in 0 until elementsList[0].size) {
                     for (es in elementsList) {
@@ -231,6 +235,7 @@ class AnalyzeByJSoup(doc: Any) {
                     textS.add(text)
                 }
             }
+
             "textNodes" -> for (element in elements) {
                 val tn = arrayListOf<String>()
                 val contentEs = element.textNodes()
@@ -244,12 +249,14 @@ class AnalyzeByJSoup(doc: Any) {
                     textS.add(tn.joinToString("\n"))
                 }
             }
+
             "ownText" -> for (element in elements) {
                 val text = element.ownText()
                 if (text.isNotEmpty()) {
                     textS.add(text)
                 }
             }
+
             "html" -> {
                 elements.select("script").remove()
                 elements.select("style").remove()
@@ -258,7 +265,9 @@ class AnalyzeByJSoup(doc: Any) {
                     textS.add(html)
                 }
             }
+
             "all" -> textS.add(elements.outerHtml())
+
             else -> for (element in elements) {
 
                 val url = element.attr(lastRule)
@@ -379,7 +388,7 @@ class AnalyzeByJSoup(doc: Any) {
 
                 for (pcInt in indexSet) elements[pcInt] = null
 
-                elements.removeAll(listOf(null)) //测试过，这样就行
+                elements.removeAll(nullSet) //测试过，这样就行
 
             } else if (split == '.') { //选择
 
@@ -486,7 +495,7 @@ class AnalyzeByJSoup(doc: Any) {
 
                         if (rl != ':') { //rl == '!'  || rl == '.'
                             split = rl
-                            beforeRule = rus.substring(0, len)
+                            beforeRule = rus.take(len)
                             return
                         }
 
