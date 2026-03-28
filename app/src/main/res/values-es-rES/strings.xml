@@ -91,7 +91,7 @@
     <string name="offline_cache_s">precarga el o los capítulos(s) seleccionado(s) en Almacenamiento en caché</string>
     <string name="change_origin">Cambiar origen</string>
     <string name="about_description">\u3000\u3000 Este es una aplicación de lectura bajo software libre, desarrollado en Kotlin, en que podrás participar. </string>
-    <string name="app_share_description">Legado (YueDu 3.0) disponible para descargar en：\n https://play.google.com/store/apps/details?id=io.legado.play.release</string>
+    <string name="app_share_description">Legado (YueDu 3.0) disponible para descargar en：\n https://github.com/gedoor/legado/releases</string>
     <string name="version_name">Versión %s</string>
     <string name="pt_background_verification">Verificación en segundo plano</string>
     <string name="ps_background_verification">podrá utilizar con libertad cuando se verifique la fuente del libro</string>
@@ -417,7 +417,7 @@
     <string name="rule_chapter_url">章节URL规则(chapterUrl)</string>
     <string name="rule_is_volume">Volume mark(isVolume)</string>
     <string name="rule_is_vip">VIP标识(isVip)</string>
-    <string name="rule_update_time">更新时间(ChapterInfo)</string>
+    <string name="rule_update_time">章节信息(ChapterInfo)</string>
     <string name="pre_update_js">更新之前Js(preUpdateJs)</string>
     <string name="rule_book_content">正文规则(content)</string>
     <string name="rule_next_content">正文下一页URL规则(nextContentUrl)</string>
@@ -683,7 +683,7 @@
     <string name="alouding_disable">The selected text cannot be spoken in full text speech</string>
     <string name="read_body_to_lh">Extend to cutout</string>
     <string name="toc_updateing">Updating Chapters</string>
-  
+
     <string name="media_button_on_exit_title">Headset buttons are always available</string>
     <string name="media_button_on_exit_summary">Headset buttons are available even exit the app.</string>
     <string name="contributors">Contributors</string>
@@ -1137,4 +1137,5 @@
     <string name="preview_image_by_click">点击预览图片</string>
     <string name="menu_page">第 %d 页</string>
     <string name="change_page">跳转页数</string>
+    <string name="refresh_explore">刷新发现</string>
 </resources>

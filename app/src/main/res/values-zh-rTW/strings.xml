@@ -93,7 +93,7 @@
         \u3000\u3000這是一款使用Kotlin全新開發的開源的閱讀軟體，歡迎您的加入。
     </string>
     <string name="app_share_description">
-        閱讀3.0下載網址：\nhttps://play.google.com/store/apps/details?id=io.legado.play.release
+        閱讀3.0下載網址：\nhttps://github.com/gedoor/legado/releases
     </string>
     <string name="version_name">Version %s</string>
     <string name="pt_background_verification">後臺校驗書源</string>
@@ -420,7 +420,7 @@
     <string name="rule_chapter_url">章節URL規則(chapterUrl)</string>
     <string name="rule_is_volume">Volume標識(isVolume)</string>
     <string name="rule_is_vip">VIP標識(isVip)</string>
-    <string name="rule_update_time">更新時間(ChapterInfo)</string>
+    <string name="rule_update_time">更章節信息(ChapterInfo)</string>
     <string name="pre_update_js">更新之前Js(preUpdateJs)</string>
     <string name="rule_book_content">正文規則(content)</string>
     <string name="rule_next_content">正文下一頁URL規則(nextContentUrl)</string>
@@ -1139,4 +1139,5 @@
     <string name="preview_image_by_click">点击预览图片</string>
     <string name="menu_page">第 %d 頁</string>
     <string name="change_page">跳轉頁數</string>
+    <string name="refresh_explore">刷新發現</string>
 </resources>
