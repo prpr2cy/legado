@@ -592,7 +592,7 @@ interface JsExtensions : JsEncodeUtils {
      */
     fun getFile(path: String): File {
         val cachePath = appCtx.externalCache.absolutePath
-        val aPath = if (path.startsWith("/storage"))
+        val aPath = if (path.startsWith("/storage")) {
             path
         } else if (path.startsWith(File.separator)) {
             cachePath + path
