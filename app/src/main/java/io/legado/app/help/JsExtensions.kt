@@ -99,7 +99,6 @@ interface JsExtensions : JsEncodeUtils {
             }.awaitAll().toTypedArray()
         }
     }
-}
 
     /**
      * 访问网络,返回Response<String>
