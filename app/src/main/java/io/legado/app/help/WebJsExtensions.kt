@@ -36,6 +36,7 @@ import io.legado.app.utils.UrlUtil
 import java.lang.ref.WeakReference
 import java.io.File
 import java.io.FileOutputStream
+import java.nio.charset.Charset
 import java.util.UUID
 import kotlinx.coroutines.runBlocking
 import org.jsoup.Connection
@@ -108,15 +109,14 @@ class WebJsExtensions(
             kotlin.runCatching {
                 val analyzeUrl = AnalyzeUrl(urlStr, source = getSource())
                 val response = analyzeUrl.getStrResponseAwait()
-                val result = mapOf(
+                mapOf(
                     "code" to response.code(),
                     "message" to response.message(),
                     "url" to response.url().toString(),
                     "body" to response.body(),
                     "headers" to response.headers().toMultimap(),
                     "cookies" to response.headers().values("set-cookie")
-                )
-                GSON.toJson(result)
+                ).let { GSON.toJson(it) }
             }.onFailure {
                 AppLog.put("connect($urlStr) error\n${it.localizedMessage}", it)
             }.getOrElse {
@@ -130,7 +130,6 @@ class WebJsExtensions(
         return kotlin.runCatching {
             val options = GSON.fromJsonObject<Map<String, Any>>(option).getOrNull()
                 ?: emptyMap<String, Any>()
-            var method = options["method"]?.toString()?.uppercase()
             val body = options["body"]?.let { value ->
                 when (value) {
                     is String -> value
@@ -138,11 +137,17 @@ class WebJsExtensions(
                     else -> GSON.toJson(value)
                 }
             }
+
+            val method = options["method"]?.toString()?.uppercase()
+                ?: if (body != null) "POST" else "GET"
+
             val headers = (options["headers"] as? Map<*, *>)
                 ?.mapKeys { entry -> entry.key.toString() }
                 ?.mapValues { entry -> entry.value?.toString() ?: "" }
                 ?: emptyMap<String, String>()
+
             val timeout = (options["timeout"] as? Number)?.toInt() ?: 30000
+
             val connect = Jsoup.connect(url)
                 .sslSocketFactory(SSLHelper.unsafeSSLSocketFactory)
                 .ignoreContentType(true)
@@ -151,23 +156,22 @@ class WebJsExtensions(
                 .maxBodySize(0)
                 .timeout(timeout)
                 .headers(headers)
-            if (method == null) {
-                method = if (body != null) "POST" else "GET"
-            }
+
             if (method != "GET" && method != "HEAD") {
                 connect.requestBody(body ?: "")
             }
+
             connect.method(Connection.Method.valueOf(method))
             val response = connect.execute()
-            val result = mapOf(
+
+            mapOf(
                 "code" to response.statusCode(),
                 "message" to response.statusMessage(),
                 "url" to response.url().toString(),
                 "body" to response.body(),
                 "headers" to response.headers(),
                 "cookies" to response.cookies()
-            )
-            GSON.toJson(result)
+            ).let { GSON.toJson(it) }
         }.onFailure {
             AppLog.put("fetch(${url}) error\n${it.localizedMessage}", it)
         }.getOrElse {
@@ -175,25 +179,23 @@ class WebJsExtensions(
         }
     }
 
-    fun getFile(path: String): File {
+    private fun getFile(path: String): File {
         val cachePath = appCtx.externalCache.absolutePath
-        val aPath = if (path.startsWith("/storage")) {
-            path
-        } else if (path.startsWith(File.separator)) {
-            cachePath + path
-        } else {
-            cachePath + File.separator + path
+        return when {
+            path.startsWith("/storage") -> File(path)
+            path.startsWith(File.separator) -> File(cachePath + path)
+            else -> File(cachePath + File.separator + path)
         }
-        return File(aPath)
     }
 
     @JavascriptInterface
     fun readTxtFile(path: String, charsetName: String): String {
         val file = getFile(path)
-        if (file.exists()) {
-            return String(file.readBytes(), charset(charsetName))
+        return if (file.exists()) {
+            file.readText(Charset.forName(charsetName))
+        } else {
+            ""
         }
-        return ""
     }
 
     @JavascriptInterface
@@ -252,14 +254,16 @@ class WebJsExtensions(
         return Base64.encode(HMac(algorithm, key.toByteArray()).digest(data))
     }
 
-    fun symmetricCrypto(
+    private fun symmetricCrypto(
         algorithm: String,
         key: String,
         iv: String?
     ): SymmetricCrypto {
-        val crypto = SymmetricCrypto(algorithm, key.encodeToByteArray())
-        if (iv != null && iv.isNotEmpty()) crypto.setIv(iv.encodeToByteArray())
-        return crypto
+        return SymmetricCrypto(algorithm, key.encodeToByteArray()).apply {
+            if (!iv.isNullOrEmpty()) {
+                setIv(iv.encodeToByteArray())
+            }
+        }
     }
 
     @JavascriptInterface
@@ -282,11 +286,14 @@ class WebJsExtensions(
         key: String,
         usePublicKey: Boolean
     ): AsymmetricCrypto {
-        val crypto = AsymmetricCrypto(algorithm)
-        val keyBytes = Base64.decode(key)
-        if (usePublicKey) crypto.setPublicKey(keyBytes)
-        else crypto.setPrivateKey(keyBytes)
-        return crypto
+        return AsymmetricCrypto(algorithm).apply {
+            val keyBytes = Base64.decode(key)
+            if (usePublicKey) {
+                setPublicKey(keyBytes)
+            } else {
+                setPrivateKey(keyBytes)
+            }
+        }
     }
 
     @JavascriptInterface
@@ -316,14 +323,14 @@ class WebJsExtensions(
         publicKey: String?,
         privateKey: String?
     ): String {
-        val sign = Sign(algorithm);
-        if (publicKey != null && publicKey.isNotEmpty()) {
-            sign.setPublicKey(Base64.decode(publicKey))
-        }
-        if (privateKey != null && privateKey.isNotEmpty()) {
-            sign.setPrivateKey(Base64.decode(privateKey))
-        }
-        return sign.signHex(data)
+        return Sign(algorithm).apply {
+            if (!publicKey.isNullOrEmpty()) {
+                setPublicKey(Base64.decode(publicKey))
+            }
+            if (!privateKey.isNullOrEmpty()) {
+                setPrivateKey(Base64.decode(privateKey))
+            }
+        }.signHex(data)
     }
 
     @JavascriptInterface
@@ -380,17 +387,16 @@ class WebJsExtensions(
     fun request(funName: String, jsParam: Array<String?>, id: String) {
         val activity = activityRef.get() ?: return
         Coroutine.async(activity.lifecycleScope) {
-            val params = Array(4) { i -> jsParam.getOrNull(i) }
-            val p0 = params[0]
-            val p1 = params[1]
-            val p2 = params[2]
-            val p3 = params[3]
-            when (funName) {
+            val p0 = jsParam.getOrNull(0)
+            val p1 = jsParam.getOrNull(1)
+            val p2 = jsParam.getOrNull(2)
+            val p3 = jsParam.getOrNull(3)
+
+            val result = when (funName) {
                 "runAwait" -> {
-                    analyzeRule.evalJS(
-                        p0 ?: throw NoStackTraceException("error null")
-                    )?.let { result ->
-                        when(result) {
+                    val jsCode = p0 ?: throw NoStackTraceException("error null")
+                    analyzeRule.evalJS(jsCode)?.let { result ->
+                        when (result) {
                             is String -> result
                             is ByteArray -> Base64.encode(result)
                             is IntArray -> GSON.toJson(result)
@@ -404,109 +410,104 @@ class WebJsExtensions(
                             is Map<*, *> -> GSON.toJson(result)
                             else -> result.toString()
                         }
-                    }
+                    } ?: ""
                 }
                 "ajaxAwait" -> {
-                    ajax(
-                        p0 ?: throw NoStackTraceException("error url null")
-                    )
+                    val url = p0 ?: throw NoStackTraceException("error url null")
+                    ajax(url)
                 }
                 "connectAwait" -> {
-                    connect(
-                        p0 ?: throw NoStackTraceException("error url null")
-                    )
+                    val url = p0 ?: throw NoStackTraceException("error url null")
+                    connect(url)
                 }
                 "fetchAwait" -> {
-                    fetch(
-                        p0 ?: throw NoStackTraceException("error url null"),
-                        p1 ?: throw NoStackTraceException("error option null")
-                    )
-                }
-                "decryptStrAwait" -> {
-                    symmetricCrypto(
-                        p1 ?: throw NoStackTraceException("error algorithm null"),
-                        p2 ?: throw NoStackTraceException("error key null"),
-                        p3
-                    ).decryptStr(p0 ?: throw NoStackTraceException("error data null"))
-                }
-                "encryptHexAwait" -> {
-                    symmetricCrypto(
-                        p1 ?: throw NoStackTraceException("error algorithm null"),
-                        p2 ?: throw NoStackTraceException("error key null"),
-                        p3
-                    ).encryptHex(p0 ?: throw NoStackTraceException("error data null"))
-                }
-                "encryptBase64Await" -> {
-                    symmetricCrypto(
-                        p1 ?: throw NoStackTraceException("error algorithm null"),
-                        p2 ?: throw NoStackTraceException("error key null"),
-                        p3
-                    ).encryptBase64(p0 ?: throw NoStackTraceException("error data null"))
-                }
-                "decryptWithPublicKeyAwait" -> {
-                    asymmetricCrypto(
-                        p1 ?: throw NoStackTraceException("error algorithm null"),
-                        p2 ?: throw NoStackTraceException("error publicKey null"),
-                        true
-                    ).decryptStr(p0 ?: throw NoStackTraceException("error data null"))
-                }
-                "encryptWithPublicKeyAwait" -> {
-                    asymmetricCrypto(
-                        p1 ?: throw NoStackTraceException("error algorithm null"),
-                        p2 ?: throw NoStackTraceException("error publicKey null"),
-                        true
-                    ).encryptBase64(p0 ?: throw NoStackTraceException("error data null"))
-                }
-                "decryptWithPrivateKeyAwait" -> {
-                    asymmetricCrypto(
-                        p1 ?: throw NoStackTraceException("error algorithm null"),
-                        p2 ?: throw NoStackTraceException("error privateKey null"),
-                        false
-                    ).decryptStr(p0 ?: throw NoStackTraceException("error data null"))
-                }
-                "encryptWithPrivateKeyAwait" -> {
-                    asymmetricCrypto(
-                        p1 ?: throw NoStackTraceException("error algorithm null"),
-                        p2 ?: throw NoStackTraceException("error privateKey null"),
-                        false
-                    ).encryptBase64(p0 ?: throw NoStackTraceException("error data null"))
-                }
-                "createSignHexAwait" -> {
-                    createSignHex(
-                        p0 ?: throw NoStackTraceException("error data null"),
-                        p1 ?: throw NoStackTraceException("error algorithm null"),
-                        p2 ?: throw NoStackTraceException("error publicKey null"),
-                        p3 ?: throw NoStackTraceException("error privateKey null")
-                    )
+                    val url = p0 ?: throw NoStackTraceException("error url null")
+                    val option = p1 ?: throw NoStackTraceException("error option null")
+                    fetch(url, option)
                 }
                 "readTxtFileAwait" -> {
-                    readTxtFile(
-                        p0 ?: throw NoStackTraceException("error path null"),
-                        p1 ?: throw NoStackTraceException("error charset null")
-                    )
+                    val path = p0 ?: throw NoStackTraceException("error path null")
+                    val charset = p1 ?: throw NoStackTraceException("error charset null")
+                    readTxtFile(path, charset)
                 }
-                else -> throw NoStackTraceException("error funName")
+                "decryptStrAwait" -> {
+                    val data = p0 ?: throw NoStackTraceException("error data null")
+                    val algorithm = p1 ?: throw NoStackTraceException("error algorithm null")
+                    val key = p2 ?: throw NoStackTraceException("error key null")
+                    val iv = p3
+                    symmetricCrypto(algorithm, key, iv).decryptStr(data)
+                }
+                "encryptHexAwait" -> {
+                    val data = p0 ?: throw NoStackTraceException("error data null")
+                    val algorithm = p1 ?: throw NoStackTraceException("error algorithm null")
+                    val key = p2 ?: throw NoStackTraceException("error key null")
+                    val iv = p3
+                    symmetricCrypto(algorithm, key, iv).encryptHex(data)
+                }
+                "encryptBase64Await" -> {
+                    val data = p0 ?: throw NoStackTraceException("error data null")
+                    val algorithm = p1 ?: throw NoStackTraceException("error algorithm null")
+                    val key = p2 ?: throw NoStackTraceException("error key null")
+                    val iv = p3
+                    symmetricCrypto(algorithm, key, iv).encryptBase64(data)
+                }
+                "decryptWithPublicKeyAwait" -> {
+                    val data = p0 ?: throw NoStackTraceException("error data null")
+                    val algorithm = p1 ?: throw NoStackTraceException("error algorithm null")
+                    val publicKey = p2 ?: throw NoStackTraceException("error publicKey null")
+                    asymmetricCrypto(algorithm, publicKey, true).decryptStr(data)
+                }
+                "encryptWithPublicKeyAwait" -> {
+                    val data = p0 ?: throw NoStackTraceException("error data null")
+                    val algorithm = p1 ?: throw NoStackTraceException("error algorithm null")
+                    val publicKey = p2 ?: throw NoStackTraceException("error publicKey null")
+                    asymmetricCrypto(algorithm, publicKey, true).encryptBase64(data)
+                }
+                "decryptWithPrivateKeyAwait" -> {
+                    val data = p0 ?: throw NoStackTraceException("error data null")
+                    val algorithm = p1 ?: throw NoStackTraceException("error algorithm null")
+                    val privateKey = p2 ?: throw NoStackTraceException("error privateKey null")
+                    asymmetricCrypto(algorithm, privateKey, false).decryptStr(data)
+                }
+                "encryptWithPrivateKeyAwait" -> {
+                    val data = p0 ?: throw NoStackTraceException("error data null")
+                    val algorithm = p1 ?: throw NoStackTraceException("error algorithm null")
+                    val privateKey = p2 ?: throw NoStackTraceException("error privateKey null")
+                    asymmetricCrypto(algorithm, privateKey, false).encryptBase64(data)
+                }
+                "createSignHexAwait" -> {
+                    val data = p0 ?: throw NoStackTraceException("error data null")
+                    val algorithm = p1 ?: throw NoStackTraceException("error algorithm null")
+                    val publicKey = p2
+                    val privateKey = p3
+                    createSignHex(data, algorithm, publicKey, privateKey)
+                }
+                else -> throw NoStackTraceException("error funName: $funName")
             }
-        }.onSuccess { data ->
-            CacheManager.putMemory(id, data ?: "")
+
+            CacheManager.putMemory(id, result)
             webViewRef.get()?.evaluateJavascript("window.$JSBridgeResult('$id', true);", null)
         }.onError {
-            CacheManager.putMemory(id, it.localizedMessage ?: "err")
+            val errorMessage = it.localizedMessage ?: "Unknown error"
+            CacheManager.putMemory(id, errorMessage)
             webViewRef.get()?.evaluateJavascript("window.$JSBridgeResult('$id', false);", null)
         }
     }
 
-    companion object{
+    companion object {
         private fun getRandomLetter(): Char {
             val letters = "abcdefghijklmnopqrstuvwxyz"
             return letters.random()
         }
-        val uuid by lazy {
+
+        private val uuid by lazy {
             UUID.randomUUID().toString().replace('-', getRandomLetter()).chunked(6)
         }
-        val uuid2 by lazy {
+
+        private val uuid2 by lazy {
             UUID.randomUUID().toString().replace('-', getRandomLetter()).chunked(6)
         }
+
         val nameJava by lazy { getRandomLetter() + uuid[0] + uuid2[0] }
         val nameCache by lazy { getRandomLetter() + uuid[1] + uuid2[1] }
         val JSBridgeResult by lazy { getRandomLetter() + uuid[3] + uuid2[3] }
@@ -520,93 +521,94 @@ class WebJsExtensions(
             delete window.$nameCache;
             function runAwait(jsCode) {
                 return new Promise((resolve, reject) => {
-                    const id = requestId("runAwait");
+                    const id = requestId('runAwait');
                     JSBridgeCallbacks[id] = { resolve, reject };
-                    java.request("runAwait", [String(jsCode)], id);
+                    java.request('runAwait', [String(jsCode)], id);
                 });
             };
-            function ajaxAwait(...args) {
+            function ajaxAwait(url) {
                 return new Promise((resolve, reject) => {
-                    const id = requestId("ajaxAwait");
+                    const id = requestId('ajaxAwait');
                     JSBridgeCallbacks[id] = { resolve, reject };
-                    java.request("ajaxAwait", params(args), id);
+                    java.request('ajaxAwait', [url], id);
                 });
             };
-            function connectAwait(...args) {
+            function connectAwait(url) {
                 return new Promise((resolve, reject) => {
-                    const id = requestId("connectAwait");
+                    const id = requestId('connectAwait');
                     JSBridgeCallbacks[id] = { resolve, reject };
-                    java.request("connectAwait", params(args), id);
+                    java.request('connectAwait', [url], id);
                 });
             };
-            function fetchAwait(...args) {
+            function fetchAwait(url, options) {
+                const optionStr = options ? JSON.stringify(options) : '{}';
                 return new Promise((resolve, reject) => {
-                    const id = requestId("fetchAwait");
+                    const id = requestId('fetchAwait');
                     JSBridgeCallbacks[id] = { resolve, reject };
-                    java.request("fetchAwait", params(args), id);
+                    java.request('fetchAwait', [url, optionStr], id);
+                });
+            };
+            function readTxtFileAwait(path, charset) {
+                return new Promise((resolve, reject) => {
+                    const id = requestId('readTxtFileAwait');
+                    JSBridgeCallbacks[id] = { resolve, reject };
+                    java.request('readTxtFileAwait', [path, charset || 'UTF-8'], id);
                 });
             };
             function decryptStrAwait(...args) {
                 return new Promise((resolve, reject) => {
-                    const id = requestId("decryptStrAwait");
+                    const id = requestId('decryptStrAwait');
                     JSBridgeCallbacks[id] = { resolve, reject };
-                    java.request("decryptStrAwait", params(args), id);
+                    java.request('decryptStrAwait', params(args), id);
                 });
             };
             function encryptHexAwait(...args) {
                 return new Promise((resolve, reject) => {
-                    const id = requestId("encryptHexAwait");
+                    const id = requestId('encryptHexAwait');
                     JSBridgeCallbacks[id] = { resolve, reject };
-                    java.request("encryptHexAwait", params(args), id);
+                    java.request('encryptHexAwait', params(args), id);
                 });
             };
             function encryptBase64Await(...args) {
                 return new Promise((resolve, reject) => {
-                    const id = requestId("encryptBase64Await");
+                    const id = requestId('encryptBase64Await');
                     JSBridgeCallbacks[id] = { resolve, reject };
-                    java.request("encryptBase64Await", params(args), id);
+                    java.request('encryptBase64Await', params(args), id);
                 });
             };
             function decryptWithPublicKeyAwait(...args) {
                 return new Promise((resolve, reject) => {
-                    const id = requestId("decryptWithPublicKeyAwait");
+                    const id = requestId('decryptWithPublicKeyAwait');
                     JSBridgeCallbacks[id] = { resolve, reject };
-                    java.request("decryptWithPublicKeyAwait", params(args), id);
+                    java.request('decryptWithPublicKeyAwait', params(args), id);
                 });
             };
             function encryptWithPublicKeyAwait(...args) {
                 return new Promise((resolve, reject) => {
-                    const id = requestId("encryptWithPublicKeyAwait");
+                    const id = requestId('encryptWithPublicKeyAwait');
                     JSBridgeCallbacks[id] = { resolve, reject };
-                    java.request("encryptWithPublicKeyAwait", params(args), id);
+                    java.request('encryptWithPublicKeyAwait', params(args), id);
                 });
             };
             function decryptWithPrivateKeyAwait(...args) {
                 return new Promise((resolve, reject) => {
-                    const id = requestId("decryptWithPrivateKeyAwait");
+                    const id = requestId('decryptWithPrivateKeyAwait');
                     JSBridgeCallbacks[id] = { resolve, reject };
-                    java.request("decryptWithPrivateKeyAwait", params(args), id);
+                    java.request('decryptWithPrivateKeyAwait', params(args), id);
                 });
             };
             function encryptWithPrivateKeyAwait(...args) {
                 return new Promise((resolve, reject) => {
-                    const id = requestId("encryptWithPrivateKeyAwait");
+                    const id = requestId('encryptWithPrivateKeyAwait');
                     JSBridgeCallbacks[id] = { resolve, reject };
-                    java.request("encryptWithPrivateKeyAwait", params(args), id);
+                    java.request('encryptWithPrivateKeyAwait', params(args), id);
                 });
             };
             function createSignHexAwait(...args) {
                 return new Promise((resolve, reject) => {
-                    const id = requestId("createSignHexAwait");
+                    const id = requestId('createSignHexAwait');
                     JSBridgeCallbacks[id] = { resolve, reject };
-                    java.request("createSignHexAwait", params(args), id);
-                });
-            };
-            function readTxtFileAwait(...args) {
-                return new Promise((resolve, reject) => {
-                    const id = requestId("readTxtFileAwait");
-                    JSBridgeCallbacks[id] = { resolve, reject };
-                    java.request("readTxtFileAwait", params(args), id);
+                    java.request('createSignHexAwait', params(args), id);
                 });
             };
             window.$JSBridgeResult = function(id, success) {

@@ -610,14 +610,11 @@ interface JsExtensions : JsEncodeUtils {
      */
     fun getFile(path: String): File {
         val cachePath = appCtx.externalCache.absolutePath
-        val aPath = if (path.startsWith("/storage")) {
-            path
-        } else if (path.startsWith(File.separator)) {
-            cachePath + path
-        } else {
-            cachePath + File.separator + path
+        return when {
+            path.startsWith("/storage") -> File(path)
+            path.startsWith(File.separator) -> File(cachePath + path)
+            else -> File(cachePath + File.separator + path)
         }
-        return File(aPath)
     }
 
     fun readFile(path: String): ByteArray? {
