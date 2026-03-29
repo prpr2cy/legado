@@ -172,7 +172,7 @@ class AnalyzeRule(
                 }
             } else if (result is LinkedTreeMap<*, *>) {
                 // 键值直接访问
-                result = result[ruleList.first().rule]
+                result = (result as LinkedTreeMap<*, *>)[ruleList.first().rule]
             } else {
                 for (sourceRule in ruleList) {
                     putRule(sourceRule.putMap)
@@ -190,7 +190,7 @@ class AnalyzeRule(
                     }
                     if (sourceRule.replaceRegex.isNotEmpty() && result is List<*>) {
                         val newList = ArrayList<String>()
-                        for (item in result) {
+                        for (item in result as List<*>) {
                             newList.add(replaceRegex(item.toString(), sourceRule))
                         }
                         result = newList
@@ -202,12 +202,12 @@ class AnalyzeRule(
         }
         if (result == null) return null
         if (result is String) {
-            result = result.split("\n")
+            result = (result as String).split("\n")
         }
         if (isUrl) {
             val urlList = ArrayList<String>()
             if (result is List<*>) {
-                for (url in result) {
+                for (url in result as List<*>) {
                     val absoluteURL = NetworkUtils.getAbsoluteURL(redirectUrl, url.toString())
                     if (absoluteURL.isNotEmpty() && !urlList.contains(absoluteURL)) {
                         urlList.add(absoluteURL)
