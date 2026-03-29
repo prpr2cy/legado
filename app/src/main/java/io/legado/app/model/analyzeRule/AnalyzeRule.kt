@@ -14,6 +14,7 @@ import io.legado.app.utils.*
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.apache.commons.text.StringEscapeUtils
+import org.jsoup.nodes.Node
 import org.mozilla.javascript.NativeObject
 import java.net.URL
 import java.util.regex.Pattern
@@ -163,7 +164,7 @@ class AnalyzeRule(
                         result = replaceRegex(result.toString(), sourceRule)
                     }
                 }
-            } else if (result is LinkedTreeMap<*, *>) {
+            } else if (result is Map<*, *>) {
                 // 键值直接访问
                 result = result[ruleList.first().rule]
             } else {
@@ -182,7 +183,7 @@ class AnalyzeRule(
                         }
                         if (sourceRule.replaceRegex.isNotEmpty() && result is List<*>) {
                             val newList = ArrayList<String>()
-                            for (item in result) {
+                            for (item in result as List<*>) {
                                 newList.add(replaceRegex(item.toString(), sourceRule))
                             }
                             result = newList
@@ -200,7 +201,7 @@ class AnalyzeRule(
         if (isUrl) {
             val urlList = ArrayList<String>()
             if (result is List<*>) {
-                for (url in result) {
+                for (url in result as List<*>) {
                     val absoluteURL = NetworkUtils.getAbsoluteURL(redirectUrl, url.toString())
                     if (absoluteURL.isNotEmpty() && !urlList.contains(absoluteURL)) {
                         urlList.add(absoluteURL)
@@ -253,7 +254,7 @@ class AnalyzeRule(
                 }?.let {
                     replaceRegex(it, sourceRule)
                 }
-            } else if (result is LinkedTreeMap<*, *>) {
+            } else if (result is Map<*, *>) {
                 // 键值直接访问
                 result = result[ruleList.first().rule]?.toString()
             } else {

@@ -190,7 +190,7 @@ class AnalyzeUrl(
                     option.getMethod()?.let {
                         method = when (it.uppercase()) {
                             "POST" -> RequestMethod.POST
-                            "GET" -> RequestMethod.GET
+                            else -> RequestMethod.GET
                         }
                     }
                     option.getHeaderMap()?.forEach { entry ->
@@ -327,7 +327,7 @@ class AnalyzeUrl(
         if (type != null) {
             return StrResponse(url, HexUtil.encodeHexStr(getByteArrayAwait()))
         }
-        if (header == true) {
+        if (useHeader == true) {
             setCookie()
         }
         val strResponse: StrResponse

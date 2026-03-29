@@ -16,6 +16,7 @@ import io.legado.app.help.source.exploreKinds
 import io.legado.app.lib.dialogs.selector
 import io.legado.app.lib.theme.accentColor
 import io.legado.app.lib.theme.primaryColor
+import io.legado.app.ui.about.AppLogDialog
 import io.legado.app.ui.qrcode.QrCodeResult
 import io.legado.app.ui.widget.dialog.TextDialog
 import io.legado.app.utils.launch
@@ -115,6 +116,11 @@ class BookSourceDebugActivity : VMBaseActivity<ActivitySourceDebugBinding, BookS
         binding.textContent.onClick {
             prefixAutoComplete("--")
         }
+        initExploreKinds()
+    }
+
+    @SuppressLint("SetTextI18n")
+    private fun initExploreKinds() {
         lifecycleScope.launch {
             val exploreKinds = viewModel.bookSource?.exploreKinds()?.filter {
                 !it.url.isNullOrBlank()

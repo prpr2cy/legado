@@ -84,18 +84,18 @@ class ConcurrentRateLimiter(source: BaseSource?) {
                 // 已经过了限制时间，重置开始时间
                 fetchRecord.time = nowTime
                 fetchRecord.frequency = 1
-                return@synchronized 0
+                return@synchronized 0L
             }
 
             if (fetchRecord.frequency < fetchRecord.accessLimit) {
                 fetchRecord.frequency++
-                return@synchronized 0
+                return@synchronized 0L
             } else {
                 return@synchronized nextTime - nowTime
             }
         }
 
-        if (waitTime > 0) {
+        if (waitTime > 0L) {
             throw ConcurrentException(
                 "根据并发率还需等待${waitTime}毫秒才可以访问",
                 waitTime = waitTime

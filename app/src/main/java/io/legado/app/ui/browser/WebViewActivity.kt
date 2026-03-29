@@ -8,6 +8,8 @@ import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
+import android.webkit.ConsoleMessage
+import android.webkit.CookieManager
 import android.webkit.SslErrorHandler
 import android.webkit.URLUtil
 import android.webkit.WebChromeClient
@@ -22,13 +24,15 @@ import io.legado.app.R
 import io.legado.app.base.VMBaseActivity
 import io.legado.app.constant.AppConst
 import io.legado.app.constant.AppConst.imagePathKey
+import io.legado.app.constant.AppLog
+import io.legado.app.exception.NoStackTraceException
 import io.legado.app.databinding.ActivityWebViewBinding
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.http.CookieStore
 import io.legado.app.help.source.SourceVerificationHelp
 import io.legado.app.help.WebCacheManager
 import io.legado.app.help.WebJsExtensions
-import io.legado.app.help.WebJsExtensions.Companion.JS_INJECTION2
+import io.legado.app.help.WebJsExtensions.Companion.JS_INJECTION
 import io.legado.app.help.WebJsExtensions.Companion.nameCache
 import io.legado.app.help.WebJsExtensions.Companion.nameJava
 import io.legado.app.lib.dialogs.SelectItem

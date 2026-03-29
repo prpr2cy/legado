@@ -30,13 +30,13 @@ import io.legado.app.utils.FileUtils
 import io.legado.app.utils.fromJsonObject
 import io.legado.app.utils.GSON
 import io.legado.app.utils.longToastOnUi
-import io.legado.app.utils.readTxtFile
 import io.legado.app.utils.toastOnUi
 import io.legado.app.utils.UrlUtil
 import java.lang.ref.WeakReference
 import java.io.File
 import java.io.FileOutputStream
 import java.util.UUID
+import kotlinx.coroutines.runBlocking
 import org.jsoup.Connection
 import org.jsoup.Jsoup
 import splitties.init.appCtx
@@ -89,34 +89,38 @@ class WebJsExtensions(
 
     @JavascriptInterface
     fun ajax(urlStr: String): String {
-        return kotlin.runCatching {
-            val analyzeUrl = AnalyzeUrl(urlStr, source = getSource())
-            analyzeUrl.getStrResponseAwait().body ?: ""
-        }.onFailure {
-            AppLog.put("ajax(${urlStr}) error\n${it.localizedMessage}", it)
-        }.getOrElse {
-            it.stackTraceToString()
+        return runBlocking {
+            kotlin.runCatching {
+                val analyzeUrl = AnalyzeUrl(urlStr, source = getSource())
+                analyzeUrl.getStrResponseAwait().body ?: ""
+            }.onFailure {
+                AppLog.put("ajax(${urlStr}) error\n${it.localizedMessage}", it)
+            }.getOrElse {
+                it.stackTraceToString()
+            }
         }
     }
 
     @JavascriptInterface
     fun connect(urlStr: String): String {
-        return kotlin.runCatching {
-            val analyzeUrl = AnalyzeUrl(urlStr, source = getSource())
-            val response = analyzeUrl.getStrResponseAwait()
-            val result = mapOf(
-                "code" to response.code(),
-                "message" to response.message(),
-                "url" to response.url().toString(),
-                "body" to response.body(),
-                "headers" to response.headers().toMultimap(),
-                "cookies" to response.headers().values("set-cookie")
-            )
-            GSON.toJson(result)
-        }.onFailure {
-            AppLog.put("connect($urlStr) error\n${it.localizedMessage}", it)
-        }.getOrElse {
-            it.stackTraceToString()
+        return runBlocking {
+            kotlin.runCatching {
+                val analyzeUrl = AnalyzeUrl(urlStr, source = getSource())
+                val response = analyzeUrl.getStrResponseAwait()
+                val result = mapOf(
+                    "code" to response.code(),
+                    "message" to response.message(),
+                    "url" to response.url().toString(),
+                    "body" to response.body(),
+                    "headers" to response.headers().toMultimap(),
+                    "cookies" to response.headers().values("set-cookie")
+                )
+                GSON.toJson(result)
+            }.onFailure {
+                AppLog.put("connect($urlStr) error\n${it.localizedMessage}", it)
+            }.getOrElse {
+                it.stackTraceToString()
+            }
         }
     }
 
@@ -286,7 +290,7 @@ class WebJsExtensions(
 
     @JavascriptInterface
     fun decryptWithPublicKey(data: String, algorithm: String, key: String): String {
-        return asymmetricCrypto(algorithm, key, true).decodeStr(data, true)
+        return asymmetricCrypto(algorithm, key, true).decryptStr(data, true)
     }
 
     @JavascriptInterface
@@ -296,7 +300,7 @@ class WebJsExtensions(
 
     @JavascriptInterface
     fun decryptWithPrivateKey(data: String, algorithm: String, key: String): String {
-        return asymmetricCrypto(algorithm, key, false).decodeStr(data, false)
+        return asymmetricCrypto(algorithm, key, false).decryptStrStr(data, false)
     }
 
     @JavascriptInterface
@@ -388,7 +392,7 @@ class WebJsExtensions(
                         p0 ?: throw NoStackTraceException("error null")
                     )?.let { result ->
                         when(result) {
-                            null, is Boolean, is Number, is String -> result
+                            is String -> result
                             is ByteArray -> Base64.encode(result).toString()
                             is IntArray -> GSON.toJson(result)
                             is LongArray -> GSON.toJson(result)

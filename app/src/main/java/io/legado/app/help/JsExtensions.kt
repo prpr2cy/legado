@@ -92,8 +92,8 @@ interface JsExtensions : JsEncodeUtils {
             val asyncArray = urlList.map { url ->
                 async {
                     semaphore.withPermit {
-                        val analyzeUrl = AnalyzeUrl(url, source = getSource(), skipRateLimit = skipRateLimit)
-                        analyzeUrl.getStrResponseAwait()
+                        val analyzeUrl = AnalyzeUrl(url, source = getSource())
+                        analyzeUrl.getStrResponseAwait(skipRateLimit = skipRateLimit)
                     }
                 }
             }
