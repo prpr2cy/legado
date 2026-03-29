@@ -89,14 +89,15 @@ interface JsExtensions : JsEncodeUtils {
     fun ajaxAll(urlList: Array<String>, skipRateLimit: Boolean = false): Array<StrResponse?> {
         return runBlocking(IO) {
             val semaphore = Semaphore(AppConfig.threadCount)
-            urlList.map { url ->
+            val asyncArray = urlList.map { url ->
                 async {
                     semaphore.withPermit {
                         val analyzeUrl = AnalyzeUrl(url, source = getSource(), skipRateLimit = skipRateLimit)
                         analyzeUrl.getStrResponseAwait()
                     }
                 }
-            }.awaitAll().toTypedArray()
+            }
+            asyncArray.map { it.await() }.toTypedArray()
         }
     }
 

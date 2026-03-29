@@ -64,7 +64,7 @@ class BookSourceEditViewModel(application: Application) : BaseViewModel(applicat
             source.lastUpdateTime = System.currentTimeMillis()
             appDb.bookSourceDao.insert(source)
             bookSource = source
-            ConcurrentRateLimiter.clear(source.bookSourceUrl) //删除并发限制缓存
+            ConcurrentRateLimiter.remove(source.bookSourceUrl) //删除并发限制缓存
             source
         }.onSuccess {
             success?.invoke(it)

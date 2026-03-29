@@ -42,7 +42,7 @@ class HttpTtsEditViewModel(app: Application) : BaseViewModel(app) {
         this.httpTTS = httpTTS
         execute {
             appDb.httpTTSDao.insert(httpTTS)
-            ConcurrentRateLimiter.clear(httpTTS.getKey()) //删除并发限制缓存
+            ConcurrentRateLimiter.remove(httpTTS.getKey()) //删除并发限制缓存
             if (ReadAloud.ttsEngine == httpTTS.id.toString()) ReadAloud.upReadAloudClass()
         }.onSuccess {
             success?.invoke()

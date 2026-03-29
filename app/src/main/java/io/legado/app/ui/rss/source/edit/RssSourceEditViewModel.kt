@@ -52,7 +52,7 @@ class RssSourceEditViewModel(application: Application) : BaseViewModel(applicati
             }
             appDb.rssSourceDao.insert(source)
             rssSource = source
-            ConcurrentRateLimiter.clear(source.sourceUrl) //删除并发限制缓存
+            ConcurrentRateLimiter.remove(source.sourceUrl) //删除并发限制缓存
             source
         }.onSuccess {
             success(it)

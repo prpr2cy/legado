@@ -15,7 +15,15 @@ import java.util.concurrent.ConcurrentHashMap
 class ConcurrentRateLimiter(source: BaseSource?) {
 
     companion object {
-        private val concurrentRecordMap = ConcurrentHashMap<String, ConcurrentRecord>()
+        val concurrentRecordMap = ConcurrentHashMap<String, ConcurrentRecord>()
+
+        fun remove(sourceKey: String) {
+            concurrentRecordMap.remove(sourceKey)
+        }
+
+        fun clear() {
+            concurrentRecordMap.clear()
+        }
     }
 
     private val concurrentRate = source?.concurrentRate
@@ -25,10 +33,22 @@ class ConcurrentRateLimiter(source: BaseSource?) {
      * 并发记录实体
      */
     data class ConcurrentRecord(
-        var time: Long,        // 上次访问时间/窗口开始时间
-        val accessLimit: Int,   // 最大访问次数
-        val interval: Int,       // 间隔时间（毫秒）
-        var frequency: Int     // 当前访问计数
+        /**
+         * 开始访问时间
+         */
+        var time: Long,
+        /**
+         * 限制次数
+         */
+        var accessLimit : Int,
+        /**
+         * 间隔时间
+         */
+        var interval : Int,
+        /**
+         * 正在访问的个数
+         */
+        var frequency: Int
     )
 
     /**
@@ -149,22 +169,10 @@ class ConcurrentRateLimiter(source: BaseSource?) {
     /**
      * 清理当前源的并发记录
      */
-    fun clear() {
+    fun remove() {
         if (sourceKey != null) {
             concurrentRecordMap.remove(sourceKey)
         }
     }
 
-    /**
-     * 静态方法：清理指定源的并发记录
-     */
-    companion object {
-        fun clear(sourceKey: String) {
-            concurrentRecordMap.remove(sourceKey)
-        }
-
-        fun clearAll() {
-            concurrentRecordMap.clear()
-        }
-    }
 }
