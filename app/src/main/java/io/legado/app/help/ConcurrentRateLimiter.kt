@@ -26,7 +26,7 @@ class ConcurrentRateLimiter(source: BaseSource?) {
         }
     }
 
-    private val concurrentRate = source?.concurrentRate
+private val concurrentRate = source?.concurrentRate
     private val sourceKey = source?.getKey()
 
     /**
@@ -87,6 +87,12 @@ class ConcurrentRateLimiter(source: BaseSource?) {
                 return@synchronized 0
             }
 
+             // 间隔模式：只要时间窗口未到就必须等待
+            if (fetchRecord.accessLimit == 1) {
+                return@synchronized nextTime - nowTime
+            }
+
+             // 频率模式：检查是否还有剩余次数
             if (fetchRecord.frequency < fetchRecord.accessLimit) {
                 fetchRecord.frequency++
                 return@synchronized 0
@@ -130,7 +136,7 @@ class ConcurrentRateLimiter(source: BaseSource?) {
     }
 
     /**
-     * 同步版本：获取并发记录（阻塞调用）
+     * 获取并发记录（同步版本，会阻塞调用）
      */
     fun getConcurrentRecordBlocking(): ConcurrentRecord? {
         while (true) {
@@ -143,7 +149,7 @@ class ConcurrentRateLimiter(source: BaseSource?) {
     }
 
     /**
-     * 并发控制扩展函数（挂起版本）
+     * 并发控制扩展函数
      */
     suspend inline fun <T> withLimit(block: () -> T): T {
         val record = getConcurrentRecord()
