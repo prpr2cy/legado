@@ -177,26 +177,26 @@ class AnalyzeRule(
                 for (sourceRule in ruleList) {
                     putRule(sourceRule.putMap)
                     sourceRule.makeUpRule(result)
-                    result ?: continue
-                    val rule = sourceRule.rule
-                    if (rule.isNotEmpty()) {
-                        val currentResult = result;
-                        result = when (sourceRule.mode) {
-                            Mode.Js -> evalJS(rule, currentResult)
-                            Mode.Json -> getAnalyzeByJSonPath(currentResult).getStringList(rule)
-                            Mode.XPath -> getAnalyzeByXPath(currentResult).getStringList(rule)
-                            Mode.Default -> getAnalyzeByJSoup(currentResult).getStringList(rule)
-                            else -> rule
+                    result?.let {
+                        val rule = sourceRule.rule
+                        if (rule.isNotEmpty()) {
+                            result = when (sourceRule.mode) {
+                                Mode.Js -> evalJS(rule, it)
+                                Mode.Json -> getAnalyzeByJSonPath(it).getStringList(rule)
+                                Mode.XPath -> getAnalyzeByXPath(it).getStringList(rule)
+                                Mode.Default -> getAnalyzeByJSoup(it).getStringList(rule)
+                                else -> rule
+                            }
                         }
-                    }
-                    if (sourceRule.replaceRegex.isNotEmpty() && result is List<*>) {
-                        val newList = ArrayList<String>()
-                        for (item in result as List<*>) {
-                            newList.add(replaceRegex(item.toString(), sourceRule))
+                        if (sourceRule.replaceRegex.isNotEmpty() && result is List<*>) {
+                            val newList = ArrayList<String>()
+                            for (item in result as List<*>) {
+                                newList.add(replaceRegex(item.toString(), sourceRule))
+                            }
+                            result = newList
+                        } else if (sourceRule.replaceRegex.isNotEmpty()) {
+                            result = replaceRegex(result.toString(), sourceRule)
                         }
-                        result = newList
-                    } else if (sourceRule.replaceRegex.isNotEmpty()) {
-                        result = replaceRegex(result.toString(), sourceRule)
                     }
                 }
             }
@@ -268,33 +268,33 @@ class AnalyzeRule(
                 for (sourceRule in ruleList) {
                     putRule(sourceRule.putMap)
                     sourceRule.makeUpRule(result)
-                    result ?: continue
-                    val rule = sourceRule.rule
-                    if (rule.isNotBlank() || sourceRule.replaceRegex.isEmpty()) {
-                        result = when (sourceRule.mode) {
-                            Mode.Js -> evalJS(rule, result)
-                            Mode.Json -> getAnalyzeByJSonPath(result).getString(rule)
-                            Mode.XPath -> getAnalyzeByXPath(result).getString(rule)
-                            Mode.Default -> if (isUrl) {
-                                getAnalyzeByJSoup(result).getString0(rule)
-                            } else {
-                                getAnalyzeByJSoup(result).getString(rule)
-                            }
+                    result?.let {
+                        val rule = sourceRule.rule
+                        if (rule.isNotBlank() || sourceRule.replaceRegex.isEmpty()) {
+                            result = when (sourceRule.mode) {
+                                Mode.Js -> evalJS(rule, it)
+                                Mode.Json -> getAnalyzeByJSonPath(it).getString(rule)
+                                Mode.XPath -> getAnalyzeByXPath(it).getString(rule)
+                                Mode.Default -> if (isUrl) {
+                                    getAnalyzeByJSoup(it).getString0(rule)
+                                } else {
+                                    getAnalyzeByJSoup(it).getString(rule)
+                                }
 
-                            else -> rule
+                                else -> rule
+                            }
                         }
-                    }
-                    if (result != null && sourceRule.replaceRegex.isNotEmpty()) {
-                        result = replaceRegex(result.toString(), sourceRule)
+                        if (result != null && sourceRule.replaceRegex.isNotEmpty()) {
+                            result = replaceRegex(result.toString(), sourceRule)
+                        }
                     }
                 }
             }
         }
         if (result == null) result = ""
-        val resultStr = result.toString()
         val str = if (unescape) {
-            StringEscapeUtils.unescapeHtml4(resultStr)
-        } else resultStr
+            StringEscapeUtils.unescapeHtml4(result.toString())
+        } else result.toString()
         if (isUrl) {
             return if (str.isBlank()) {
                 baseUrl ?: ""
@@ -318,21 +318,22 @@ class AnalyzeRule(
             for (sourceRule in ruleList) {
                 putRule(sourceRule.putMap)
                 sourceRule.makeUpRule(result)
-                result ?: continue
-                val rule = sourceRule.rule
-                result = when (sourceRule.mode) {
-                    Mode.Regex -> AnalyzeByRegex.getElement(
-                        result.toString(),
-                        rule.splitNotBlank("&&")
-                    )
+                result?.let {
+                    val rule = sourceRule.rule
+                    result = when (sourceRule.mode) {
+                        Mode.Regex -> AnalyzeByRegex.getElement(
+                            it.toString(),
+                            rule.splitNotBlank("&&")
+                        )
 
-                    Mode.Js -> evalJS(rule, result)
-                    Mode.Json -> getAnalyzeByJSonPath(result).getObject(rule)
-                    Mode.XPath -> getAnalyzeByXPath(result).getElements(rule)
-                    else -> getAnalyzeByJSoup(result).getElements(rule)
-                }
-                if (sourceRule.replaceRegex.isNotEmpty()) {
-                    result = replaceRegex(result.toString(), sourceRule)
+                        Mode.Js -> evalJS(rule, it)
+                        Mode.Json -> getAnalyzeByJSonPath(it).getObject(rule)
+                        Mode.XPath -> getAnalyzeByXPath(it).getElements(rule)
+                        else -> getAnalyzeByJSoup(result).getElements(rule)
+                    }
+                    if (sourceRule.replaceRegex.isNotEmpty()) {
+                        result = replaceRegex(result.toString(), sourceRule)
+                    }
                 }
             }
         }
@@ -351,18 +352,22 @@ class AnalyzeRule(
             result = content
             for (sourceRule in ruleList) {
                 putRule(sourceRule.putMap)
-                result ?: continue
-                val rule = sourceRule.rule
-                result = when (sourceRule.mode) {
-                    Mode.Regex -> AnalyzeByRegex.getElements(
-                        result.toString(),
-                        rule.splitNotBlank("&&")
-                    )
+                result?.let {
+                    val rule = sourceRule.rule
+                    result = when (sourceRule.mode) {
+                        Mode.Regex -> AnalyzeByRegex.getElements(
+                            it.toString(),
+                            rule.splitNotBlank("&&")
+                        )
 
-                    Mode.Js -> evalJS(rule, result)
-                    Mode.Json -> getAnalyzeByJSonPath(result).getList(rule)
-                    Mode.XPath -> getAnalyzeByXPath(result).getElements(rule)
-                    else -> getAnalyzeByJSoup(result).getElements(rule)
+                        Mode.Js -> evalJS(rule, it)
+                        Mode.Json -> getAnalyzeByJSonPath(it).getList(rule)
+                        Mode.XPath -> getAnalyzeByXPath(it).getElements(rule)
+                        else -> getAnalyzeByJSoup(it).getElements(rule)
+                    }
+                    if (sourceRule.replaceRegex.isNotEmpty()) {
+                        result = replaceRegex(result.toString(), sourceRule)
+                    }
                 }
             }
         }
