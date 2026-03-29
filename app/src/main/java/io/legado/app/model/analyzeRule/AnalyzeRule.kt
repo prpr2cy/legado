@@ -164,9 +164,9 @@ class AnalyzeRule(
                         result = replaceRegex(result.toString(), sourceRule)
                     }
                 }
-            } else if (result is Map<*, *>) {
+            } else if (result is LinkedTreeMap<*, *>) {
                 // 键值直接访问
-                result = result[ruleList.first().rule]
+                result = (result as LinkedTreeMap<*, *>)?.let { it.[ruleList.first().rule] }
             } else {
                 for (sourceRule in ruleList) {
                     putRule(sourceRule.putMap)
@@ -196,7 +196,7 @@ class AnalyzeRule(
         }
         if (result == null) return null
         if (result is String) {
-            result = result.split("\n")
+            result = (result as String).split("\n")
         }
         if (isUrl) {
             val urlList = ArrayList<String>()
@@ -254,9 +254,9 @@ class AnalyzeRule(
                 }?.let {
                     replaceRegex(it, sourceRule)
                 }
-            } else if (result is Map<*, *>) {
+            } else if (result is LinkedTreeMap<*, *>) {
                 // 键值直接访问
-                result = result[ruleList.first().rule]?.toString()
+                result = (result as LinkedTreeMap<*, *>)?.let { it.[ruleList.first().rule] }
             } else {
                 for (sourceRule in ruleList) {
                     putRule(sourceRule.putMap)

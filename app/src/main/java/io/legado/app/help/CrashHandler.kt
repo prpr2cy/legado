@@ -15,7 +15,6 @@ import io.legado.app.model.ReadAloud
 import io.legado.app.utils.FileDoc
 import io.legado.app.utils.FileUtils
 import io.legado.app.utils.createFileIfNotExist
-import io.legado.app.utils.externalCache
 import io.legado.app.utils.getFile
 import io.legado.app.utils.longToastOnUiLegacy
 import io.legado.app.utils.stackTraceStr

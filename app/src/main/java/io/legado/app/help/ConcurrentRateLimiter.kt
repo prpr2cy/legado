@@ -84,18 +84,18 @@ class ConcurrentRateLimiter(source: BaseSource?) {
                 // 已经过了限制时间，重置开始时间
                 fetchRecord.time = nowTime
                 fetchRecord.frequency = 1
-                return@synchronized 0L
+                return@synchronized 0
             }
 
             if (fetchRecord.frequency < fetchRecord.accessLimit) {
                 fetchRecord.frequency++
-                return@synchronized 0L
+                return@synchronized 0
             } else {
                 return@synchronized nextTime - nowTime
             }
         }
 
-        if (waitTime > 0L) {
+        if (waitTime > 0) {
             throw ConcurrentException(
                 "根据并发率还需等待${waitTime}毫秒才可以访问",
                 waitTime = waitTime
@@ -145,7 +145,7 @@ class ConcurrentRateLimiter(source: BaseSource?) {
     /**
      * 并发控制扩展函数（挂起版本）
      */
-    suspend inline fun <T> withLimit(block: suspend () -> T): T {
+    suspend inline fun <T> withLimit(block: () -> T): T {
         val record = getConcurrentRecord()
         return try {
             block()

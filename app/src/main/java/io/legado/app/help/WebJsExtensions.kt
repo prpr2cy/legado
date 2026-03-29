@@ -26,6 +26,7 @@ import io.legado.app.model.analyzeRule.AnalyzeRule
 import io.legado.app.model.analyzeRule.AnalyzeUrl
 import io.legado.app.model.AudioPlay
 import io.legado.app.model.ReadBook
+import io.legado.app.utils.externalCache
 import io.legado.app.utils.FileUtils
 import io.legado.app.utils.fromJsonObject
 import io.legado.app.utils.GSON
@@ -489,7 +490,7 @@ class WebJsExtensions(
                 else -> throw NoStackTraceException("error funName")
             }
         }.onSuccess { data ->
-            CacheManager.putMemory(id, data)
+            CacheManager.putMemory(id, data ?: "")
             webViewRef.get()?.evaluateJavascript("window.$JSBridgeResult('$id', true);", null)
         }.onError {
             CacheManager.putMemory(id, it.localizedMessage ?: "err")
