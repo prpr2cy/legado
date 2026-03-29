@@ -167,7 +167,7 @@ class AnalyzeRule(
                             replaceRegex(v.toString(), sourceRule)
                         }
                     } else if (sourceRule.replaceRegex.isNotEmpty()) {
-                        result = replaceRegex(result.toString(), sourceRule)
+                        result = replaceRegex(it.toString(), sourceRule)
                     }
                 }
             } else if (result is LinkedTreeMap<*, *>) {
@@ -180,11 +180,12 @@ class AnalyzeRule(
                     result ?: continue
                     val rule = sourceRule.rule
                     if (rule.isNotEmpty()) {
+                        val currentResult = result;
                         result = when (sourceRule.mode) {
-                            Mode.Js -> evalJS(rule, result)
-                            Mode.Json -> getAnalyzeByJSonPath(result).getStringList(rule)
-                            Mode.XPath -> getAnalyzeByXPath(result).getStringList(rule)
-                            Mode.Default -> getAnalyzeByJSoup(result).getStringList(rule)
+                            Mode.Js -> evalJS(rule, currentResult)
+                            Mode.Json -> getAnalyzeByJSonPath(currentResult).getStringList(rule)
+                            Mode.XPath -> getAnalyzeByXPath(currentResult).getStringList(rule)
+                            Mode.Default -> getAnalyzeByJSoup(currentResult).getStringList(rule)
                             else -> rule
                         }
                     }
