@@ -1,4 +1,4 @@
-package io.legado.app.help.http
+package io.legado.app.help
 
 import io.legado.app.data.entities.BaseSource
 import io.legado.app.exception.ConcurrentException

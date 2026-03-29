@@ -300,7 +300,7 @@ class WebJsExtensions(
 
     @JavascriptInterface
     fun decryptWithPrivateKey(data: String, algorithm: String, key: String): String {
-        return asymmetricCrypto(algorithm, key, false).decryptStrStr(data, false)
+        return asymmetricCrypto(algorithm, key, false).decryptStr(data, false)
     }
 
     @JavascriptInterface
@@ -313,7 +313,7 @@ class WebJsExtensions(
         data: String,
         algorithm: String,
         publicKey: String?,
-        privateKey: String?,
+        privateKey: String?
     ): String {
         val sign = Sign(algorithm);
         if (publicKey != null && publicKey.isNotEmpty()) {
@@ -393,7 +393,7 @@ class WebJsExtensions(
                     )?.let { result ->
                         when(result) {
                             is String -> result
-                            is ByteArray -> Base64.encode(result).toString()
+                            is ByteArray -> Base64.encode(result)
                             is IntArray -> GSON.toJson(result)
                             is LongArray -> GSON.toJson(result)
                             is DoubleArray -> GSON.toJson(result)

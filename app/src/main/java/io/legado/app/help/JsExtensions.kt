@@ -378,7 +378,7 @@ interface JsExtensions : JsEncodeUtils {
      * js实现重定向拦截,网络访问get
      */
     @Suppress("UnnecessaryVariable")
-    fun get(url: Any, headers: Any, timeout: Int? = 30000): Connection.Response {
+    fun get(url: Any, headers: Any, timeout: Int? = null): Connection.Response {
         val urlStr = url.toString()
         val headersMap = parseToMap(headers)
         val requestHeaders = if (getSource()?.enabledCookieJar == true) {
@@ -392,7 +392,7 @@ interface JsExtensions : JsEncodeUtils {
                 .ignoreHttpErrors(true)
                 .followRedirects(false)
                 .maxBodySize(0)
-                .timeout(timeout)
+                .timeout(timeout ?: 30000)
                 .headers(requestHeaders)
                 .method(Connection.Method.GET)
                 .execute()
@@ -404,7 +404,7 @@ interface JsExtensions : JsEncodeUtils {
      * js实现重定向拦截,网络访问head,不返回Response Body更省流量
      */
     @Suppress("UnnecessaryVariable")
-    fun head(url: Any, headers: Any, timeout: Int? = 30000): Connection.Response {
+    fun head(url: Any, headers: Any, timeout: Int? = null): Connection.Response {
         val urlStr = url.toString()
         val headersMap = parseToMap(headers)
         val requestHeaders = if (getSource()?.enabledCookieJar == true) {
@@ -418,7 +418,7 @@ interface JsExtensions : JsEncodeUtils {
                 .ignoreHttpErrors(true)
                 .followRedirects(false)
                 .maxBodySize(0)
-                .timeout(timeout)
+                .timeout(timeout ?: 30000)
                 .headers(requestHeaders)
                 .method(Connection.Method.HEAD)
                 .execute()
@@ -430,7 +430,7 @@ interface JsExtensions : JsEncodeUtils {
      * 网络访问post
      */
     @Suppress("UnnecessaryVariable")
-    fun post(url: Any, body: Any, headers: Any, timeout: Int? = 30000): Connection.Response {
+    fun post(url: Any, body: Any, headers: Any, timeout: Int? = null): Connection.Response {
         val urlStr = url.toString()
         val bodyStr = body.toString()
         val headersMap = parseToMap(headers)
@@ -445,7 +445,7 @@ interface JsExtensions : JsEncodeUtils {
                 .ignoreHttpErrors(true)
                 .followRedirects(false)
                 .maxBodySize(0)
-                .timeout(timeout)
+                .timeout(timeout ?: 30000)
                 .requestBody(bodyStr)
                 .headers(requestHeaders)
                 .method(Connection.Method.POST)
