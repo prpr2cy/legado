@@ -29,4 +29,9 @@
         android:title="@string/show_web_log"
         android:checkable="true" />
 
+    <item
+        android:id="@+id/menu_log"
+        android:title="@string/log"
+        app:showAsAction="never" />
+
 </menu>

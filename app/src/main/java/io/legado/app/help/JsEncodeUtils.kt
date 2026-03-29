@@ -42,11 +42,8 @@ interface JsEncodeUtils {
         key: ByteArray?,
         iv: ByteArray?
     ): SymmetricCrypto {
-        return SymmetricCrypto(algorithm, key).apply {
-            if (!iv.isNullOrEmpty()) {
-                setIv(iv)
-            }
-        }
+        val symmetricCrypto = SymmetricCrypto(transformation, key)
+        return if (iv != null && iv.isNotEmpty()) symmetricCrypto.setIv(iv) else symmetricCrypto
     }
 
     fun createSymmetricCrypto(
