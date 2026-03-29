@@ -7,6 +7,7 @@ import io.legado.app.base.BaseViewModel
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.RssSource
 import io.legado.app.exception.NoStackTraceException
+import io.legado.app.help.ConcurrentRateLimiter
 import io.legado.app.help.RuleComplete
 import io.legado.app.help.http.CookieStore
 import io.legado.app.utils.GSON
@@ -51,6 +52,7 @@ class RssSourceEditViewModel(application: Application) : BaseViewModel(applicati
             }
             appDb.rssSourceDao.insert(source)
             rssSource = source
+            ConcurrentRateLimiter.clear(source.sourceUrl) //删除并发限制缓存
             source
         }.onSuccess {
             success(it)

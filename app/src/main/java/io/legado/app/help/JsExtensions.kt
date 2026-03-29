@@ -40,11 +40,11 @@ import java.util.SimpleTimeZone
 import java.util.UUID
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
+import kotlinx.coroutines.async
 import kotlinx.coroutines.Dispatchers.IO
-import kotlinx.coroutines.flow.asFlow
-import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.Semaphore 
+import kotlinx.coroutines.sync.withPermit 
 import okio.use
 import org.jsoup.Connection
 import org.jsoup.Jsoup
@@ -86,14 +86,20 @@ interface JsExtensions : JsEncodeUtils {
     /**
      * 并发访问网络
      */
-    fun ajaxAll(urlList: Array<String>): Array<StrResponse?> {
-        return runBlocking {
-            urlList.asFlow().mapAsync(AppConfig.threadCount) { url ->
-                val analyzeUrl = AnalyzeUrl(url, source = getSource())
-                analyzeUrl.getStrResponseAwait()
-            }.flowOn(IO).toList().toTypedArray()
+    fun ajaxAll(urlList: Array<String>, skipRateLimit: Boolean = false): Array<StrResponse?> {
+        return runBlocking(IO) {
+            val semaphore = Semaphore(AppConfig.threadCount)
+            urlList.map { url ->
+                async {
+                    semaphore.withPermit {
+                        val analyzeUrl = AnalyzeUrl(url, source = getSource(), skipRateLimit = skipRateLimit)
+                        analyzeUrl.getStrResponseAwait()
+                    }
+                }
+            }.awaitAll().toTypedArray()
         }
     }
+}
 
     /**
      * 访问网络,返回Response<String>
@@ -372,21 +378,25 @@ interface JsExtensions : JsEncodeUtils {
      * js实现重定向拦截,网络访问get
      */
     @Suppress("UnnecessaryVariable")
-    fun get(url: Any, headers: Any): Connection.Response {
+    fun get(url: Any, headers: Any, timeout: Int? = 30000): Connection.Response {
         val urlStr = url.toString()
         val headersMap = parseToMap(headers)
         val requestHeaders = if (getSource()?.enabledCookieJar == true) {
             headersMap.toMutableMap().apply { put(cookieJarHeader, "1") }
         } else headersMap
-        val response = Jsoup.connect(urlStr)
-            .sslSocketFactory(SSLHelper.unsafeSSLSocketFactory)
-            .ignoreContentType(true)
-            .ignoreHttpErrors(true)
-            .followRedirects(false)
-            .maxBodySize(0)
-            .headers(requestHeaders)
-            .method(Connection.Method.GET)
-            .execute()
+        val rateLimiter = ConcurrentRateLimiter(getSource())
+        val response = rateLimiter.withLimitBlocking {
+            Jsoup.connect(urlStr)
+                .sslSocketFactory(SSLHelper.unsafeSSLSocketFactory)
+                .ignoreContentType(true)
+                .ignoreHttpErrors(true)
+                .followRedirects(false)
+                .maxBodySize(0)
+                .timeout(timeout)
+                .headers(requestHeaders)
+                .method(Connection.Method.GET)
+                .execute()
+        }
         return response
     }
 
@@ -394,21 +404,25 @@ interface JsExtensions : JsEncodeUtils {
      * js实现重定向拦截,网络访问head,不返回Response Body更省流量
      */
     @Suppress("UnnecessaryVariable")
-    fun head(url: Any, headers: Any): Connection.Response {
+    fun head(url: Any, headers: Any, timeout: Int? = 30000): Connection.Response {
         val urlStr = url.toString()
         val headersMap = parseToMap(headers)
         val requestHeaders = if (getSource()?.enabledCookieJar == true) {
             headersMap.toMutableMap().apply { put(cookieJarHeader, "1") }
         } else headersMap
-        val response = Jsoup.connect(urlStr)
-            .sslSocketFactory(SSLHelper.unsafeSSLSocketFactory)
-            .ignoreContentType(true)
-            .ignoreHttpErrors(true)
-            .followRedirects(false)
-            .maxBodySize(0)
-            .headers(requestHeaders)
-            .method(Connection.Method.HEAD)
-            .execute()
+        val rateLimiter = ConcurrentRateLimiter(getSource())
+        val response = rateLimiter.withLimitBlocking {
+            Jsoup.connect(urlStr)
+                .sslSocketFactory(SSLHelper.unsafeSSLSocketFactory)
+                .ignoreContentType(true)
+                .ignoreHttpErrors(true)
+                .followRedirects(false)
+                .maxBodySize(0)
+                .timeout(timeout)
+                .headers(requestHeaders)
+                .method(Connection.Method.HEAD)
+                .execute()
+        }
         return response
     }
 
@@ -416,23 +430,27 @@ interface JsExtensions : JsEncodeUtils {
      * 网络访问post
      */
     @Suppress("UnnecessaryVariable")
-    fun post(url: Any, body: Any, headers: Any): Connection.Response {
+    fun post(url: Any, body: Any, headers: Any, timeout: Int? = 30000): Connection.Response {
         val urlStr = url.toString()
         val bodyStr = body.toString()
         val headersMap = parseToMap(headers)
         val requestHeaders = if (getSource()?.enabledCookieJar == true) {
             headersMap.toMutableMap().apply { put(cookieJarHeader, "1") }
         } else headersMap
-        val response = Jsoup.connect(urlStr)
-            .sslSocketFactory(SSLHelper.unsafeSSLSocketFactory)
-            .ignoreContentType(true)
-            .ignoreHttpErrors(true)
-            .followRedirects(false)
-            .maxBodySize(0)
-            .requestBody(bodyStr)
-            .headers(requestHeaders)
-            .method(Connection.Method.POST)
-            .execute()
+        val rateLimiter = ConcurrentRateLimiter(getSource())
+        val response = rateLimiter.withLimitBlocking {
+            Jsoup.connect(urlStr)
+                .sslSocketFactory(SSLHelper.unsafeSSLSocketFactory)
+                .ignoreContentType(true)
+                .ignoreHttpErrors(true)
+                .followRedirects(false)
+                .maxBodySize(0)
+                .timeout(timeout)
+                .requestBody(bodyStr)
+                .headers(requestHeaders)
+                .method(Connection.Method.POST)
+                .execute()
+        }
         return response
     }
 

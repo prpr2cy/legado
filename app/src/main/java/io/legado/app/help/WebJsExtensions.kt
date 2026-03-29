@@ -2,6 +2,7 @@ package io.legado.app.help
 
 import android.net.Uri
 import android.webkit.JavascriptInterface
+import android.webkit.WebView
 import androidx.annotation.Keep
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
@@ -12,11 +13,8 @@ import cn.hutool.crypto.digest.HMac
 import cn.hutool.crypto.symmetric.SymmetricCrypto
 import io.legado.app.constant.AppConst
 import io.legado.app.constant.AppLog
-import io.legado.app.constant.BookType
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.BaseSource
-import io.legado.app.data.entities.Book
-import io.legado.app.data.entities.BookChapter
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.crypto.AsymmetricCrypto
 import io.legado.app.help.CacheManager
@@ -54,32 +52,8 @@ class WebJsExtensions(
     private val activityRef: WeakReference<AppCompatActivity> = WeakReference(activity)
     private val webViewRef: WeakReference<WebView?> = WeakReference(webView)
 
-    /** AnalyzeRule实现 **/
-    private val bookAndChapter by lazy {
-        var book: Book? = null
-        var chapter: BookChapter? = null
-        when (bookType) {
-            BookType.text -> {
-                book = ReadBook.book?.also {
-                    chapter = appDb.bookChapterDao.getChapter(
-                        it.bookUrl,
-                        ReadBook.durChapterIndex
-                    )
-                }
-            }
-
-            BookType.audio -> {
-                book = AudioPlay.book
-                chapter = AudioPlay.durChapter
-            }
-        }
-        Pair(book, chapter)
-    }
-    private val book: Book? get() = bookAndChapter.first
-    private val chapter: BookChapter? get() = bookAndChapter.second
-
     val analyzeRule by lazy {
-        AnalyzeRule(book, source = getSource()).setChapter(chapter)
+        AnalyzeRule(source = getSource())
     }
 
     fun getSource(): BaseSource? {
@@ -115,7 +89,7 @@ class WebJsExtensions(
 
     @JavascriptInterface
     fun ajax(urlStr: String): String {
-        kotlin.runCatching {
+        return kotlin.runCatching {
             val analyzeUrl = AnalyzeUrl(urlStr, source = getSource())
             analyzeUrl.getStrResponseAwait().body ?: ""
         }.onFailure {
@@ -127,7 +101,7 @@ class WebJsExtensions(
 
     @JavascriptInterface
     fun connect(urlStr: String): String {
-        kotlin.runCatching {
+        return kotlin.runCatching {
             val analyzeUrl = AnalyzeUrl(urlStr, source = getSource())
             val response = analyzeUrl.getStrResponseAwait()
             val result = mapOf(
@@ -148,7 +122,7 @@ class WebJsExtensions(
 
     @JavascriptInterface
     fun fetch(url: String, option: String): String {
-        kotlin.runCatching {
+        return kotlin.runCatching {
             val options = GSON.fromJsonObject<Map<String, Any>>(option).getOrNull()
                 ?: emptyMap<String, Any>()
             var method = options["method"]?.toString()?.uppercase()
@@ -277,7 +251,7 @@ class WebJsExtensions(
         algorithm: String,
         key: String,
         iv: String?
-    ): String {
+    ): SymmetricCrypto {
         val crypto = SymmetricCrypto(algorithm, key.encodeToByteArray())
         if (iv != null && iv.isNotEmpty()) crypto.setIv(iv.encodeToByteArray())
         return crypto
@@ -302,7 +276,7 @@ class WebJsExtensions(
         algorithm: String,
         key: String,
         usePublicKey: Boolean
-    ): String {
+    ): AsymmetricCrypto {
         val crypto = AsymmetricCrypto(algorithm)
         val keyBytes = Base64.decode(key)
         if (usePublicKey) crypto.setPublicKey(keyBytes)
@@ -415,7 +389,7 @@ class WebJsExtensions(
                     )?.let { result ->
                         when(result) {
                             null, is Boolean, is Number, is String -> result
-                            is ByteArray -> Base64.encode(result)
+                            is ByteArray -> Base64.encode(result).toString()
                             is IntArray -> GSON.toJson(result)
                             is LongArray -> GSON.toJson(result)
                             is DoubleArray -> GSON.toJson(result)

@@ -163,6 +163,9 @@ class AnalyzeRule(
                         result = replaceRegex(result.toString(), sourceRule)
                     }
                 }
+            } else if (result is LinkedTreeMap<*, *>) {
+                // 键值直接访问
+                result = result[ruleList.first().rule]
             } else {
                 for (sourceRule in ruleList) {
                     putRule(sourceRule.putMap)
@@ -250,6 +253,9 @@ class AnalyzeRule(
                 }?.let {
                     replaceRegex(it, sourceRule)
                 }
+            } else if (result is LinkedTreeMap<*, *>) {
+                // 键值直接访问
+                result = result[ruleList.first().rule]?.toString()
             } else {
                 for (sourceRule in ruleList) {
                     putRule(sourceRule.putMap)
@@ -795,21 +801,6 @@ class AnalyzeRule(
         private val evalPattern =
             Pattern.compile("@get:\\{[^}]+?\\}|\\{\\{[\\w\\W]*?\\}\\}", Pattern.CASE_INSENSITIVE)
         private val regexPattern = Pattern.compile("\\$\\d{1,2}")
-
-        fun AnalyzeRule.setRuleData(ruleData: RuleDataInterface?): AnalyzeRule {
-            this.ruleData = ruleData
-            return this
-        }
-
-        fun AnalyzeRule.setNextChapterUrl(nextChapterUrl: String?): AnalyzeRule {
-            this.nextChapterUrl = nextChapterUrl
-            return this
-        }
-
-        fun AnalyzeRule.setChapter(chapter: BookChapter?): AnalyzeRule {
-            this.chapter = chapter
-            return this
-        }
     }
 
 }
