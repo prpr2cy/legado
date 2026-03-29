@@ -220,7 +220,7 @@ class BookSourceEditActivity :
                     if (currentFocusedEditText != view) {
                         currentFocusedEditText = view
                         // 把当前EditText传递到NoChildScrollLinearLayoutManagerl
-                        layoutManager?.setFocusedEditText(view)
+                        layoutManager.setFocusedEditText(view)
                     }
                 } else {
                     if (currentFocusedEditText == view) {

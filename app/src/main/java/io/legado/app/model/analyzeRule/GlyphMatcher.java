@@ -1,18 +1,20 @@
 package io.legado.app.model.analyzeRule;
 
 import android.annotation.SuppressLint;
-import android.os.AsyncTask;
 import android.os.Build;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.LruCache;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.FutureTask;
 import java.util.stream.IntStream;
 
 public class GlyphMatcher {
@@ -25,6 +27,10 @@ public class GlyphMatcher {
     private static final int MAX_RESULT_CACHE_SIZE = 1000; // 结果缓存容量
     private static final LruCache<ResultCacheKey, Result> resultCache =
             new LruCache<>(MAX_RESULT_CACHE_SIZE);
+
+    // 新增线程池
+    private static final ExecutorService executorService = Executors.newCachedThreadPool();
+    private static final Handler mainHandler = new Handler(Looper.getMainLooper());
 
     // 新增结果缓存键类
     private static class ResultCacheKey {
@@ -121,7 +127,7 @@ public class GlyphMatcher {
             return;
         }
 
-
+        /*
         new AsyncTask<Void, Void, Result>() {
             protected Result doInBackground(Void... params) {
                 try {
@@ -150,6 +156,42 @@ public class GlyphMatcher {
                 }
             }
         }.execute();
+        */
+
+        // 使用 ExecutorService 替代 AsyncTask
+        executorService.submit(() -> {
+            Result result;
+            try {
+                List<GlyphPoint> input = parseGlyph(inputGlyph);
+                if (input == null) {
+                    result = new Result("Invalid input format");
+                } else {
+                    List<GlyphData> candidates = groupedData.get(input.size());
+                    if (candidates == null) {
+                        result = new Result("No candidates found");
+                    } else {
+                        result = findClosestOptimized(input, candidates);
+                    }
+                }
+            } catch (Exception e) {
+                result = new Result(e.getMessage());
+            }
+
+            // 缓存有效结果（仅成功匹配时缓存）
+            if (result.error == null) {
+                resultCache.put(cacheKey, result);
+            }
+
+            final Result finalResult = result;
+            // 使用 Handler 切回主线程回调
+            mainHandler.post(() -> {
+                if (finalResult.error != null) {
+                    callback.onError(finalResult.error);
+                } else {
+                    callback.onResult(finalResult.unicode);
+                }
+            });
+        });
     }
 
     // 核心匹配逻辑

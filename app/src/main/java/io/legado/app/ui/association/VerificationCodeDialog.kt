@@ -103,7 +103,7 @@ class VerificationCodeDialog() : BaseDialogFragment(R.layout.dialog_verification
                     dataSource: DataSource,
                     isFirstResource: Boolean
                 ): Boolean {
-                    val bitmap = resource.copy(resource.config!!, true)
+                    val bitmap = resource.copy(resource.config, true)
                     ImageProvider.put(url, bitmap) // 传给 PhotoDialog
                     return false
                 }

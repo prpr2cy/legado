@@ -1,7 +1,6 @@
 <resources>
 <!--App-->
     <string name="app_name">Legado</string>
-    <string name="app_name_a">Legado</string>
     <string name="receiving_shared_label">Legado·Tìm kiếm</string>
     <string name="tip_perm_request_storage">Legado cần quyền truy cập bộ nhớ để tìm và đọc sách. Vui lòng vào "Cài đặt ứng dụng" để cấp "Quyền truy cập bộ nhớ".</string>
 
@@ -29,7 +28,6 @@
     <string name="draw">Cảnh báo</string>
     <string name="edit">Chỉnh sửa</string>
     <string name="delete">Xóa</string>
-    <string name="delete_select_group">Xóa nhóm đã chọn</string>
     <string name="delete_all">Xóa tất cả</string>
     <string name="replace">Thay thế</string>
     <string name="replace_purify">Thay thế và lọc</string>
@@ -243,6 +241,7 @@
     <string name="find_on_www">Khám phá</string>
     <string name="find_source_manage">Quản lý khám phá</string>
     <string name="find_empty">Không có nội dung. Hãy vào Quản lý nguồn để thêm!</string>
+    <string name="del_all">Xóa tất cả</string>
     <string name="searchHistory">Lịch sử tìm kiếm</string>
     <string name="clear">Xóa</string>
     <string name="showTitle">Hiển thị tiêu đề sách trong văn bản</string>
@@ -426,7 +425,6 @@
     <string name="rule_replace_regex">Regex thay thế(replaceRegex)</string>
     <string name="rule_image_style">Kiểu hình ảnh(imageStyle)</string>
     <string name="rule_pay_action">Hành động thanh toán(payAction)</string>
-
     <string name="source_icon">Biểu tượng nguồn(sourceIcon)</string>
     <string name="r_articles">Quy tắc bài viết(ruleArticles)</string>
     <string name="r_next">Quy tắc bài viết tiếp theo(ruleNextArticles)</string>
@@ -765,7 +763,6 @@
     <string name="donate_summary">Sự ủng hộ của bạn làm cho ứng dụng này tốt hơn</string>
     <string name="about_summary">Tài khoản chính thức Wechat [开源阅读软件]</string>
     <string name="read_record">Lịch sử đọc</string>
-    <string name="del_read_record">Xóa lịch sử đọc</string>
     <string name="read_record_summary">Tóm tắt lịch sử đọc</string>
     <string name="local_tts">TTS cục bộ</string>
     <string name="thread_count">Số luồng</string>
@@ -806,7 +803,7 @@
     <string name="rule_subscription">Đăng ký quy tắc</string>
     <string name="rule_sub_empty_msg">Thêm địa chỉ nhập quy tắc do các quản trị viên cung cấp\nNhấn để nhập quy tắc sau khi thêm</string>
     <string name="get_book_progress">Kéo tiến độ từ đám mây</string>
-    <string name="cloud_progress_exceeds_current">Tiến độ trên đám mây vượt quá tiến độ hiện tại. Bạn có muốn đồng bộ không?</string>
+    <string name="current_progress_exceeds_cloud">Tiến độ hiện tại vượt quá tiến độ trên đám mây. Bạn có muốn đồng bộ không?</string>
     <string name="sync_book_progress_t">Đồng bộ tiến độ đọc</string>
     <string name="sync_book_progress_s">Đồng bộ tiến độ đọc khi vào/ra giao diện đọc</string>
     <string name="create_bookmark_error">Không thể tạo dấu trang</string>
@@ -814,7 +811,6 @@
     <string name="export_bookshelf">Xuất danh sách sách</string>
     <string name="import_bookshelf">Nhập danh sách sách</string>
     <string name="pre_download">Tải trước</string>
-    <string name="pre_download_m">Tải trước %s trang</string>
     <string name="pre_download_s">Tải trước %s chương</string>
     <string name="is_enabled">Đã bật</string>
     <string name="background_image">Ảnh nền</string>
@@ -927,6 +923,7 @@
     <string name="select_book_folder">Chọn thư mục lưu sách</string>
     <string name="user_agent">User agent</string>
     <string name="bg_alpha">Độ trong suốt của nền</string>
+    <!-- check source config string -->
     <string name="check_source_config">Cài đặt xác minh</string>
     <string name="check_source_item">Mục xác minh</string>
     <string name="check_source_timeout">Thời gian chờ xác minh một nguồn sách (giây)</string>
@@ -1120,13 +1117,11 @@
     <string name="page_to">Trang tới</string>
     <string name="result_analyzed">Đã phân tích</string>
     <string name="bookshelf_px_4">Toàn diện</string>
-    <string name="bookshelf_px_5">Sắp xếp theo tác giả</string>
     <string name="effective_replaces">Thay thế hiệu quả</string>
     <string name="export_book">Xuất sách</string>
     <string name="export_book_notification_content">Đang xuất (%1$s), còn %2$d cuốn cần xuất.</string>
     <string name="export_md">Xuất (MD)</string>
     <string name="change_source_delay">Độ trễ đổi nguồn</string>
-    <string name="change_source_progress">Kết quả %1$d, Tiến độ %2$d / %3$d: %4$s</string>
     <string name="open_book_info_by_click_title">Nhấn vào tên sách để mở chi tiết</string>
     <string name="export_wait">Đang chờ xuất</string>
     <string name="default_home_page">Trang chủ mặc định</string>

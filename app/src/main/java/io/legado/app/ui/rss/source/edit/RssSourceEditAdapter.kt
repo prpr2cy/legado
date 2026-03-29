@@ -95,7 +95,7 @@ class RssSourceEditAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
                     View.OnFocusChangeListener { view, hasFocus ->
                         listener(view, hasFocus)
                     }
-                } ?: null
+                }
             }
 
             if (editText.getTag(R.id.tag1) == null) {

@@ -277,7 +277,7 @@ class WebJsExtensions(
         return symmetricCrypto(algorithm, key, iv).encryptBase64(data)
     }
 
-    private inline fun asymmetricCrypto(
+    private fun asymmetricCrypto(
         algorithm: String,
         key: String,
         usePublicKey: Boolean
@@ -380,13 +380,11 @@ class WebJsExtensions(
     fun request(funName: String, jsParam: Array<String?>, id: String) {
         val activity = activityRef.get() ?: return
         Coroutine.async(activity.lifecycleScope) {
-            val params = Array(6) { i -> jsParam.getOrNull(i) }
+            val params = Array(4) { i -> jsParam.getOrNull(i) }
             val p0 = params[0]
             val p1 = params[1]
             val p2 = params[2]
             val p3 = params[3]
-            val p4 = params[4]
-            val p5 = params[5]
             when (funName) {
                 "runAwait" -> {
                     analyzeRule.evalJS(
