@@ -329,7 +329,7 @@ class AnalyzeRule(
                         Mode.Js -> evalJS(rule, it)
                         Mode.Json -> getAnalyzeByJSonPath(it).getObject(rule)
                         Mode.XPath -> getAnalyzeByXPath(it).getElements(rule)
-                        else -> getAnalyzeByJSoup(result).getElements(rule)
+                        else -> getAnalyzeByJSoup(it).getElements(rule)
                     }
                     if (sourceRule.replaceRegex.isNotEmpty()) {
                         result = replaceRegex(result.toString(), sourceRule)
