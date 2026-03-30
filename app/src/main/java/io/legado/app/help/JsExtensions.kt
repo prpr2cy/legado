@@ -199,6 +199,7 @@ interface JsExtensions : JsEncodeUtils {
      * 使用内置浏览器打开链接，手动验证网站防爬
      * @param url 要打开的链接
      * @param title 浏览器页面的标题
+     * @param html 要打开的本地网页
      */
     fun startBrowser(url: String, title: String) {
         return startBrowser(url, title, null)
@@ -210,6 +211,10 @@ interface JsExtensions : JsEncodeUtils {
 
     /**
      * 使用内置浏览器打开链接，并等待网页结果
+     * @param url 要打开的链接
+     * @param title 浏览器页面的标题
+     * @param refetchAfterSuccess 浏览器关闭后是否重新请求
+     * @param html 要打开的本地网页
      */
     fun startBrowserAwait(url: String, title: String): StrResponse {
         return startBrowserAwait(url, title, true)

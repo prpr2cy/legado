@@ -51,6 +51,15 @@ class AnalyzeUrl(
     companion object {
         val paramPattern: Pattern = Pattern.compile("\\s*,\\s*(?=\\{)")
         private val pagePattern = Pattern.compile("<(.*?)>")
+        @JvmStatic
+        @JvmOverloads
+        fun create(
+            url: String,
+            source: BaseSource? = null,
+            headerMap: Map<String, String>? = null
+        ): AnalyzeUrl {
+            return AnalyzeUrl(url, source = source, headerMapF = headerMap)
+        }
     }
 
     var ruleUrl = ""
@@ -106,41 +115,6 @@ class AnalyzeUrl(
         //处理URL
         analyzeUrl()
     }
-
-    @JvmOverloads 
-    constructor(
-        url: String,
-        source: BaseSource? = null
-    ) : this(
-        mUrl = url,
-        key = null,
-        page = null,
-        speakText = null,
-        speakSpeed = null,
-        baseUrl = "",
-        source = source,
-        ruleData = null,
-        chapter = null,
-        headerMapF = null
-    )
-
-    @JvmOverloads 
-    constructor(
-        url: String,
-        source: BaseSource? = null,
-        headerMapF: Map<String, String>? = null
-    ) : this(
-        mUrl = url,
-        key = null,
-        page = null,
-        speakText = null,
-        speakSpeed = null,
-        baseUrl = "",
-        source = source,
-        ruleData = null,
-        chapter = null,
-        headerMapF = headerMapF
-    )
 
     /**
      * 执行@js,<js></js>
