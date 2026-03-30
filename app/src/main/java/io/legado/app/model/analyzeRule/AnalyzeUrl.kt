@@ -69,7 +69,7 @@ class AnalyzeUrl(
     private var method = RequestMethod.GET
     private var proxy: String? = null
     private var retry: Int = 0
-    private var useHeader: Boolean = true
+    private var ignoreHeader: Boolean = false
     private var useWebView: Boolean = false
     private var webJs: String? = null
     private val enabledCookieJar = source?.enabledCookieJar ?: false
@@ -182,8 +182,8 @@ class AnalyzeUrl(
         if (urlNoOption.length != ruleUrl.length) {
             GSON.fromJsonObject<UrlOption>(ruleUrl.substring(urlMatcher.end())).getOrNull()
                 ?.let { option ->
-                    useHeader = option.useHeader()
-                    if (useHeader == false) {
+                    ignoreHeader = option.ignoreHeader()
+                    if (ignoreHeader == true) {
                         headerMap.clear()
                         headerMap[UA_NAME] = AppConfig.userAgent
                     }
@@ -327,7 +327,7 @@ class AnalyzeUrl(
         if (type != null) {
             return StrResponse(url, HexUtil.encodeHexStr(getByteArrayAwait()))
         }
-        if (useHeader == true) {
+        if (ignoreHeader != true) {
             setCookie()
         }
         val strResponse: StrResponse
@@ -412,7 +412,7 @@ class AnalyzeUrl(
      */
     suspend fun getResponseAwait(): Response {
         rateLimiter.withLimit {
-            if (useHeader == true) {
+            if (ignoreHeader != true) {
                 setCookie()
             }
             val response = getProxyClient(proxy).newCallResponse(retry) {
@@ -555,7 +555,7 @@ class AnalyzeUrl(
      *获取处理过阅读定义的urlOption和cookie的GlideUrl
      */
     fun getGlideUrl(): GlideUrl {
-        if (useHeader == true) {
+        if (ignoreHeader != true) {
             setCookie()
         }
         return GlideUrl(url, GlideHeaders(headerMap))
@@ -593,7 +593,7 @@ class AnalyzeUrl(
         /**
         * 是否使用 source 请求头
         **/
-        private var header: Any? = true,
+        private var ignore: Any? = null,
         /**
          * 是否使用webView
          **/
@@ -652,14 +652,14 @@ class AnalyzeUrl(
             return type
         }
 
-        fun useHeader(boolean: Boolean) {
-            header = boolean == true
+        fun ignoreHeader(boolean: Boolean) {
+            ignore = if (boolean) true false null
         }
 
-        fun useHeader(): Boolean {
-            return when (header) {
-                null, 0, false, "", "false", "ignore", "none" -> false // 忽略 source 请求头
-                else -> true
+        fun ignoreHeader(): Boolean {
+            return when (ignore) {
+                true, 1, "true" -> true // 忽略 source 请求头
+                else -> false
             }
         }
 
@@ -669,8 +669,8 @@ class AnalyzeUrl(
 
         fun useWebView(): Boolean {
             return when (webView) {
-                null, 0, false, "", "false", "ignore", "none" -> false
-                else -> true
+                true, 1, "true" -> true
+                else -> false
             }
         }
 
