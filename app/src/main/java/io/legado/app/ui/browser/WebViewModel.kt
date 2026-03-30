@@ -58,35 +58,33 @@ class WebViewModel(application: Application) : BaseViewModel(application) {
             html = intent.getStringExtra("html")
             if (url.contains("data:text/html", ignoreCase = true) && html.isNullOrBlank()) {
                 val dataUri = url.substringAfter("data:text/html")
-                val metaIndex = dataUri.indexOf(',')
-                val meta = dataUri.substring(5, metaIndex).lowercase()
+                val metaIndex = dataUri.indexOf(",")
+                val meta = dataUri.substring(0, metaIndex).lowercase()
                 val data = dataUri.substring(metaIndex + 1)
-                val charset = if (meta.contains('charset=')) {
+                val charset = if (meta.contains("charset=")) {
                     Charset.forName(
-                        meta.substringAfter("charset=")
-                            .substringBefore(";")
-                            .trim()
+                        meta.substringAfter("charset=").substringBefore(";").trim()
                     )
                 } else Charsets.UTF_8
-                html = if (meta.contains('base64')) {
+                html = if (meta.contains("base64")) {
                     String(Base64.decode(data, Base64.DEFAULT), charset)
                 } else  {
                     URLDecoder.decode(data, charset.name())
                 }
                 url = "about:blank"
             }
-            if (!html.isNullOrBlank()) {
-                val headIndex = html.indexOf("<head", ignoreCase = true)
+            html?.let {
+                val headIndex = it.indexOf("<head", ignoreCase = true)
                 html = if (headIndex != -1) {
-                    val closingHeadIndex = html.indexOf('>', startIndex = headIndex)
+                    val closingHeadIndex = it.indexOf(">", startIndex = headIndex)
                     if (closingHeadIndex != -1) {
                         val insertPos = closingHeadIndex + 1
-                        StringBuilder(html).insert(insertPos, "<script>$JS_INJECTION</script>").toString()
+                        StringBuilder(it).insert(insertPos, "<script>$JS_INJECTION</script>").toString()
                     } else {
-                        "<head><script>$JS_INJECTION</script></head>$html"
+                        "<head><script>$JS_INJECTION</script></head>$it"
                     }
                 } else {
-                    "<head><script>$JS_INJECTION</script></head>$html"
+                    "<head><script>$JS_INJECTION</script></head>$it"
                 }
                 localHtml = true
             }
@@ -148,13 +146,11 @@ class WebViewModel(application: Application) : BaseViewModel(application) {
             execute {
                 val url = intent!!.getStringExtra("url")!!
                 val source = SourceHelp.getSource(sourceOrigin)
-                if (!localHtml) {
-                    html = AnalyzeUrl(
-                        url,
-                        headerMapF = headerMap,
-                        source = source
-                    ).getStrResponseAwait(useWebView = false).body
-                }
+                html = AnalyzeUrl(
+                    url,
+                    headerMapF = headerMap,
+                    source = source
+                ).getStrResponseAwait(useWebView = false).body
                 SourceVerificationHelp.setResult(sourceOrigin, html ?: "", baseUrl)
             }.onSuccess {
                 success.invoke()
@@ -163,8 +159,8 @@ class WebViewModel(application: Application) : BaseViewModel(application) {
             webView.evaluateJavascript("document.documentElement.outerHTML") {
                 execute {
                     html = StringEscapeUtils.unescapeJson(it).trim('"')
-                }.onSuccess {
                     SourceVerificationHelp.setResult(sourceOrigin, html ?: "", webView.url ?: "")
+                }.onSuccess {
                     success.invoke()
                 }
             }

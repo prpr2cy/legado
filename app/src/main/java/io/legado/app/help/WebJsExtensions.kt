@@ -54,24 +54,8 @@ class WebJsExtensions(
     private val activityRef: WeakReference<AppCompatActivity> = WeakReference(activity)
     private val webViewRef: WeakReference<WebView?> = WeakReference(webView)
 
-    private val bookAndChapter by lazy {
-        var book: Book? = null
-        var chapter: BookChapter? = null
-        book = ReadBook.book?.also {
-            chapter = appDb.bookChapterDao.getChapter(
-                it.bookUrl,
-                ReadBook.durChapterIndex
-            )
-        } ?: AudioPlay.book?.also {
-            chapter = AudioPlay.durChapter
-        }
-        Pair(book, chapter)
-    }
-    private val book: Book? get() = bookAndChapter.first
-    private val chapter: BookChapter? get() = bookAndChapter.second
-
     private val analyzeRule by lazy {
-        AnalyzeRule(book, source = getSource())
+        AnalyzeRule(source = getSource())
     }
 
     fun getSource(): BaseSource? {

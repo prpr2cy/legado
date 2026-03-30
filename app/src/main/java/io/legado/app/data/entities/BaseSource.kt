@@ -217,7 +217,7 @@ interface BaseSource : JsExtensions {
         } else {
             CacheManager.delete("v_${getKey()}_${key}")      
         }
-        return value
+        return value ?: ""
     }
 
     /**

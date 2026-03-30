@@ -99,7 +99,7 @@ object SourceVerificationHelp {
     fun checkResult(sourceKey: String) {
         getResult(sourceKey) ?: setResult(sourceKey, "")
         val thread = IntentData.get<Thread>(getKey(sourceKey))
-        // 延迟200ms防止吞toastOnUi的消息
+        // 延迟200ms防止吞java.toast/java.longToast的消息
         mainHandler.postDelayed({
             LockSupport.unpark(thread)
         }, 200)
