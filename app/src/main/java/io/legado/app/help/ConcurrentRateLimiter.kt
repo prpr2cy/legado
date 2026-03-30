@@ -26,28 +26,20 @@ class ConcurrentRateLimiter(source: BaseSource?) {
         }
     }
 
-private val concurrentRate = source?.concurrentRate
+    private val concurrentRate = source?.concurrentRate
     private val sourceKey = source?.getKey()
 
     /**
      * 并发记录实体
      */
     data class ConcurrentRecord(
-        /**
-         * 开始访问时间
-         */
+        // 开始访问时间
         var time: Long,
-        /**
-         * 限制次数
-         */
-        var accessLimit : Int,
-        /**
-         * 间隔时间
-         */
+        // 限制次数
+        var accessLimit: Int,
+        // 间隔时间
         var interval : Int,
-        /**
-         * 正在访问的个数
-         */
+        // 正在访问的个数
         var frequency: Int
     )
 
@@ -67,32 +59,47 @@ private val concurrentRate = source?.concurrentRate
             if (rateIndex > 0) {
                 val accessLimit = concurrentRate.take(rateIndex).toIntOrNull() ?: 1
                 val interval = concurrentRate.substring(rateIndex + 1).toIntOrNull() ?: 0
-                ConcurrentRecord(System.currentTimeMillis(), accessLimit, interval, 1)
+                // 初始frequency为0，获取许可后才+1
+                ConcurrentRecord(System.currentTimeMillis(), accessLimit, interval, 0)
             } else {
-                ConcurrentRecord(System.currentTimeMillis(), 1, concurrentRate.toIntOrNull() ?: 0, 1)
+                val interval = concurrentRate.toIntOrNull() ?: 0
+                // 初始frequency为0，获取许可后才+1
+                ConcurrentRecord(System.currentTimeMillis(), 1, interval, 0)
             }
         }
 
-        if (isNewRecord) return fetchRecord
+        if (isNewRecord) {
+            // 新记录不等待直接获取
+            fetchRecord.frequency = 1
+            return fetchRecord
+        }
 
         val waitTime: Long = synchronized(fetchRecord) {
+
             // 并发控制为 次数/毫秒 , 非并发实际为1/毫秒
             val nextTime = fetchRecord.time + fetchRecord.interval.toLong()
             val nowTime = System.currentTimeMillis()
 
             if (nowTime >= nextTime) {
-                // 已经过了限制时间，重置开始时间
+                // 已经过了限制时间，重置
                 fetchRecord.time = nowTime
+                fetchRecord.frequency = 1  // 重置后为当前请求计数
+                return@synchronized 0
+            }
+
+            // 间隔模式
+            if (fetchRecord.accessLimit == 1) {
+                // 间隔模式下，frequency表示正在进行的请求数
+                // 如果有请求正在进行，需要等待
+                if (fetchRecord.frequency > 0) {
+                    return@synchronized nextTime - nowTime
+                }
+                // 没有请求在进行，可以执行，增加计数
                 fetchRecord.frequency = 1
                 return@synchronized 0
             }
 
-             // 间隔模式：只要时间窗口未到就必须等待
-            if (fetchRecord.accessLimit == 1) {
-                return@synchronized nextTime - nowTime
-            }
-
-             // 频率模式：检查是否还有剩余次数
+            // 频率模式
             if (fetchRecord.frequency < fetchRecord.accessLimit) {
                 fetchRecord.frequency++
                 return@synchronized 0
@@ -117,7 +124,8 @@ private val concurrentRate = source?.concurrentRate
     fun fetchEnd(record: ConcurrentRecord?) {
         if (record != null && record.accessLimit == 1) {
             synchronized(record) {
-                record.frequency = record.frequency.coerceAtLeast(1) - 1
+                // 确保不会减到负数
+                record.frequency = (record.frequency - 1).coerceAtLeast(0)
             }
         }
     }

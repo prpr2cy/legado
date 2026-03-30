@@ -653,7 +653,7 @@ class AnalyzeUrl(
         }
 
         fun ignoreHeader(boolean: Boolean) {
-            ignore = if (boolean) true false null
+            ignore = if (boolean) true else null
         }
 
         fun ignoreHeader(): Boolean {
