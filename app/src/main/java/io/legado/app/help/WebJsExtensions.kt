@@ -61,7 +61,8 @@ class WebJsExtensions(
             chapter = appDb.bookChapterDao.getChapter(
                 it.bookUrl,
                 ReadBook.durChapterIndex
-        ) ?: AudioPlay.book?.also {
+            )
+        } ?: AudioPlay.book?.also {
             chapter = AudioPlay.durChapter
         }
         Pair(book, chapter)
