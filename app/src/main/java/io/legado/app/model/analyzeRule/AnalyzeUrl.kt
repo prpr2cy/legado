@@ -107,6 +107,41 @@ class AnalyzeUrl(
         analyzeUrl()
     }
 
+    @JvmOverloads 
+    constructor(
+        url: String,
+        source: BaseSource? = null
+    ) : this(
+        mUrl = url,
+        key = null,
+        page = null,
+        speakText = null,
+        speakSpeed = null,
+        baseUrl = "",
+        source = source,
+        ruleData = null,
+        chapter = null,
+        headerMapF = null
+    )
+
+    @JvmOverloads 
+    constructor(
+        url: String,
+        source: BaseSource? = null,
+        headerMapF: Map<String, String>? = null
+    ) : this(
+        mUrl = url,
+        key = null,
+        page = null,
+        speakText = null,
+        speakSpeed = null,
+        baseUrl = "",
+        source = source,
+        ruleData = null,
+        chapter = null,
+        headerMapF = headerMapF
+    )
+
     /**
      * 执行@js,<js></js>
      */

@@ -88,8 +88,8 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
                 viewModel.source?.let {
                     val webJsExtensions = WebJsExtensions(it, this, binding.webView)
                     binding.webView.addJavascriptInterface(webJsExtensions, nameJava)
-                    binding.webView.addJavascriptInterface(WebCacheManager, nameCache)
                 }
+                binding.webView.addJavascriptInterface(WebCacheManager, nameCache)
             }
             if (html.isNullOrEmpty()) {
                 binding.webView.loadUrl(url, headerMap)
@@ -271,13 +271,6 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
                 return shouldOverrideUrlLoading(Uri.parse(it))
             }
             return true
-        }
-
-        override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
-            super.onPageStarted(view, url, favicon)
-            if (viewModel.localHtml) {
-                binding.webView.evaluateJavascript(JS_INJECTION, null)
-            }
         }
 
         override fun onPageFinished(view: WebView?, url: String?) {

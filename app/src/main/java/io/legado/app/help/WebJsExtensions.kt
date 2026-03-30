@@ -503,7 +503,7 @@ class WebJsExtensions(
 
         val nameJava by lazy { getRandomLetter() + uuid[0] + uuid2[0] }
         val nameCache by lazy { getRandomLetter() + uuid[1] + uuid2[1] }
-        val JSBridgeResult by lazy { getRandomLetter() + uuid[3] + uuid2[3] }
+        val JSBridgeResult by lazy { getRandomLetter() + uuid[2] + uuid2[2] }
 
         val JS_INJECTION by lazy { """
             const requestId = n => 'req_' + n + '_' + Date.now() + '_' + Math.random().toString(36).slice(-3);
