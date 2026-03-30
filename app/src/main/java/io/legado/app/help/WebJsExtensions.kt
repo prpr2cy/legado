@@ -54,8 +54,23 @@ class WebJsExtensions(
     private val activityRef: WeakReference<AppCompatActivity> = WeakReference(activity)
     private val webViewRef: WeakReference<WebView?> = WeakReference(webView)
 
-    val analyzeRule by lazy {
-        AnalyzeRule(source = getSource())
+    private val bookAndChapter by lazy {
+        var book: Book? = null
+        var chapter: BookChapter? = null
+        book = ReadBook.book?.also {
+            chapter = appDb.bookChapterDao.getChapter(
+                it.bookUrl,
+                ReadBook.durChapterIndex
+        ) ?: AudioPlay.book?.also {
+            chapter = AudioPlay.durChapter
+        }
+        Pair(book, chapter)
+    }
+    private val book: Book? get() = bookAndChapter.first
+    private val chapter: BookChapter? get() = bookAndChapter.second
+
+    private val analyzeRule by lazy {
+        AnalyzeRule(book, source = getSource())
     }
 
     fun getSource(): BaseSource? {
@@ -137,17 +152,13 @@ class WebJsExtensions(
                     else -> GSON.toJson(value)
                 }
             }
-
             val method = options["method"]?.toString()?.uppercase()
                 ?: if (body != null) "POST" else "GET"
-
             val headers = (options["headers"] as? Map<*, *>)
                 ?.mapKeys { entry -> entry.key.toString() }
                 ?.mapValues { entry -> entry.value?.toString() ?: "" }
                 ?: emptyMap<String, String>()
-
             val timeout = (options["timeout"] as? Number)?.toInt() ?: 30000
-
             val connect = Jsoup.connect(url)
                 .sslSocketFactory(SSLHelper.unsafeSSLSocketFactory)
                 .ignoreContentType(true)
@@ -156,14 +167,11 @@ class WebJsExtensions(
                 .maxBodySize(0)
                 .timeout(timeout)
                 .headers(headers)
-
             if (method != "GET" && method != "HEAD") {
                 connect.requestBody(body ?: "")
             }
-
             connect.method(Connection.Method.valueOf(method))
             val response = connect.execute()
-
             mapOf(
                 "code" to response.statusCode(),
                 "message" to response.statusMessage(),
@@ -392,7 +400,7 @@ class WebJsExtensions(
             val p2 = jsParam.getOrNull(2)
             val p3 = jsParam.getOrNull(3)
 
-            val result = when (funName) {
+            when (funName) {
                 "runAwait" -> {
                     val jsCode = p0 ?: throw NoStackTraceException("error null")
                     analyzeRule.evalJS(jsCode)?.let { result ->
@@ -410,7 +418,7 @@ class WebJsExtensions(
                             is Map<*, *> -> GSON.toJson(result)
                             else -> result.toString()
                         }
-                    } ?: ""
+                    }
                 }
                 "ajaxAwait" -> {
                     val url = p0 ?: throw NoStackTraceException("error url null")
@@ -484,8 +492,8 @@ class WebJsExtensions(
                 }
                 else -> throw NoStackTraceException("error funName: $funName")
             }
-
-            CacheManager.putMemory(id, result)
+        }.onSuccess { result ->
+            CacheManager.putMemory(id, result ?: "")
             webViewRef.get()?.evaluateJavascript("window.$JSBridgeResult('$id', true);", null)
         }.onError {
             val errorMessage = it.localizedMessage ?: "Unknown error"

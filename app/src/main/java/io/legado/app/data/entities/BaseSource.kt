@@ -211,8 +211,12 @@ interface BaseSource : JsExtensions {
     /**
      * 保存数据
      */
-    fun put(key: String, value: String): String {
-        CacheManager.put("v_${getKey()}_${key}", value)
+    fun put(key: String, value: String?): String {
+        if (value != null) {
+            CacheManager.put("v_${getKey()}_${key}", value)
+        } else {
+            CacheManager.delete("v_${getKey()}_${key}")      
+        }
         return value
     }
 

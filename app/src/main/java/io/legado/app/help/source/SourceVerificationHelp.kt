@@ -36,8 +36,9 @@ object SourceVerificationHelp {
         url: String,
         title: String,
         useBrowser: Boolean,
-        refetchAfterSuccess: Boolean = true
-    ): String {
+        refetchAfterSuccess: Boolean = true,
+        html: String? = null
+    ): Pair<String, String> {
         source
             ?: throw NoStackTraceException("getVerificationResult parameter source cannot be null")
 
@@ -51,23 +52,22 @@ object SourceVerificationHelp {
                 IntentData.put(getKey(source), Thread.currentThread())
             }
         } else {
-            startBrowser(source, url, title, true, refetchAfterSuccess)
+            startBrowser(source, url, title, true, refetchAfterSuccess, html)
         }
 
         var waitUserInput = false
         while (getResult(source.getKey()) == null) {
-            if (!waitUserInput) {
+            if (!waitUserInput && html == null) {
                 AppLog.putDebug("等待返回验证结果...")
                 waitUserInput = true
             }
             LockSupport.parkNanos(this, waitTime)
         }
 
-        return getResult(source.getKey())!!.let {
-            it.ifBlank {
-                throw NoStackTraceException("验证结果为空")
-            }
-        }
+        val result = getResult(source.getKey())
+            ?: throw NoStackTraceException("验证结果为空")
+        clearResult(source.getKey())
+        return result
     }
 
     /**
@@ -79,9 +79,11 @@ object SourceVerificationHelp {
         url: String,
         title: String,
         saveResult: Boolean? = false,
-        refetchAfterSuccess: Boolean? = true
+        refetchAfterSuccess: Boolean? = true,
+        html: String? = null
     ) {
-        source ?: throw NoStackTraceException("startBrowser parameter source cannot be null")
+        source
+            ?: throw NoStackTraceException("startBrowser parameter source cannot be null")
         appCtx.startActivity<WebViewActivity> {
             putExtra("title", title)
             putExtra("url", url)
@@ -89,6 +91,7 @@ object SourceVerificationHelp {
             putExtra("sourceName", source.getTag())
             putExtra("sourceVerificationEnable", saveResult)
             putExtra("refetchAfterSuccess", refetchAfterSuccess)
+            putExtra("html", html)
             IntentData.put(getKey(source), Thread.currentThread())
         }
     }
@@ -102,15 +105,20 @@ object SourceVerificationHelp {
         }, 200)
     }
 
-    fun setResult(sourceKey: String, result: String?) {
-        CacheManager.putMemory(getKey(sourceKey), result ?: "")
+    fun setResult(sourceKey: String, result: String, url: String = "") {
+        CacheManager.putMemory(getKey(sourceKey), (url to result))
     }
 
-    fun getResult(sourceKey: String): String? {
-        return CacheManager.get(getKey(sourceKey))
+    fun getResult(sourceKey: String): Pair<String, String>? {
+        val pair = CacheManager.getFromMemory(getKey(sourceKey)) as? Pair<*, *>
+            ?: return null
+        if (pair.first is String && pair.second is  String) {
+            return pair.first as String to pair.second as String
+        }
+        return null
     }
 
     fun clearResult(sourceKey: String) {
-        CacheManager.delete(getKey(sourceKey))
+        CacheManager.deleteMemory(getKey(sourceKey))
     }
 }

@@ -86,7 +86,11 @@ interface JsExtensions : JsEncodeUtils {
     /**
      * 并发访问网络
      */
-    fun ajaxAll(urlList: Array<String>, skipRateLimit: Boolean = false): Array<StrResponse?> {
+    fun ajaxAll(urlList: Array<String>): Array<StrResponse?> {
+        return ajaxAll(urlList, false)
+    }
+
+    fun ajaxAll(urlList: Array<String>, skipRateLimit: Boolean): Array<StrResponse?> {
         return runBlocking(IO) {
             val semaphore = Semaphore(AppConfig.threadCount)
             val asyncArray = urlList.map { url ->
@@ -197,28 +201,36 @@ interface JsExtensions : JsEncodeUtils {
      * @param title 浏览器页面的标题
      */
     fun startBrowser(url: String, title: String) {
-        SourceVerificationHelp.startBrowser(getSource(), url, title)
+        return startBrowser(url, title, null)
+    }
+
+    fun startBrowser(url: String, title: String, html: String?) {
+        SourceVerificationHelp.startBrowser(getSource(), url, title, html = html)
     }
 
     /**
      * 使用内置浏览器打开链接，并等待网页结果
      */
-    fun startBrowserAwait(url: String, title: String, refetchAfterSuccess: Boolean): StrResponse {
-        val body = SourceVerificationHelp.getVerificationResult(
-            getSource(), url, title, true, refetchAfterSuccess
-        )
-        return StrResponse(url, body)
+    fun startBrowserAwait(url: String, title: String): StrResponse {
+        return startBrowserAwait(url, title, true, null)
     }
 
-    fun startBrowserAwait(url: String, title: String): StrResponse {
-        return startBrowserAwait(url, title, true)
+    fun startBrowserAwait(url: String, title: String, refetchAfterSuccess: Boolean): StrResponse {
+        return startBrowserAwait(url, title, refetchAfterSuccess, null)
+    }
+
+    fun startBrowserAwait(url: String, title: String, refetchAfterSuccess: Boolean, html: String?): StrResponse {
+        val (baseUrl, body) = SourceVerificationHelp.getVerificationResult(
+            getSource(), url, title, true, refetchAfterSuccess, html
+        )
+        return StrResponse(baseUrl.ifEmpty { url }, body)
     }
 
     /**
      * 打开图片验证码对话框，等待返回验证结果
      */
     fun getVerificationCode(imageUrl: String): String {
-        return SourceVerificationHelp.getVerificationResult(getSource(), imageUrl, "", false)
+        return SourceVerificationHelp.getVerificationResult(getSource(), imageUrl, "", false).second
     }
 
     /**
@@ -378,6 +390,11 @@ interface JsExtensions : JsEncodeUtils {
      * js实现重定向拦截,网络访问get
      */
     @Suppress("UnnecessaryVariable")
+    fun get(url: Any, headers: Any): Connection.Response {
+        return get(url, headers, null)
+    }
+
+    @Suppress("UnnecessaryVariable")
     fun get(url: Any, headers: Any, timeout: Int? = null): Connection.Response {
         val urlStr = url.toString()
         val headersMap = parseToMap(headers)
@@ -404,6 +421,11 @@ interface JsExtensions : JsEncodeUtils {
      * js实现重定向拦截,网络访问head,不返回Response Body更省流量
      */
     @Suppress("UnnecessaryVariable")
+    fun head(url: Any, headers: Any): Connection.Response {
+        return head(url, headers, null)
+    }
+
+    @Suppress("UnnecessaryVariable")
     fun head(url: Any, headers: Any, timeout: Int? = null): Connection.Response {
         val urlStr = url.toString()
         val headersMap = parseToMap(headers)
@@ -429,6 +451,11 @@ interface JsExtensions : JsEncodeUtils {
     /**
      * 网络访问post
      */
+    @Suppress("UnnecessaryVariable")
+    fun post(url: Any, body: Any, headers: Any): Connection.Response {
+        return post(url, body, headers, null)
+    }
+
     @Suppress("UnnecessaryVariable")
     fun post(url: Any, body: Any, headers: Any, timeout: Int? = null): Connection.Response {
         val urlStr = url.toString()

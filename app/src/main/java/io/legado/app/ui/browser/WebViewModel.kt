@@ -23,9 +23,12 @@ import io.legado.app.utils.FileUtils
 import io.legado.app.utils.isContentScheme
 import io.legado.app.utils.printOnDebug
 import io.legado.app.utils.toastOnUi
+import io.legado.app.help.WebJsExtensions.Companion.JS_INJECTION
 import io.legado.app.utils.writeBytes
 import org.apache.commons.text.StringEscapeUtils
 import java.io.File
+import java.net.URLDecoder
+import java.nio.charset.Charset
 import java.util.Date
 
 class WebViewModel(application: Application) : BaseViewModel(application) {
@@ -46,15 +49,47 @@ class WebViewModel(application: Application) : BaseViewModel(application) {
     ) {
         execute {
             this@WebViewModel.intent = intent
-            val url = intent.getStringExtra("url")
+            var url = intent.getStringExtra("url")
                 ?: throw NoStackTraceException("url不能为空")
-            if (url.startsWith("data:text/html")) {
-                localHtml = true
-            }
             sourceOrigin = intent.getStringExtra("sourceOrigin") ?: ""
             sourceName = intent.getStringExtra("sourceName") ?: ""
             sourceVerificationEnable = intent.getBooleanExtra("sourceVerificationEnable", false)
             refetchAfterSuccess = intent.getBooleanExtra("refetchAfterSuccess", true)
+            html = intent.getStringExtra("html")
+            if (url.contains("data:text/html", ignoreCase = true) && html.isNullOrBlank()) {
+                val dataUri = url.substringAfter("data:text/html")
+                val metaIndex = dataUri.indexOf(',')
+                val meta = dataUri.substring(5, metaIndex).lowercase()
+                val data = dataUri.substring(metaIndex + 1)
+                val charset = if (meta.contains('charset=')) {
+                    Charset.forName(
+                        meta.substringAfter("charset=")
+                            .substringBefore(";")
+                            .trim()
+                    )
+                } else Charsets.UTF_8
+                html = if (meta.contains('base64')) {
+                    String(Base64.decode(data, Base64.DEFAULT), charset)
+                } else  {
+                    URLDecoder.decode(data, charset.name())
+                }
+                url = "about:blank"
+            }
+            if (!html.isNullOrBlank()) {
+                val headIndex = html.indexOf("<head", ignoreCase = true)
+                html = if (headIndex != -1) {
+                    val closingHeadIndex = html.indexOf('>', startIndex = headIndex)
+                    if (closingHeadIndex != -1) {
+                        val insertPos = closingHeadIndex + 1
+                        StringBuilder(html).insert(insertPos, "<script>$JS_INJECTION</script>").toString()
+                    } else {
+                        "<head><script>$JS_INJECTION</script></head>$html"
+                    }
+                } else {
+                    "<head><script>$JS_INJECTION</script></head>$html"
+                }
+                localHtml = true
+            }
             source = SourceHelp.getSource(sourceOrigin)
             val analyzeUrl = AnalyzeUrl(url, source = source)
             baseUrl = analyzeUrl.url
@@ -113,12 +148,14 @@ class WebViewModel(application: Application) : BaseViewModel(application) {
             execute {
                 val url = intent!!.getStringExtra("url")!!
                 val source = SourceHelp.getSource(sourceOrigin)
-                html = AnalyzeUrl(
-                    url,
-                    headerMapF = headerMap,
-                    source = source
-                ).getStrResponseAwait(useWebView = false).body
-                SourceVerificationHelp.setResult(sourceOrigin, html ?: "")
+                if (!localHtml) {
+                    html = AnalyzeUrl(
+                        url,
+                        headerMapF = headerMap,
+                        source = source
+                    ).getStrResponseAwait(useWebView = false).body
+                }
+                SourceVerificationHelp.setResult(sourceOrigin, html ?: "", baseUrl)
             }.onSuccess {
                 success.invoke()
             }
@@ -126,8 +163,8 @@ class WebViewModel(application: Application) : BaseViewModel(application) {
             webView.evaluateJavascript("document.documentElement.outerHTML") {
                 execute {
                     html = StringEscapeUtils.unescapeJson(it).trim('"')
-                    SourceVerificationHelp.setResult(sourceOrigin, html ?: "")
                 }.onSuccess {
+                    SourceVerificationHelp.setResult(sourceOrigin, html ?: "", webView.url ?: "")
                     success.invoke()
                 }
             }

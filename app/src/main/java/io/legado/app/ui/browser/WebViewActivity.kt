@@ -279,7 +279,7 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
                 binding.webView.evaluateJavascript(JS_INJECTION, null)
             }
         }
-        
+
         override fun onPageFinished(view: WebView?, url: String?) {
             super.onPageFinished(view, url)
             url?.let {

@@ -308,6 +308,7 @@ class AnalyzeRule(
     /**
      * 获取Element
      */
+    @JvmOverloads
     fun getElement(ruleStr: String, mContent: Any? = null): Any? {
         if (TextUtils.isEmpty(ruleStr)) return null
         var result: Any? = null
@@ -344,6 +345,7 @@ class AnalyzeRule(
      * 获取列表
      */
     @Suppress("UNCHECKED_CAST")
+    @JvmOverloads
     fun getElements(ruleStr: String, mContent: Any? = null): List<Any> {
         var result: Any? = null
         val content = mContent ?: this.content
