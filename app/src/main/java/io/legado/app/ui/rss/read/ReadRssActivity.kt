@@ -18,7 +18,6 @@ import io.legado.app.base.VMBaseActivity
 import io.legado.app.constant.AppConst
 import io.legado.app.constant.AppConst.imagePathKey
 import io.legado.app.constant.AppLog
-import io.legado.app.data.entities.RssSource
 import io.legado.app.databinding.ActivityRssReadBinding
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.http.CookieStore
@@ -60,9 +59,21 @@ class ReadRssActivity : VMBaseActivity<ActivityRssReadBinding, ReadRssViewModel>
         }
     }
     private val rssJsExtensions by lazy { RssJsExtensions(this) }
+    private val refreshNameList: MutableList<String> by lazy { mutableListOf() }
 
-    fun getSource(): RssSource? {
-        return viewModel.rssSource
+    private fun refresh() {
+        if (viewModel.rssSource?.singleUrl == true) {
+            binding.webView.reload()
+            return
+        }
+        binding.webView.title?.let {
+            refreshNameList.add(it)
+        }
+        viewModel.rssArticle?.let {
+            start(this@ReadRssActivity, true, it.origin, it.title, it.link)
+        } ?: run {
+            viewModel.initData(intent)
+        }
     }
 
     private val editSourceResult = registerForActivityResult(
@@ -171,7 +182,10 @@ class ReadRssActivity : VMBaseActivity<ActivityRssReadBinding, ReadRssViewModel>
                 binding.webView.reload()
             }
 
-            R.id.menu_rss_star -> viewModel.favorite()
+            R.id.menu_rss_star -> {
+                viewModel.addFavorite()
+            }
+
             R.id.menu_share_it -> {
                 binding.webView.url?.let {
                     share(it)

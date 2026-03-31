@@ -139,9 +139,9 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true) {
                                 put("chapter", viewModel.chapter)
                             }
                         }
+                    }.onFailure { e ->
+                        AppLog.put("LoginUI Button ${rowUi.name} JavaScript error", e)
                     }
-                }.onFailure { e ->
-                    AppLog.put("LoginUI Button ${rowUi.name} JavaScript error", e)
                 }
             }
         }
