@@ -23,7 +23,8 @@ import io.legado.app.utils.FileUtils
 import io.legado.app.utils.isContentScheme
 import io.legado.app.utils.printOnDebug
 import io.legado.app.utils.toastOnUi
-import io.legado.app.help.WebJsExtensions.Companion.JS_INJECTION
+import io.legado.app.help.webView.WebJsExtensions.Companion.JS_INJECTION
+import io.legado.app.help.webView.WebViewPool.DATA_HTML
 import io.legado.app.utils.writeBytes
 import org.apache.commons.text.StringEscapeUtils
 import java.io.File
@@ -72,7 +73,7 @@ class WebViewModel(application: Application) : BaseViewModel(application) {
                     } else  {
                         URLDecoder.decode(data, charset.name())
                     }
-                    url = "data:text/html,"
+                    url = DATA_HTML
                 }
             }
             html?.let {
@@ -147,14 +148,13 @@ class WebViewModel(application: Application) : BaseViewModel(application) {
         if (refetchAfterSuccess) {
             execute {
                 val url = intent!!.getStringExtra("url")!!
-                val source = SourceHelp.getSource(sourceOrigin)
                 html = AnalyzeUrl(
                     url,
                     headerMapF = headerMap,
                     source = source
                 ).getStrResponseAwait(useWebView = false).body
-                SourceVerificationHelp.setResult(sourceOrigin, html ?: "", baseUrl)
             }.onSuccess {
+                SourceVerificationHelp.setResult(sourceOrigin, html ?: "", baseUrl)
                 success.invoke()
             }.onError {
                 throw NoStackTraceException(it.localizedMessage ?: "error")
@@ -163,8 +163,8 @@ class WebViewModel(application: Application) : BaseViewModel(application) {
             webView.evaluateJavascript("document.documentElement.outerHTML") {
                 execute {
                     html = StringEscapeUtils.unescapeJson(it).trim('"')
-                    SourceVerificationHelp.setResult(sourceOrigin, html ?: "", webView.url ?: "")
                 }.onSuccess {
+                    SourceVerificationHelp.setResult(sourceOrigin, html ?: "", webView.url ?: "")
                     success.invoke()
                 }.onError {
                     throw NoStackTraceException(it.localizedMessage ?: "error")

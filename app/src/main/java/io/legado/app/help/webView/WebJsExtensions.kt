@@ -1,4 +1,4 @@
-package io.legado.app.help
+package io.legado.app.help.webView
 
 import android.net.Uri
 import android.webkit.JavascriptInterface
@@ -48,11 +48,22 @@ import splitties.init.appCtx
 class WebJsExtensions(
     source: BaseSource,
     activity: AppCompatActivity?,
-    webView: WebView
+    webView: WebView,
+    callback: Callback? = null
 ) {
     private val sourceRef: WeakReference<BaseSource?> = WeakReference(source)
     private val activityRef: WeakReference<AppCompatActivity> = WeakReference(activity)
     private val webViewRef: WeakReference<WebView?> = WeakReference(webView)
+    private val callbackRef: WeakReference<Callback> = WeakReference(callback)
+
+    interface Callback {
+        fun upConfig(config: String)
+    }
+
+    @JavascriptInterface
+    fun upConfig(config: String) {
+        callbackRef.get()?.upConfig(config)
+    }
 
     private val analyzeRule by lazy {
         AnalyzeRule(source = getSource())
@@ -507,6 +518,7 @@ class WebJsExtensions(
 
         val JS_INJECTION by lazy { """
             const requestId = n => 'req_' + n + '_' + Date.now() + '_' + Math.random().toString(36).slice(-3);
+            const params = a => a.map(p => p != null && typeof p.toString === 'function' ? p.toString() : null);
             const JSBridgeCallbacks = {};
             const java = window.$nameJava;
             delete window.$nameJava;
