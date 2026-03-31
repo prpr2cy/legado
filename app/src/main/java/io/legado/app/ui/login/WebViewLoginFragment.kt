@@ -28,6 +28,7 @@ import io.legado.app.utils.gone
 import io.legado.app.utils.longSnackbar
 import io.legado.app.utils.openUrl
 import io.legado.app.utils.snackbar
+import io.legado.app.utils.startActivity
 import io.legado.app.utils.viewbindingdelegate.viewBinding
 
 class WebViewLoginFragment : BaseFragment(R.layout.fragment_web_view_login) {
@@ -80,12 +81,16 @@ class WebViewLoginFragment : BaseFragment(R.layout.fragment_web_view_login) {
         }
         binding.webView.webViewClient = object : WebViewClient() {
             override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
-                CookieStore.setCookie(source.getKey(), CookieStore.getWebCookie(url))
+                url?.let {
+                    CookieStore.setCookie(source.getKey(), CookieStore.getWebCookie(it))
+                }
                 super.onPageStarted(view, url, favicon)
             }
 
             override fun onPageFinished(view: WebView?, url: String?) {
-                CookieStore.setCookie(source.getKey(), CookieStore.getWebCookie(url))
+                url?.let {
+                    CookieStore.setCookie(source.getKey(), CookieStore.getWebCookie(it))
+                }
                 if (checking) {
                     activity?.finish()
                 }

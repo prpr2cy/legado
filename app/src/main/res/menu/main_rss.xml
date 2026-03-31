@@ -3,11 +3,13 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
+    <!--
     <item
         android:id="@+id/menu_rss_star"
         android:title="@string/favorite"
         android:icon="@drawable/ic_star"
         app:showAsAction="always" />
+    -->
 
     <item
         android:id="@+id/menu_group"

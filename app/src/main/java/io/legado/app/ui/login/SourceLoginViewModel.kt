@@ -55,7 +55,7 @@ class SourceLoginViewModel(application: Application) : BaseViewModel(application
                     }
                 }
             }
-            headerMap = source?.getHeaderMap(true) ?: emptyMap()        
+            headerMap = source?.getHeaderMap(true) ?: emptyMap()
             source
         }.onSuccess {
             if (it != null) {

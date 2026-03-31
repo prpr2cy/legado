@@ -13,6 +13,7 @@ import io.legado.app.base.BaseDialogFragment
 import io.legado.app.constant.AppLog
 import io.legado.app.data.entities.BaseSource
 import io.legado.app.data.entities.rule.RowUi
+import io.legado.app.data.entities.rule.RowUi.Type
 import io.legado.app.databinding.DialogLoginBinding
 import io.legado.app.databinding.ItemFilletTextBinding
 import io.legado.app.databinding.ItemSourceEditBinding
@@ -43,7 +44,6 @@ import kotlinx.coroutines.withContext
 import splitties.init.appCtx
 import splitties.views.onClick
 
-
 class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true) {
 
     private val binding by viewBinding(DialogLoginBinding::bind)
@@ -56,13 +56,25 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true) {
 
     override fun onFragmentCreated(view: View, savedInstanceState: Bundle?) {
         val source = viewModel.source ?: return
+        val loginUiStr = source.loginUi ?: return
         binding.toolBar.setBackgroundColor(primaryColor)
         binding.toolBar.title = getString(R.string.login_source, source.getTag())
         val loginInfo = source.getLoginInfoMap()
-        val loginUi = source.loginUi()
+        val codeStr = loginUiStr.let {
+            when {
+                it.startsWith("@js:") -> it.substring(4)
+                it.startsWith("<js>") -> it.substring(4, it.lastIndexOf("<"))
+                else -> null
+            }
+        }
+        val loginUi = if (codeStr != null) {
+            loginUi(source.evalJS(codeStr))
+        } else {
+            loginUi(loginUiStr)
+        }
         loginUi?.forEachIndexed { index, rowUi ->
             when (rowUi.type) {
-                RowUi.Type.text -> ItemSourceEditBinding.inflate(
+                Type.text -> ItemSourceEditBinding.inflate(
                     layoutInflater,
                     binding.root,
                     false
@@ -72,7 +84,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true) {
                     it.textInputLayout.hint = rowUi.name
                     it.editText.setText(loginInfo?.get(rowUi.name))
                 }
-                RowUi.Type.password -> ItemSourceEditBinding.inflate(
+                Type.password -> ItemSourceEditBinding.inflate(
                     layoutInflater,
                     binding.root,
                     false
@@ -84,7 +96,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true) {
                         InputType.TYPE_TEXT_VARIATION_PASSWORD or InputType.TYPE_CLASS_TEXT
                     it.editText.setText(loginInfo?.get(rowUi.name))
                 }
-                RowUi.Type.button -> ItemFilletTextBinding.inflate(
+                Type.button -> ItemFilletTextBinding.inflate(
                     layoutInflater,
                     binding.root,
                     false
@@ -124,6 +136,12 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true) {
         }
     }
 
+    private fun loginUi(json: String?): List<RowUi>? {
+        return GSON.fromJsonArray<RowUi>(json).onFailure {
+            AppLog.put("loginUi json parse err:" + it.localizedMessage, it)
+        }.getOrNull()
+    }
+
     private fun handleButtonClick(source: BaseSource, rowUi: RowUi, loginUi: List<RowUi>) {
         Coroutine.async {
             if (rowUi.action.isAbsUrl()) {
@@ -151,7 +169,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true) {
         val loginData = hashMapOf<String, String>()
         loginUi?.forEachIndexed { index, rowUi ->
             when (rowUi.type) {
-                "text", "password" -> {
+                Type.text, Type.password -> {
                     val rowView = binding.root.findViewById<View>(index + 1000)
                     ItemSourceEditBinding.bind(rowView).editText.text?.let {
                         loginData[rowUi.name] = it.toString()
