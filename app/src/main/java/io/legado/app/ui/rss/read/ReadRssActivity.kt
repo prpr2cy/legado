@@ -18,6 +18,7 @@ import io.legado.app.base.VMBaseActivity
 import io.legado.app.constant.AppConst
 import io.legado.app.constant.AppConst.imagePathKey
 import io.legado.app.constant.AppLog
+import io.legado.app.data.entities.RssSource
 import io.legado.app.databinding.ActivityRssReadBinding
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.http.CookieStore
@@ -45,6 +46,10 @@ import org.jsoup.Jsoup
  * rss阅读界面
  */
 class ReadRssActivity : VMBaseActivity<ActivityRssReadBinding, ReadRssViewModel>(false) {
+    companion object {
+        // 是否输出日志
+        var sessionShowWebLog = false
+    }
 
     override val binding by viewBinding(ActivityRssReadBinding::inflate)
     override val viewModel by viewModels<ReadRssViewModel>()
@@ -59,29 +64,9 @@ class ReadRssActivity : VMBaseActivity<ActivityRssReadBinding, ReadRssViewModel>
         }
     }
     private val rssJsExtensions by lazy { RssJsExtensions(this) }
-    private val refreshNameList: MutableList<String> by lazy { mutableListOf() }
 
-    private fun refresh() {
-        if (viewModel.rssSource?.singleUrl == true) {
-            binding.webView.reload()
-            return
-        }
-        binding.webView.title?.let {
-            refreshNameList.add(it)
-        }
-        viewModel.rssArticle?.let {
-            start(this@ReadRssActivity, true, it.origin, it.title, it.link)
-        } ?: run {
-            viewModel.initData(intent)
-        }
-    }
-
-    private val editSourceResult = registerForActivityResult(
-        StartActivityContract(RssSourceEditActivity::class.java)
-    ) {
-        if (it.resultCode == RESULT_OK) {
-            refresh()
-        }
+    fun getSource(): RssSource? {
+        return viewModel.rssSource
     }
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
@@ -97,7 +82,7 @@ class ReadRssActivity : VMBaseActivity<ActivityRssReadBinding, ReadRssViewModel>
                 return@addCallback
             }
             if (binding.webView.canGoBack()) {
-                val list = binding.webView.copyBackForwardList() //获取历史列表
+                val list = binding.webView.copyBackForwardList()
                 val size = list.size
                 if (size == 1) {
                     finish()
@@ -107,23 +92,16 @@ class ReadRssActivity : VMBaseActivity<ActivityRssReadBinding, ReadRssViewModel>
                 val currentItem = list.currentItem
                 val currentUrl = currentItem?.originalUrl ?: BLANK_HTML
                 val currentTitle = currentItem?.title
-                //从后往前找，找到第一个不同链接的页面，计算需要回退多少步 避免刷新后导致返回不灵
                 var steps = 1
+
                 for (i in currentIndex - 1 downTo 0) {
                     val item = list.getItemAtIndex(i)
-                    val itemTitle = item.title
-                    val index = refreshNameList.indexOf(itemTitle)
-                    if (index != -1) {
-                        refreshNameList.removeAt(index)
-                        steps++
-                        continue
-                    }
                     val itemUrl = item.originalUrl
                     if (itemUrl == BLANK_HTML) {
                         finish()
                         return@addCallback
                     }
-                    if (itemUrl != currentUrl || itemTitle != currentTitle) {
+                    if (itemUrl != currentUrl || currentTitle != item.title) {
                         break
                     }
                     if (currentUrl == DATA_HTML) {
@@ -131,6 +109,7 @@ class ReadRssActivity : VMBaseActivity<ActivityRssReadBinding, ReadRssViewModel>
                     }
                     steps++
                 }
+
                 if (steps == size) {
                     finish()
                     return@addCallback
@@ -168,6 +147,7 @@ class ReadRssActivity : VMBaseActivity<ActivityRssReadBinding, ReadRssViewModel>
         starMenuItem = menu.findItem(R.id.menu_rss_star)
         ttsMenuItem = menu.findItem(R.id.menu_aloud)
         upStarMenu()
+        menu.findItem(R.id.menu_show_web_log)?.isChecked = sessionShowWebLog
         return super.onPrepareOptionsMenu(menu)
     }
 
@@ -182,10 +162,7 @@ class ReadRssActivity : VMBaseActivity<ActivityRssReadBinding, ReadRssViewModel>
                 binding.webView.reload()
             }
 
-            R.id.menu_rss_star -> {
-                viewModel.addFavorite()
-            }
-
+            R.id.menu_rss_star -> viewModel.favorite()
             R.id.menu_share_it -> {
                 binding.webView.url?.let {
                     share(it)
@@ -204,9 +181,13 @@ class ReadRssActivity : VMBaseActivity<ActivityRssReadBinding, ReadRssViewModel>
                 openUrl(it)
             } ?: toastOnUi("url null")
             R.id.menu_edit_source -> viewModel.rssSource?.sourceUrl?.let {
-                editSourceResult.launch {
-                    putExtra("sourceUrl", it)
+                startActivity<RssSourceEditActivity> {
+                    putExtra("sourceUrl", sourceUrl)
                 }
+            } ?: toastOnUi("sourceUrl null")
+            R.id.menu_show_web_log -> {
+                sessionShowWebLog = !sessionShowWebLog
+                item.isChecked = sessionShowWebLog
             }
             R.id.menu_log -> showDialogFragment<AppLogDialog>()
         }
@@ -387,6 +368,21 @@ class ReadRssActivity : VMBaseActivity<ActivityRssReadBinding, ReadRssViewModel>
             binding.llView.visible()
             requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         }
+
+        /* 监听网页日志 */
+        override fun onConsoleMessage(consoleMessage: ConsoleMessage): Boolean {
+            viewModel.rssSource?.let { source ->
+                if (sessionShowWebLog) {
+                    val messageLevel = consoleMessage.messageLevel().name
+                    val message = consoleMessage.message()
+                    AppLog.put("${source.getTag()}${messageLevel}: $message",
+                        NoStackTraceException("\n${message}\n- Line ${consoleMessage.lineNumber()} of ${consoleMessage.sourceId()}"))
+                    return true
+                }
+            }
+            return false
+        }
+
     }
 
     inner class CustomWebViewClient : WebViewClient() {
@@ -439,7 +435,11 @@ class ReadRssActivity : VMBaseActivity<ActivityRssReadBinding, ReadRssViewModel>
         override fun onPageFinished(view: WebView, url: String?) {
             super.onPageFinished(view, url)
             view.title?.let { title ->
-                if (title != url && title != view.url && title.isNotBlank() && url != "about:blank") {
+                if (title != url
+                    && title != view.url
+                    && title.isNotBlank()
+                    && url != BLANK_HTML
+                    && !url.contains(title)) {
                     binding.titleBar.title = title
                 } else {
                     binding.titleBar.title = intent.getStringExtra("title")
