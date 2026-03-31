@@ -95,29 +95,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true) {
                     it.textView.text = rowUi.name
                     it.textView.setPadding(16.dpToPx())
                     it.root.onClick {
-                        Coroutine.async {
-                            if (rowUi.action.isAbsUrl()) {
-                                context?.openUrl(rowUi.action!!)
-                            } else {
-                                // JavaScript
-                                rowUi.action?.let { buttonFunctionJS ->
-                                    kotlin.runCatching {
-                                        source.getLoginJs()?.let { loginJS ->
-                                            source.evalJS("$loginJS\n$buttonFunctionJS") {
-                                                put("result", getLoginData(loginUi))
-                                                put("book", viewModel.book)
-                                                put("chapter", viewModel.chapter)
-                                            }
-                                        }
-                                    }.onFailure { e ->
-                                        AppLog.put(
-                                            "LoginUI Button ${rowUi.name} JavaScript error",
-                                            e
-                                        )
-                                    }
-                                }
-                            }
-                        }
+                        handleButtonClick(source, rowUi, loginUi)
                     }
                 }
             }
@@ -143,6 +121,29 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true) {
                 R.id.menu_log -> showDialogFragment<AppLogDialog>()
             }
             return@setOnMenuItemClickListener true
+        }
+    }
+
+    private fun handleButtonClick(source: BaseSource, rowUi: RowUi, loginUi: List<RowUi>) {
+        Coroutine.async {
+            if (rowUi.action.isAbsUrl()) {
+                context?.openUrl(rowUi.action!!)
+            } else {
+                // JavaScript
+                rowUi.action?.let { buttonFunctionJS ->
+                    kotlin.runCatching {
+                        source.getLoginJs()?.let { loginJS ->
+                            source.evalJS("$loginJS\n$buttonFunctionJS") {
+                                put("result", getLoginData(loginUi))
+                                put("book", viewModel.book)
+                                put("chapter", viewModel.chapter)
+                            }
+                        }
+                    }
+                }.onFailure { e ->
+                    AppLog.put("LoginUI Button ${rowUi.name} JavaScript error", e)
+                }
+            }
         }
     }
 

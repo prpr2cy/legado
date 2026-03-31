@@ -20,8 +20,9 @@ class SourceLoginViewModel(application: Application) : BaseViewModel(application
     var book: Book? = null
     var bookType: Int = 0
     var chapter: BookChapter? = null
+    var headerMap: Map<String, String> = emptyMap()
 
-    fun initData(intent: Intent, success: (bookSource: BaseSource) -> Unit, error: () -> Unit) {
+    fun initData(intent: Intent, success: (bookSource: BaseSource) -> Unit) {
         execute {
             bookType = intent.getIntExtra("bookType", 0)
             when (bookType) {
@@ -54,6 +55,7 @@ class SourceLoginViewModel(application: Application) : BaseViewModel(application
                     }
                 }
             }
+            headerMap = source?.getHeaderMap(true) ?: emptyMap()        
             source
         }.onSuccess {
             if (it != null) {
@@ -61,9 +63,6 @@ class SourceLoginViewModel(application: Application) : BaseViewModel(application
             } else {
                 context.toastOnUi("未找到书源")
             }
-        }.onError {
-            error.invoke()
-            AppLog.put("登录 UI 初始化失败\n$it", it, true)
         }
     }
 

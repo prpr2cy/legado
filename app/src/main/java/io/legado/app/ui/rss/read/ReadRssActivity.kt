@@ -21,6 +21,7 @@ import io.legado.app.constant.AppLog
 import io.legado.app.data.entities.RssSource
 import io.legado.app.databinding.ActivityRssReadBinding
 import io.legado.app.help.config.AppConfig
+import io.legado.app.help.http.CookieStore
 import io.legado.app.help.WebJsExtensions.Companion.BLANK_HTML
 import io.legado.app.help.WebJsExtensions.Companion.DATA_HTML
 import io.legado.app.lib.dialogs.SelectItem
@@ -28,9 +29,11 @@ import io.legado.app.lib.dialogs.selector
 import io.legado.app.lib.theme.accentColor
 import io.legado.app.lib.theme.primaryTextColor
 import io.legado.app.model.Download
+import io.legado.app.ui.about.AppLogDialog
 import io.legado.app.ui.association.OnLineImportActivity
 import io.legado.app.ui.file.HandleFileContract
 import io.legado.app.ui.login.SourceLoginActivity
+import io.legado.app.ui.rss.source.edit.RssSourceEditActivity
 import io.legado.app.utils.*
 import io.legado.app.utils.viewbindingdelegate.viewBinding
 import java.io.ByteArrayInputStream
@@ -60,6 +63,14 @@ class ReadRssActivity : VMBaseActivity<ActivityRssReadBinding, ReadRssViewModel>
 
     fun getSource(): RssSource? {
         return viewModel.rssSource
+    }
+
+    private val editSourceResult = registerForActivityResult(
+        StartActivityContract(RssSourceEditActivity::class.java)
+    ) {
+        if (it.resultCode == RESULT_OK) {
+            refresh()
+        }
     }
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
@@ -178,6 +189,12 @@ class ReadRssActivity : VMBaseActivity<ActivityRssReadBinding, ReadRssViewModel>
             R.id.menu_browser_open -> binding.webView.url?.let {
                 openUrl(it)
             } ?: toastOnUi("url null")
+            R.id.menu_edit_source -> viewModel.rssSource?.sourceUrl?.let {
+                editSourceResult.launch {
+                    putExtra("sourceUrl", it)
+                }
+            }
+            R.id.menu_log -> showDialogFragment<AppLogDialog>()
         }
         return super.onCompatOptionsItemSelected(item)
     }
@@ -265,8 +282,7 @@ class ReadRssActivity : VMBaseActivity<ActivityRssReadBinding, ReadRssViewModel>
                 val url = NetworkUtils.getAbsoluteURL(it.origin, it.link)
                 val html = viewModel.clHtml(content)
                 binding.webView.settings.userAgentString =
-                    viewModel.rssSource?.getHeaderMap()?.get(AppConst.UA_NAME, true)
-                        ?: AppConfig.userAgent
+                    viewModel.headerMap[AppConst.UA_NAME] ?: AppConfig.userAgent
                 if (viewModel.rssSource?.loadWithBaseUrl == true) {
                     binding.webView
                         .loadDataWithBaseURL(url, html, "text/html", "utf-8", url)//不想用baseUrl进else
@@ -278,6 +294,7 @@ class ReadRssActivity : VMBaseActivity<ActivityRssReadBinding, ReadRssViewModel>
         }
         viewModel.urlLiveData.observe(this) {
             upJavaScriptEnable()
+            CookieStore.setCookie(it.url, CookieStore.getWebCookie(it.url))
             binding.webView.settings.userAgentString = it.getUserAgent()
             binding.webView.loadUrl(it.url, it.headerMap)
         }
