@@ -51,6 +51,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true) {
     private val viewModel by activityViewModels<SourceLoginViewModel>()
     private var rowUis: List<RowUi>? = null
     private var loginUrl: String? = null
+    private var loginInfo: HashMap<String, String> = hashMapOf()
 
     override fun onStart() {
         super.onStart()
@@ -60,6 +61,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true) {
     override fun onFragmentCreated(view: View, savedInstanceState: Bundle?) {
         val source = viewModel.source ?: return
         loginUrl = source.getLoginJs()
+        loginInfo = source.getLoginInfoMap()
         val loginUiStr = source.loginUi ?: return
         val codeStr = loginUiStr.let {
             when {
@@ -124,7 +126,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true) {
         binding.toolBar.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 R.id.menu_ok -> {
-                    val loginData = getLoginData(loginUi)
+                    val loginData = getLoginData(rowUis)
                     login(source, loginData)
                 }
                 R.id.menu_show_login_header -> alert {
@@ -146,9 +148,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true) {
     suspend fun evalUiJs(rowJs: String): String? {
         val source = viewModel.source ?: return null
         val loginJS = loginUrl ?: ""
-        val result = rowUis?.let {
-            getLoginData(it)
-        } ?: viewModel.loginInfo.toMutableMap()
+        val result = rowUis?.let { getLoginData(it) } ?: loginInfo
         return try {
             source.evalJS("$loginJS\n$rowJs") {
                 put("result", result)
@@ -190,7 +190,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true) {
         }
     }
 
-    private fun getLoginData(rowUis: List<RowUi>?): MutableMap<String, String> {
+    private fun getLoginData(rowUis: List<RowUi>?): HashMap<String, String> {
         val loginData = hashMapOf<String, String>()
         rowUis?.forEachIndexed { index, rowUi ->
             when (rowUi.type) {
@@ -202,7 +202,8 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true) {
                 }
             }
         }
-        return viewModel.loginInfo.toMutableMap().apply { putAll(loginData) }
+        loginData.putAll(loginInfo)
+        return loginData
     }
 
     private fun login(source: BaseSource, loginData: HashMap<String, String>) {

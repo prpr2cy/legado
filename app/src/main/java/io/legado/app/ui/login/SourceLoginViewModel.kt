@@ -3,7 +3,6 @@ package io.legado.app.ui.login
 import android.app.Application
 import android.content.Intent
 import io.legado.app.base.BaseViewModel
-import io.legado.app.constant.AppLog
 import io.legado.app.constant.BookType
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.BaseSource
@@ -21,7 +20,6 @@ class SourceLoginViewModel(application: Application) : BaseViewModel(application
     var bookType: Int = 0
     var chapter: BookChapter? = null
     var headerMap: Map<String, String> = emptyMap()
-    var loginInfo: MutableMap<String, String> = mutableMapOf()
 
     fun initData(intent: Intent, success: (bookSource: BaseSource) -> Unit) {
         execute {
@@ -56,10 +54,7 @@ class SourceLoginViewModel(application: Application) : BaseViewModel(application
                     }
                 }
             }
-            headerMap = source?.let {
-                loginInfo = it.getLoginInfoMap()
-                it.getHeaderMap(true)
-            } ?: emptyMap()
+            headerMap = source?.getHeaderMap(true) ?: emptyMap()
             source
         }.onSuccess {
             if (it != null) {
