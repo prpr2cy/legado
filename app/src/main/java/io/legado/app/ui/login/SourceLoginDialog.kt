@@ -24,6 +24,7 @@ import io.legado.app.ui.about.AppLogDialog
 import io.legado.app.utils.GSON
 import io.legado.app.utils.applyTint
 import io.legado.app.utils.dpToPx
+import io.legado.app.utils.fromJsonArray
 import io.legado.app.utils.isAbsUrl
 import io.legado.app.utils.openUrl
 import io.legado.app.utils.printOnDebug
@@ -48,6 +49,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true) {
 
     private val binding by viewBinding(DialogLoginBinding::bind)
     private val viewModel by activityViewModels<SourceLoginViewModel>()
+    private var rowUis: List<RowUi>? = null
 
     override fun onStart() {
         super.onStart()
@@ -67,12 +69,16 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true) {
                 else -> null
             }
         }
-        val loginUi = if (codeStr != null) {
-            loginUi(source.evalJS(codeStr))
+        if (codeStr != null) {
+            lifecycleScope.launch(Main) {
+                withContext(IO) {
+                    rowUis = loginUi(source.evalJS(codeStr))
+                }
+            }
         } else {
-            loginUi(loginUiStr)
+            rowUis = loginUi(loginUiStr)
         }
-        loginUi?.forEachIndexed { index, rowUi ->
+        rowUis?.forEachIndexed { index, rowUi ->
             when (rowUi.type) {
                 Type.text -> ItemSourceEditBinding.inflate(
                     layoutInflater,
