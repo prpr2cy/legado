@@ -185,7 +185,7 @@ class ReadRssActivity : VMBaseActivity<ActivityRssReadBinding, ReadRssViewModel>
                 startActivity<RssSourceEditActivity> {
                     putExtra("sourceUrl", it)
                 }
-            } ?: toastOnUi("sourceUrl null")
+            } ?: toastOnUi("source null")
             R.id.menu_show_web_log -> {
                 sessionShowWebLog = !sessionShowWebLog
                 item.isChecked = sessionShowWebLog

@@ -8,7 +8,6 @@ import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
-import android.webkit.CookieManager
 import android.webkit.SslErrorHandler
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
@@ -78,17 +77,14 @@ class WebViewLoginFragment : BaseFragment(R.layout.fragment_web_view_login) {
                 userAgentString = it
             }
         }
-        val cookieManager = CookieManager.getInstance()
         binding.webView.webViewClient = object : WebViewClient() {
             override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
-                val cookie = cookieManager.getCookie(url)
-                CookieStore.setCookie(source.getKey(), cookie)
+                CookieStore.setCookie(source.getKey(), CookieStore.getWebCookie(url))
                 super.onPageStarted(view, url, favicon)
             }
 
             override fun onPageFinished(view: WebView?, url: String?) {
-                val cookie = cookieManager.getCookie(url)
-                CookieStore.setCookie(source.getKey(), cookie)
+                CookieStore.setCookie(source.getKey(), CookieStore.getWebCookie(url))
                 if (checking) {
                     activity?.finish()
                 }
