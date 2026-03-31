@@ -157,7 +157,7 @@ class WebViewModel(application: Application) : BaseViewModel(application) {
             }.onSuccess {
                 success.invoke()
             }.onError {
-                throw NoStackTraceException(url, it.localizedMessage ?: "error")
+                throw NoStackTraceException(it.localizedMessage ?: "error")
             }
         } else {
             webView.evaluateJavascript("document.documentElement.outerHTML") {
@@ -167,7 +167,7 @@ class WebViewModel(application: Application) : BaseViewModel(application) {
                 }.onSuccess {
                     success.invoke()
                 }.onError {
-                    throw NoStackTraceException(url, it.localizedMessage ?: "error")
+                    throw NoStackTraceException(it.localizedMessage ?: "error")
                 }
             }
         }
