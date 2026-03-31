@@ -21,6 +21,8 @@ import io.legado.app.constant.AppLog
 import io.legado.app.data.entities.RssSource
 import io.legado.app.databinding.ActivityRssReadBinding
 import io.legado.app.help.config.AppConfig
+import io.legado.app.help.WebJsExtensions.Companion.BLANK_HTML
+import io.legado.app.help.WebJsExtensions.Companion.DATA_HTML
 import io.legado.app.lib.dialogs.SelectItem
 import io.legado.app.lib.dialogs.selector
 import io.legado.app.lib.theme.accentColor
@@ -31,11 +33,11 @@ import io.legado.app.ui.file.HandleFileContract
 import io.legado.app.ui.login.SourceLoginActivity
 import io.legado.app.utils.*
 import io.legado.app.utils.viewbindingdelegate.viewBinding
+import java.io.ByteArrayInputStream
+import java.net.URLDecoder
 import kotlinx.coroutines.launch
 import org.apache.commons.text.StringEscapeUtils
 import org.jsoup.Jsoup
-import java.io.ByteArrayInputStream
-import java.net.URLDecoder
 
 /**
  * rss阅读界面
@@ -71,10 +73,47 @@ class ReadRssActivity : VMBaseActivity<ActivityRssReadBinding, ReadRssViewModel>
             if (binding.customWebView.size > 0) {
                 customWebViewCallback?.onCustomViewHidden()
                 return@addCallback
-            } else if (binding.webView.canGoBack()
-                && binding.webView.copyBackForwardList().size > 1
-            ) {
-                binding.webView.goBack()
+            }
+            if (binding.webView.canGoBack()) {
+                val list = binding.webView.copyBackForwardList() //获取历史列表
+                val size = list.size
+                if (size == 1) {
+                    finish()
+                    return@addCallback
+                }
+                val currentIndex = list.currentIndex
+                val currentItem = list.currentItem
+                val currentUrl = currentItem?.originalUrl ?: BLANK_HTML
+                val currentTitle = currentItem?.title
+                //从后往前找，找到第一个不同链接的页面，计算需要回退多少步 避免刷新后导致返回不灵
+                var steps = 1
+                for (i in currentIndex - 1 downTo 0) {
+                    val item = list.getItemAtIndex(i)
+                    val itemTitle = item.title
+                    val index = refreshNameList.indexOf(itemTitle)
+                    if (index != -1) {
+                        refreshNameList.removeAt(index)
+                        steps++
+                        continue
+                    }
+                    val itemUrl = item.originalUrl
+                    if (itemUrl == BLANK_HTML) {
+                        finish()
+                        return@addCallback
+                    }
+                    if (itemUrl != currentUrl || itemTitle != currentTitle) {
+                        break
+                    }
+                    if (currentUrl == DATA_HTML) {
+                        break
+                    }
+                    steps++
+                }
+                if (steps == size) {
+                    finish()
+                    return@addCallback
+                }
+                binding.webView.goBackOrForward(-steps)
                 return@addCallback
             }
             finish()
@@ -284,12 +323,9 @@ class ReadRssActivity : VMBaseActivity<ActivityRssReadBinding, ReadRssViewModel>
         } else {
             binding.webView.settings.javaScriptEnabled = true
             binding.webView.evaluateJavascript("document.documentElement.outerHTML") {
-                val html = StringEscapeUtils.unescapeJson(it)
-                    .replace("^\"|\"$".toRegex(), "")
+                val html = StringEscapeUtils.unescapeJson(it).trim('"')
                 viewModel.readAloud(
-                    Jsoup.parse(html)
-                        .textArray()
-                        .joinToString("\n")
+                    Jsoup.parse(html).textArray().joinToString("\n")
                 )
             }
         }

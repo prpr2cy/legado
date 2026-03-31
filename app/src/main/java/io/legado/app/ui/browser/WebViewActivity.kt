@@ -2,6 +2,7 @@ package io.legado.app.ui.browser
 
 import android.annotation.SuppressLint
 import android.content.pm.ActivityInfo
+import android.graphics.Bitmap
 import android.net.Uri
 import android.net.http.SslError
 import android.os.Bundle
@@ -31,14 +32,11 @@ import io.legado.app.help.config.AppConfig
 import io.legado.app.help.http.CookieStore
 import io.legado.app.help.source.SourceVerificationHelp
 import io.legado.app.help.WebCacheManager
-import io.legado.app.help.webView.PooledWebView
-import io.legado.app.help.webView.WebJsExtensions
-import io.legado.app.help.webView.WebJsExtensions.Companion.JS_INJECTION
-import io.legado.app.help.webView.WebJsExtensions.Companion.nameCache
-import io.legado.app.help.webView.WebJsExtensions.Companion.nameJava
-import io.legado.app.help.webView.WebViewPool
-import io.legado.app.help.webView.WebViewPool.BLANK_HTML
-import io.legado.app.help.webView.WebViewPool.DATA_HTML
+import io.legado.app.help.WebJsExtensions
+import io.legado.app.help.WebJsExtensions.Companion.BLANK_HTML
+import io.legado.app.help.WebJsExtensions.Companion.DATA_HTML
+import io.legado.app.help.WebJsExtensions.Companion.nameCache
+import io.legado.app.help.WebJsExtensions.Companion.nameJava
 import io.legado.app.lib.dialogs.SelectItem
 import io.legado.app.lib.theme.accentColor
 import io.legado.app.model.Download
@@ -63,15 +61,11 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
         var sessionShowWebLog = false
     }
 
-    private lateinit var pooledWebView: PooledWebView
-    private lateinit var currentWebView: WebView
-
     override val binding by viewBinding(ActivityWebViewBinding::inflate)
     override val viewModel by viewModels<WebViewModel>()
     private var customWebViewCallback: WebChromeClient.CustomViewCallback? = null
     private var webPic: String? = null
     private var isCloudflareChallenge = false
-    private var needClearHistory = true
     private val saveImage = registerForActivityResult(HandleFileContract()) {
         it.uri?.let { uri ->
             ACache.get().put(imagePathKey, uri.toString())
@@ -80,12 +74,6 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
     }
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
-        pooledWebView = WebViewPool.acquire(this)
-        currentWebView = pooledWebView.realWebView
-        binding.webViewContainer.addView(currentWebView)
-        currentWebView.post {
-            currentWebView.clearHistory()
-        }
         binding.titleBar.title = intent.getStringExtra("title") ?: getString(R.string.loading)
         binding.titleBar.subtitle = intent.getStringExtra("sourceName")
         viewModel.initData(intent) {
@@ -95,26 +83,24 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
             val html = viewModel.html
             if (viewModel.localHtml) {
                 viewModel.source?.let {
-                    val webJsExtensions = WebJsExtensions(it, this, currentWebView)
-                    currentWebView.addJavascriptInterface(webJsExtensions, nameJava)
+                    val webJsExtensions = WebJsExtensions(it, this, binding.webView)
+                    binding.webView.addJavascriptInterface(webJsExtensions, nameJava)
                 }
-                currentWebView.addJavascriptInterface(WebCacheManager, nameCache)
+                binding.webView.addJavascriptInterface(WebCacheManager, nameCache)
             }
             if (html.isNullOrEmpty()) {
-                currentWebView.loadUrl(url, headerMap)
+                binding.webView.loadUrl(url, headerMap)
             } else {
-                currentWebView.loadDataWithBaseURL(url, html, "text/html", "utf-8", url)
+                binding.webView.loadDataWithBaseURL(url, html, "text/html", "utf-8", url)
             }
         }
-        currentWebView.clearHistory()
         onBackPressedDispatcher.addCallback(this) {
             if (binding.customWebView.size > 0) {
                 customWebViewCallback?.onCustomViewHidden()
                 return@addCallback
             }
-            // 智能回退逻辑
-            if (currentWebView.canGoBack()) {
-                val list = currentWebView.copyBackForwardList()
+            if (binding.webView.canGoBack()) {
+                val list = binding.webView.copyBackForwardList()
                 val size = list.size
                 if (size == 1) {
                     finish()
@@ -146,7 +132,7 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
                     finish()
                     return@addCallback
                 }
-                currentWebView.goBackOrForward(-steps)
+                binding.webView.goBackOrForward(-steps)
                 return@addCallback
             }
             finish()
@@ -165,12 +151,12 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
 
     override fun onCompatOptionsItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
-            R.id.menu_web_refresh -> currentWebView.reload()
+            R.id.menu_web_refresh -> binding.webView.reload()
             R.id.menu_open_in_browser -> openUrl(viewModel.baseUrl)
             R.id.menu_copy_url -> sendToClip(viewModel.baseUrl)
             R.id.menu_ok -> {
                 if (viewModel.sourceVerificationEnable) {
-                    viewModel.saveVerificationResult(currentWebView) {
+                    viewModel.saveVerificationResult(binding.webView) {
                         finish()
                     }
                 } else {
@@ -189,18 +175,25 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
     @SuppressLint("SetJavaScriptEnabled")
     private fun initWebView(url: String, headerMap: HashMap<String, String>) {
         binding.progressBar.fontColor = accentColor
-        currentWebView.webChromeClient = CustomWebChromeClient()
-        currentWebView.webViewClient = CustomWebViewClient()
-        currentWebView.settings.apply {
+        binding.webView.webChromeClient = CustomWebChromeClient()
+        binding.webView.webViewClient = CustomWebViewClient()
+        binding.webView.settings.apply {
+            setDarkeningAllowed(AppConfig.isNightTheme)
+            mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+            domStorageEnabled = true
+            allowContentAccess = true
             useWideViewPort = true
             loadWithOverviewMode = true
+            javaScriptEnabled = true
+            builtInZoomControls = true
+            displayZoomControls = false
             headerMap[AppConst.UA_NAME]?.let {
                 userAgentString = it
             }
         }
         CookieStore.setWebCookie(url, CookieStore.getCookie(url))
-        currentWebView.setOnLongClickListener {
-            val hitTestResult = currentWebView.hitTestResult
+        binding.webView.setOnLongClickListener {
+            val hitTestResult = binding.webView.hitTestResult
             if (hitTestResult.type == WebView.HitTestResult.IMAGE_TYPE ||
                 hitTestResult.type == WebView.HitTestResult.SRC_IMAGE_ANCHOR_TYPE) {
                 hitTestResult.extra?.let {
@@ -210,10 +203,10 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
             }
             return@setOnLongClickListener false
         }
-        currentWebView.setDownloadListener { downloadUrl, _, contentDisposition, _, _ ->
+        binding.webView.setDownloadListener { downloadUrl, _, contentDisposition, _, _ ->
             var fileName = URLUtil.guessFileName(downloadUrl, contentDisposition, null)
             fileName = URLDecoder.decode(fileName, "UTF-8")
-            currentWebView.longSnackbar(fileName, getString(R.string.action_download)) {
+            binding.llView.longSnackbar(fileName, getString(R.string.action_download)) {
                 Download.start(this, downloadUrl, fileName)
             }
         }
@@ -246,8 +239,8 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
     }
 
     override fun onDestroy() {
-        WebViewPool.release(pooledWebView)
         super.onDestroy()
+        binding.webView.destroy()
     }
 
     inner class CustomWebChromeClient : WebChromeClient() {
@@ -306,14 +299,6 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
             return true
         }
 
-        override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
-            if (needClearHistory) {
-                needClearHistory = false
-                currentWebView.clearHistory()
-            }
-            super.onPageStarted(view, url, favicon)
-        }
-        
         override fun onPageFinished(view: WebView?, url: String?) {
             super.onPageFinished(view, url)
             url?.let {
@@ -329,7 +314,7 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
                     if (it == "true") {
                         isCloudflareChallenge = true
                     } else if (isCloudflareChallenge && viewModel.sourceVerificationEnable) {
-                        viewModel.saveVerificationResult(currentWebView) {
+                        viewModel.saveVerificationResult(binding.webView) {
                             finish()
                         }
                     }
@@ -338,20 +323,23 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
         }
 
         private fun shouldOverrideUrlLoading(url: Uri): Boolean {
-            return when (url.scheme) {
-                "http", "https" -> false
+            when (url.scheme) {
+                "http", "https" -> {
+                    return false
+                }
+
                 "legado", "yuedu" -> {
                     startActivity<OnLineImportActivity> {
                         data = url
                     }
-                    true
+                    return true
                 }
 
                 else -> {
                     binding.root.longSnackbar(R.string.jump_to_another_app, R.string.confirm) {
                         openUrl(url)
                     }
-                    true
+                    return true
                 }
             }
         }

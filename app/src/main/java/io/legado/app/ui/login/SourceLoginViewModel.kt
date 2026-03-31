@@ -3,6 +3,7 @@ package io.legado.app.ui.login
 import android.app.Application
 import android.content.Intent
 import io.legado.app.base.BaseViewModel
+import io.legado.app.constant.AppLog
 import io.legado.app.constant.BookType
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.BaseSource
@@ -20,7 +21,7 @@ class SourceLoginViewModel(application: Application) : BaseViewModel(application
     var bookType: Int = 0
     var chapter: BookChapter? = null
 
-    fun initData(intent: Intent, success: (bookSource: BaseSource) -> Unit) {
+    fun initData(intent: Intent, success: (bookSource: BaseSource) -> Unit, error: () -> Unit) {
         execute {
             bookType = intent.getIntExtra("bookType", 0)
             when (bookType) {
@@ -60,6 +61,9 @@ class SourceLoginViewModel(application: Application) : BaseViewModel(application
             } else {
                 context.toastOnUi("未找到书源")
             }
+        }.onError {
+            error.invoke()
+            AppLog.put("登录 UI 初始化失败\n$it", it, true)
         }
     }
 

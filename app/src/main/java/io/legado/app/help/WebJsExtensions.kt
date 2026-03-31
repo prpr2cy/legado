@@ -1,4 +1,4 @@
-package io.legado.app.help.webView
+package io.legado.app.help
 
 import android.net.Uri
 import android.webkit.JavascriptInterface
@@ -499,6 +499,9 @@ class WebJsExtensions(
     }
 
     companion object {
+        const val BLANK_HTML = "about:blank"
+        const val DATA_HTML = "data:text/html;charset=utf-8;base64,"
+
         private fun getRandomLetter(): Char {
             val letters = "abcdefghijklmnopqrstuvwxyz"
             return letters.random()

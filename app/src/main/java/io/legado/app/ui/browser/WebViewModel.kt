@@ -23,8 +23,8 @@ import io.legado.app.utils.FileUtils
 import io.legado.app.utils.isContentScheme
 import io.legado.app.utils.printOnDebug
 import io.legado.app.utils.toastOnUi
-import io.legado.app.help.webView.WebJsExtensions.Companion.JS_INJECTION
-import io.legado.app.help.webView.WebViewPool.DATA_HTML
+import io.legado.app.help.WebJsExtensions.Companion.JS_INJECTION
+import io.legado.app.help.WebJsExtensions.Companion.DATA_HTML
 import io.legado.app.utils.writeBytes
 import org.apache.commons.text.StringEscapeUtils
 import java.io.File
