@@ -21,6 +21,7 @@ class SourceLoginViewModel(application: Application) : BaseViewModel(application
     var bookType: Int = 0
     var chapter: BookChapter? = null
     var headerMap: Map<String, String> = emptyMap()
+    var loginInfo: MutableMap<String, String> = mutableMapOf()
 
     fun initData(intent: Intent, success: (bookSource: BaseSource) -> Unit) {
         execute {
@@ -55,7 +56,10 @@ class SourceLoginViewModel(application: Application) : BaseViewModel(application
                     }
                 }
             }
-            headerMap = source?.getHeaderMap(true) ?: emptyMap()
+            headerMap = source?.let {
+                loginInfo = it.getLoginInfoMap()
+                it.getHeaderMap(true)
+            } ?: emptyMap()
             source
         }.onSuccess {
             if (it != null) {

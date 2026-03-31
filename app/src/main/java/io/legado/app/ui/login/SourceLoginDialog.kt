@@ -50,6 +50,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true) {
     private val binding by viewBinding(DialogLoginBinding::bind)
     private val viewModel by activityViewModels<SourceLoginViewModel>()
     private var rowUis: List<RowUi>? = null
+    private var loginUrl: String? = null
 
     override fun onStart() {
         super.onStart()
@@ -58,10 +59,8 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true) {
 
     override fun onFragmentCreated(view: View, savedInstanceState: Bundle?) {
         val source = viewModel.source ?: return
+        loginUrl = source.getLoginJs()
         val loginUiStr = source.loginUi ?: return
-        binding.toolBar.setBackgroundColor(primaryColor)
-        binding.toolBar.title = getString(R.string.login_source, source.getTag())
-        val loginInfo = source.getLoginInfoMap()
         val codeStr = loginUiStr.let {
             when {
                 it.startsWith("@js:") -> it.substring(4)
@@ -72,7 +71,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true) {
         if (codeStr != null) {
             lifecycleScope.launch(Main) {
                 withContext(IO) {
-                    rowUis = loginUi(source.evalJS(codeStr))
+                    rowUis = loginUi(evalUiJs(codeStr))
                 }
             }
         } else {
@@ -113,11 +112,13 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true) {
                     it.textView.text = rowUi.name
                     it.textView.setPadding(16.dpToPx())
                     it.root.onClick {
-                        handleButtonClick(source, rowUi, loginUi)
+                        handleButtonClick(source, rowUi)
                     }
                 }
             }
         }
+        binding.toolBar.setBackgroundColor(primaryColor)
+        binding.toolBar.title = getString(R.string.login_source, source.getTag())
         binding.toolBar.inflateMenu(R.menu.source_login)
         binding.toolBar.menu.applyTint(requireContext())
         binding.toolBar.setOnMenuItemClickListener { item ->
@@ -142,13 +143,31 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true) {
         }
     }
 
+    suspend fun evalUiJs(rowJs: String): String? {
+        val source = viewModel.source ?: return null
+        val loginJS = loginUrl ?: ""
+        val result = rowUis?.let {
+            getLoginData(it)
+        } ?: viewModel.loginInfo.toMutableMap()
+        return try {
+            source.evalJS("$loginJS\n$rowJs") {
+                put("result", result)
+                put("book", viewModel.book)
+                put("chapter", viewModel.chapter)
+            }.toString()
+        } catch (e: Exception) {
+            AppLog.put("${source.getTag()} loginUi err: ${e.message}", e)
+            null
+        }
+    }
+
     private fun loginUi(json: String?): List<RowUi>? {
         return GSON.fromJsonArray<RowUi>(json).onFailure {
             AppLog.put("loginUi json parse err:" + it.localizedMessage, it)
         }.getOrNull()
     }
 
-    private fun handleButtonClick(source: BaseSource, rowUi: RowUi, loginUi: List<RowUi>) {
+    private fun handleButtonClick(source: BaseSource, rowUi: RowUi) {
         Coroutine.async {
             if (rowUi.action.isAbsUrl()) {
                 context?.openUrl(rowUi.action!!)
@@ -156,9 +175,9 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true) {
                 // JavaScript
                 rowUi.action?.let { buttonFunctionJS ->
                     kotlin.runCatching {
-                        source.getLoginJs()?.let { loginJS ->
+                        loginUrl?.let { loginJS ->
                             source.evalJS("$loginJS\n$buttonFunctionJS") {
-                                put("result", getLoginData(loginUi))
+                                put("result", getLoginData(rowUis))
                                 put("book", viewModel.book)
                                 put("chapter", viewModel.chapter)
                             }
@@ -171,19 +190,19 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true) {
         }
     }
 
-    private fun getLoginData(loginUi: List<RowUi>?): HashMap<String, String> {
+    private fun getLoginData(rowUis: List<RowUi>?): MutableMap<String, String> {
         val loginData = hashMapOf<String, String>()
-        loginUi?.forEachIndexed { index, rowUi ->
+        rowUis?.forEachIndexed { index, rowUi ->
             when (rowUi.type) {
                 Type.text, Type.password -> {
                     val rowView = binding.root.findViewById<View>(index + 1000)
-                    ItemSourceEditBinding.bind(rowView).editText.text?.let {
-                        loginData[rowUi.name] = it.toString()
+                    ItemSourceEditBinding.bind(rowView).editText.text.let {
+                        loginData[rowUi.name] = it?.toString() ?: ""
                     }
                 }
             }
         }
-        return loginData
+        return viewModel.loginInfo.toMutableMap().apply { putAll(loginData) }
     }
 
     private fun login(source: BaseSource, loginData: HashMap<String, String>) {
