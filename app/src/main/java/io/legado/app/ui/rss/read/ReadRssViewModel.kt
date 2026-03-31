@@ -29,8 +29,7 @@ import kotlinx.coroutines.Dispatchers.IO
 import splitties.init.appCtx
 import java.util.Date
 
-
-class ReadRssViewModel(application: Application) : BaseViewModel(application), JsExtensions {
+class ReadRssViewModel(application: Application) : BaseViewModel(application) {
     var rssSource: RssSource? = null
     var rssArticle: RssArticle? = null
     var tts: TTS? = null
@@ -40,10 +39,6 @@ class ReadRssViewModel(application: Application) : BaseViewModel(application), J
     val upTtsMenuData = MutableLiveData<Boolean>()
     val upStarMenuData = MutableLiveData<Boolean>()
     var headerMap: Map<String, String> = emptyMap()
-
-    override fun getSource(): BaseSource? {
-        return rssSource
-    }
 
     fun initData(intent: Intent) {
         execute {
@@ -84,7 +79,7 @@ class ReadRssViewModel(application: Application) : BaseViewModel(application), J
         }
     }
 
-    private fun loadUrl(url: String, baseUrl: String) {
+    private suspend fun loadUrl(url: String, baseUrl: String) {
         val analyzeUrl = AnalyzeUrl(
             mUrl = url,
             baseUrl = baseUrl,

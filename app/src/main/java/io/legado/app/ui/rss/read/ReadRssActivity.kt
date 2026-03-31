@@ -20,6 +20,7 @@ import io.legado.app.constant.AppConst.imagePathKey
 import io.legado.app.constant.AppLog
 import io.legado.app.data.entities.RssSource
 import io.legado.app.databinding.ActivityRssReadBinding
+import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.http.CookieStore
 import io.legado.app.help.WebJsExtensions.Companion.BLANK_HTML
@@ -182,7 +183,7 @@ class ReadRssActivity : VMBaseActivity<ActivityRssReadBinding, ReadRssViewModel>
             } ?: toastOnUi("url null")
             R.id.menu_edit_source -> viewModel.rssSource?.sourceUrl?.let {
                 startActivity<RssSourceEditActivity> {
-                    putExtra("sourceUrl", sourceUrl)
+                    putExtra("sourceUrl", it)
                 }
             } ?: toastOnUi("sourceUrl null")
             R.id.menu_show_web_log -> {
@@ -439,7 +440,7 @@ class ReadRssActivity : VMBaseActivity<ActivityRssReadBinding, ReadRssViewModel>
                     && title != view.url
                     && title.isNotBlank()
                     && url != BLANK_HTML
-                    && !url.contains(title)) {
+                    && url?.contains(title) != true) {
                     binding.titleBar.title = title
                 } else {
                     binding.titleBar.title = intent.getStringExtra("title")

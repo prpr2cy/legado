@@ -150,8 +150,8 @@ class WebViewModel(application: Application) : BaseViewModel(application) {
                 val url = intent!!.getStringExtra("url")!!
                 html = AnalyzeUrl(
                     url,
-                    headerMapF = headerMap,
-                    source = source
+                    source = source,
+                    headerMapF = headerMap
                 ).getStrResponseAwait(useWebView = false).body
             }.onSuccess {
                 SourceVerificationHelp.setResult(sourceOrigin, html ?: "", baseUrl)
