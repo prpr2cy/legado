@@ -51,7 +51,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true) {
     private val viewModel by activityViewModels<SourceLoginViewModel>()
     private var rowUis: List<RowUi>? = null
     private var loginUrl: String? = null
-    private var loginInfo: HashMap<String, String> = hashMapOf()
+    private var loginInfo: Map<String, String> = mapOf()
 
     override fun onStart() {
         super.onStart()
