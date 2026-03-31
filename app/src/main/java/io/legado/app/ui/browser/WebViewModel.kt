@@ -59,19 +59,21 @@ class WebViewModel(application: Application) : BaseViewModel(application) {
             if (url.contains("data:text/html", ignoreCase = true) && html.isNullOrBlank()) {
                 val dataUri = url.substringAfter("data:text/html")
                 val metaIndex = dataUri.indexOf(",")
-                val meta = dataUri.substring(0, metaIndex).lowercase()
-                val data = dataUri.substring(metaIndex + 1)
-                val charset = if (meta.contains("charset=")) {
-                    Charset.forName(
-                        meta.substringAfter("charset=").substringBefore(";").trim()
-                    )
-                } else Charsets.UTF_8
-                html = if (meta.contains("base64")) {
-                    String(Base64.decode(data, Base64.DEFAULT), charset)
-                } else  {
-                    URLDecoder.decode(data, charset.name())
+                if (metaIndex != -1) {
+                    val meta = dataUri.substring(0, metaIndex).lowercase()
+                    val data = dataUri.substring(metaIndex + 1)
+                    val charset = if (meta.contains("charset=")) {
+                        Charset.forName(
+                            meta.substringAfter("charset=").substringBefore(";").trim()
+                        )
+                    } else Charsets.UTF_8
+                    html = if (meta.contains("base64")) {
+                        String(Base64.decode(data, Base64.DEFAULT), charset)
+                    } else  {
+                        URLDecoder.decode(data, charset.name())
+                    }
+                    url = "data:text/html,"
                 }
-                url = "about:blank"
             }
             html?.let {
                 val headIndex = it.indexOf("<head", ignoreCase = true)
