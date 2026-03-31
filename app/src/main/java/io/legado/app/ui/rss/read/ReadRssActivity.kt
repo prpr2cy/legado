@@ -6,6 +6,7 @@ import android.content.res.Configuration
 import android.net.Uri
 import android.net.http.SslError
 import android.os.Bundle
+import android.os.SystemClock
 import android.view.*
 import android.webkit.*
 import androidx.activity.addCallback
@@ -465,20 +466,22 @@ class ReadRssActivity : VMBaseActivity<ActivityRssReadBinding, ReadRssViewModel>
             val source = viewModel.rssSource
             val js = source?.shouldOverrideUrlLoading
             if (!js.isNullOrBlank()) {
+                val startTime = SystemClock.uptimeMillis()
                 val result = RhinoScriptEngine.runCatching {
                     eval(js) {
                         put("java", rssJsExtensions)
                         put("url", url.toString())
                     }.toString()
                 }.onFailure {
-                    AppLog.put("url跳转拦截js出错", it)
+                    AppLog.put("${source.getTag()}: url跳转拦截js出错", it)
                 }.getOrNull()
-                if (result.isTrue()) {
-                    return true
+                if (SystemClock.uptimeMillis() - startTime > 99) {
+                    AppLog.put("${source.getTag()}: url跳转拦截js执行耗时过长")
                 }
+                if (result.isTrue()) return true
             }
             when (url.scheme) {
-                "http", "https", "jsbridge" -> {
+                "http", "https", "data", "jsbridge" -> {
                     return false
                 }
 

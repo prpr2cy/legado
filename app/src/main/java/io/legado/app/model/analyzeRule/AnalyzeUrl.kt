@@ -53,7 +53,7 @@ class AnalyzeUrl(
         private val pagePattern = Pattern.compile("<(.*?)>")
         @JvmStatic
         @JvmOverloads
-        fun create(
+        fun build(
             url: String,
             source: BaseSource? = null,
             headerMap: Map<String, String>? = null

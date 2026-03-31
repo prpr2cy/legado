@@ -76,4 +76,5 @@
         android:id="@+id/menu_help"
         android:title="@string/help"
         app:showAsAction="never" />
+
 </menu>

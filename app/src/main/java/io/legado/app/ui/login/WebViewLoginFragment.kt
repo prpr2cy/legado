@@ -22,6 +22,7 @@ import io.legado.app.data.entities.BaseSource
 import io.legado.app.databinding.FragmentWebViewLoginBinding
 import io.legado.app.help.http.CookieStore
 import io.legado.app.lib.theme.accentColor
+import io.legado.app.ui.association.OnLineImportActivity
 import io.legado.app.utils.NetworkUtils
 import io.legado.app.utils.gone
 import io.legado.app.utils.longSnackbar
@@ -105,8 +106,15 @@ class WebViewLoginFragment : BaseFragment(R.layout.fragment_web_view_login) {
 
             private fun shouldOverrideUrlLoading(url: Uri): Boolean {
                 when (url.scheme) {
-                    "http", "https" -> {
+                    "http", "https", "data" -> {
                         return false
+                    }
+
+                    "legado", "yuedu" -> {
+                        startActivity<OnLineImportActivity> {
+                            data = url
+                        }
+                        return true
                     }
 
                     else -> {

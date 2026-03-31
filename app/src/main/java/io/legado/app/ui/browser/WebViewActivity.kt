@@ -324,7 +324,7 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
 
         private fun shouldOverrideUrlLoading(url: Uri): Boolean {
             when (url.scheme) {
-                "http", "https" -> {
+                "http", "https", "data" -> {
                     return false
                 }
 
