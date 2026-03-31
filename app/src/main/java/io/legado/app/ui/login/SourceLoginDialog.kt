@@ -51,7 +51,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true) {
     private val viewModel by activityViewModels<SourceLoginViewModel>()
     private var rowUis: List<RowUi>? = null
     private var loginUrl: String? = null
-    private var loginInfo: Map<String, String> = mapOf()
+    private var loginInfo: Map<String, String>? = null
 
     override fun onStart() {
         super.onStart()
@@ -89,7 +89,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true) {
                     binding.flexbox.addView(it.root)
                     it.root.id = index + 1000
                     it.textInputLayout.hint = rowUi.name
-                    it.editText.setText(loginInfo?.get(rowUi.name))
+                    it.editText.setText(loginInfo?.get(rowUi.name) ?: rowUi.default)
                 }
                 Type.password -> ItemSourceEditBinding.inflate(
                     layoutInflater,
@@ -101,7 +101,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true) {
                     it.textInputLayout.hint = rowUi.name
                     it.editText.inputType =
                         InputType.TYPE_TEXT_VARIATION_PASSWORD or InputType.TYPE_CLASS_TEXT
-                    it.editText.setText(loginInfo?.get(rowUi.name))
+                    it.editText.setText(loginInfo?.get(rowUi.name) ?: rowUi.default)
                 }
                 Type.button -> ItemFilletTextBinding.inflate(
                     layoutInflater,
@@ -197,12 +197,12 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true) {
                 Type.text, Type.password -> {
                     val rowView = binding.root.findViewById<View>(index + 1000)
                     ItemSourceEditBinding.bind(rowView).editText.text.let {
-                        loginData[rowUi.name] = it?.toString() ?: ""
+                        loginData[rowUi.name] = it?.toString() ?: rowUi.default ?: ""
                     }
                 }
             }
         }
-        loginData.putAll(loginInfo)
+        loginInfo?.let { loginData.putAll(it) }        
         return loginData
     }
 

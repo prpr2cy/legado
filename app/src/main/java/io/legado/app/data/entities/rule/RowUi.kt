@@ -7,7 +7,8 @@ data class RowUi(
     var name: String,
     var type: String = "text",
     var action: String? = null,
-    var style: Style? = null
+    var style: Style? = null,
+    val default: String? = null,
 ) {
 
     object Type {
