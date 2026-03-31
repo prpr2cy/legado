@@ -667,7 +667,7 @@ class AnalyzeUrl(
 
         fun ignoreHeader(): Boolean {
             return when (ignore) {
-                true, 1, "true" -> true // 忽略 source 请求头
+                true, "true" -> true // 忽略 source 请求头
                 else -> false
             }
         }
@@ -678,7 +678,7 @@ class AnalyzeUrl(
 
         fun useWebView(): Boolean {
             return when (webView) {
-                true, 1, "true" -> true
+                true, "true" -> true
                 else -> false
             }
         }

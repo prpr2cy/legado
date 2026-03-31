@@ -154,6 +154,8 @@ class WebViewModel(application: Application) : BaseViewModel(application) {
                 SourceVerificationHelp.setResult(sourceOrigin, html ?: "", baseUrl)
             }.onSuccess {
                 success.invoke()
+            }.onError {
+                throw NoStackTraceException(url, it.localizedMessage ?: "error")
             }
         } else {
             webView.evaluateJavascript("document.documentElement.outerHTML") {
@@ -162,6 +164,8 @@ class WebViewModel(application: Application) : BaseViewModel(application) {
                     SourceVerificationHelp.setResult(sourceOrigin, html ?: "", webView.url ?: "")
                 }.onSuccess {
                     success.invoke()
+                }.onError {
+                    throw NoStackTraceException(url, it.localizedMessage ?: "error")
                 }
             }
         }
