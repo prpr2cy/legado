@@ -305,7 +305,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
         }
     }
 
-    private fun getLoginData(rowUis: List<RowUi>?): HashMap<String, String> {
+    private fun getLoginData(rowUis: List<RowUi>?): MutableMap<String, String> {
         return runBlocking(Main) {
             val loginData = viewModel.loginInfo
             rowUis?.forEachIndexed { index, rowUi ->
@@ -323,7 +323,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
         }
     }
 
-    private fun login(source: BaseSource, loginData: HashMap<String, String>) {
+    private fun login(source: BaseSource, loginData: MutableMap<String, String>) {
         lifecycleScope.launch(IO) {
             if (loginData.isEmpty()) {
                 source.removeLoginInfo()
