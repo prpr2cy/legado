@@ -11,6 +11,8 @@ class SourceLoginJsExtensions(
     private val source: BaseSource?,
     private val callback: Callback
 ) {
+    private val activityRef: WeakReference<AppCompatActivity> = WeakReference(activity)
+    private val sourceRef: WeakReference<BaseSource?> = WeakReference(source)
     private val callbackRef: WeakReference<Callback> = WeakReference(callback)
     interface Callback {
         fun upUiData(data: Map<String, Any?>?)
