@@ -76,12 +76,12 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true) {
                     rowUis = loginUi(evalUiJs(codeStr))
                 }
                 rowUiBuilder(source, rowUis)
-                setButtonU(source, rowUis)
+                setButtonUi(source, rowUis)
             }
         } else {
             rowUis = loginUi(loginUiStr)
             rowUiBuilder(source, rowUis)
-            setButtonU(source, rowUis)
+            setButtonUi(source, rowUis)
         }
         binding.toolBar.setBackgroundColor(primaryColor)
         binding.toolBar.title = getString(R.string.login_source, source.getTag())
