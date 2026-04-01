@@ -105,7 +105,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true) {
         }.getOrNull()
     }
 
-    private rowUiBuilder(source: BaseSource, rowUis: List<RowUi>?) {
+    private fun rowUiBuilder(source: BaseSource, rowUis: List<RowUi>?) {
         rowUis ?: return
         rowUis.forEachIndexed { index, rowUi ->
             when (rowUi.type) {
