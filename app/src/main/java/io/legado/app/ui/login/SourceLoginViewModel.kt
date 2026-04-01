@@ -19,7 +19,8 @@ class SourceLoginViewModel(application: Application) : BaseViewModel(application
     var book: Book? = null
     var bookType: Int = 0
     var chapter: BookChapter? = null
-    var headerMap: Map<String, String> = emptyMap()
+    var headerMap: emptyMap<String, String>()
+    var loginInfo: emptyMap<String, String>()
 
     fun initData(intent: Intent, success: (bookSource: BaseSource) -> Unit) {
         execute {
@@ -54,7 +55,8 @@ class SourceLoginViewModel(application: Application) : BaseViewModel(application
                     }
                 }
             }
-            headerMap = source?.getHeaderMap(true) ?: emptyMap()
+            headerMap = source?.getHeaderMap(true) ?: emptyMap<String, String>()
+            loginInfo = source?.getLoginInfoMap() ?: emptyMap<String, String>()
             source
         }.onSuccess {
             if (it != null) {

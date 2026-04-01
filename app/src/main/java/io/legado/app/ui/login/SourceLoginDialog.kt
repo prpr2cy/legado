@@ -32,11 +32,6 @@ import io.legado.app.utils.setLayout
 import io.legado.app.utils.showDialogFragment
 import io.legado.app.utils.toastOnUi
 import io.legado.app.utils.viewbindingdelegate.viewBinding
-import kotlin.collections.HashMap
-import kotlin.collections.List
-import kotlin.collections.forEachIndexed
-import kotlin.collections.hashMapOf
-import kotlin.collections.set
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Dispatchers.Main
 import kotlinx.coroutines.launch
@@ -51,6 +46,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true) {
     private var rowUis: List<RowUi>? = null
     private var loginUrl: String? = null
     private var loginInfo: Map<String, String>? = null
+    private var rowUiName = arrayListOf<String>()
 
     override fun onStart() {
         super.onStart()
@@ -91,7 +87,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true) {
     suspend fun evalUiJs(rowJs: String): String? {
         val source = viewModel.source ?: return null
         val loginJS = loginUrl ?: ""
-        val result = rowUis?.let { getLoginData(it) } ?: loginInfo
+        val result = getLoginData(rowUis)
         return try {
             source.evalJS("$loginJS\n$rowJs") {
                 put("result", result)
@@ -110,7 +106,12 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true) {
         }.getOrNull()
     }
 
-    private fun rowUiBuilder(source: BaseSource, rowUis: List<RowUi>?) {
+    private fun rowUiBuilder(source: BaseSource, rowUis: List<RowUi>?, isUpdate: Boolean) {
+        if (isUpdate) {
+            binding.flexbox.removeAllViews()
+            rowUiName.clear()
+        }
+
         rowUis?.forEachIndexed { index, rowUi ->
             when (rowUi.type) {
                 Type.text -> ItemSourceEditBinding.inflate(
@@ -201,6 +202,8 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true) {
 
     private fun getLoginData(rowUis: List<RowUi>?): HashMap<String, String> {
         val loginData = hashMapOf<String, String>()
+        loginInfo?.let { loginData.putAll(it) }
+
         rowUis?.forEachIndexed { index, rowUi ->
             when (rowUi.type) {
                 Type.text, Type.password -> {
@@ -211,7 +214,6 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true) {
                 }
             }
         }
-        loginInfo?.let { loginData.putAll(it) }        
         return loginData
     }
 
