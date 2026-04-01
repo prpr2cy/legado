@@ -69,6 +69,20 @@ class AnalyzeRule(
         return this
     }
 
+    fun setNextChapterUrl(chapterUrl: String?): AnalyzeRule {
+        chapterUrl?.let {
+            this.nextChapterUrl = chapterUrl
+        }
+        return this
+    }
+
+    fun setChapter(chapter: BookChapter?): AnalyzeRule {
+        chapter?.let {
+            this.chapter = chapter
+        }
+        return this
+    }
+
     fun setBaseUrl(baseUrl: String?): AnalyzeRule {
         baseUrl?.let {
             this.baseUrl = baseUrl
@@ -728,6 +742,7 @@ class AnalyzeRule(
     /**
      * 执行JS
      */
+    @JvmOverloads
     fun evalJS(jsStr: String, result: Any? = null): Any? {
         val bindings = SimpleBindings()
         bindings["java"] = this

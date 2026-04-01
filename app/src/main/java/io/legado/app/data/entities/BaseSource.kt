@@ -59,9 +59,20 @@ interface BaseSource : JsExtensions {
     }
 
     fun loginUi(): List<RowUi>? {
-        return GSON.fromJsonArray<RowUi>(loginUi).onFailure {
-            it.printOnDebug()
-        }.getOrNull()
+        return loginUi?.let {
+            val json = when {
+                it.startsWith("@js:", true) -> evalJS(
+                    it.substring(4)
+                ).toString()
+                it.startsWith("<js>", true) -> evalJS(
+                    it.substring(4, it.lastIndexOf("<"))
+                ).toString()
+                else -> it
+            }
+            GSON.fromJsonArray<RowUi>(json).onFailure {
+                it.printOnDebug()
+            }.getOrNull()
+        }
     }
 
     fun getLoginJs(): String? {
@@ -99,12 +110,11 @@ interface BaseSource : JsExtensions {
         header?.let {
             GSON.fromJsonObject<Map<String, String>>(
                 when {
-                    it.startsWith("@js:", true) -> evalJS(it.substring(4)).toString()
+                    it.startsWith("@js:", true) -> evalJS(
+                        it.substring(4)
+                    ).toString()
                     it.startsWith("<js>", true) -> evalJS(
-                        it.substring(
-                            4,
-                            it.lastIndexOf("<")
-                        )
+                        it.substring(4, it.lastIndexOf("<"))
                     ).toString()
                     else -> it
                 }

@@ -75,11 +75,39 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true) {
                 withContext(IO) {
                     rowUis = loginUi(evalUiJs(codeStr))
                 }
+                rowUiBuilder(source, rowUis)
             }
         } else {
             rowUis = loginUi(loginUiStr)
+            rowUiBuilder(source, rowUis)
         }
-        rowUis?.forEachIndexed { index, rowUi ->
+    }
+
+    private fun evalUiJs(rowJs: String): String? {
+        val source = viewModel.source ?: return null
+        val loginJS = loginUrl ?: ""
+        val result = rowUis?.let { getLoginData(it) } ?: loginInfo
+        return try {
+            source.evalJS("$loginJS\n$rowJs") {
+                put("result", result)
+                put("book", viewModel.book)
+                put("chapter", viewModel.chapter)
+            }.toString()
+        } catch (e: Exception) {
+            AppLog.put("${source.getTag()} loginUi err: ${e.message}", e)
+            null
+        }
+    }
+
+    private fun loginUi(json: String?): List<RowUi>? {
+        return GSON.fromJsonArray<RowUi>(json).onFailure {
+            AppLog.put("loginUi json parse err:" + it.localizedMessage, it)
+        }.getOrNull()
+    }
+
+    private rowUiBuilder(source: BaseSource, rowUis: List<RowUi>?) {
+        rowUis ?: return
+        rowUis.forEachIndexed { index, rowUi ->
             when (rowUi.type) {
                 Type.text -> ItemSourceEditBinding.inflate(
                     layoutInflater,
@@ -119,6 +147,10 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true) {
                 }
             }
         }
+        setToobar(source, rowUis)
+    }
+
+    private fun setToobar(source: BaseSource, rowUis: List<RowUi>) {
         binding.toolBar.setBackgroundColor(primaryColor)
         binding.toolBar.title = getString(R.string.login_source, source.getTag())
         binding.toolBar.inflateMenu(R.menu.source_login)
@@ -143,28 +175,6 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true) {
             }
             return@setOnMenuItemClickListener true
         }
-    }
-
-    suspend fun evalUiJs(rowJs: String): String? {
-        val source = viewModel.source ?: return null
-        val loginJS = loginUrl ?: ""
-        val result = rowUis?.let { getLoginData(it) } ?: loginInfo
-        return try {
-            source.evalJS("$loginJS\n$rowJs") {
-                put("result", result)
-                put("book", viewModel.book)
-                put("chapter", viewModel.chapter)
-            }.toString()
-        } catch (e: Exception) {
-            AppLog.put("${source.getTag()} loginUi err: ${e.message}", e)
-            null
-        }
-    }
-
-    private fun loginUi(json: String?): List<RowUi>? {
-        return GSON.fromJsonArray<RowUi>(json).onFailure {
-            AppLog.put("loginUi json parse err:" + it.localizedMessage, it)
-        }.getOrNull()
     }
 
     private fun handleButtonClick(source: BaseSource, rowUi: RowUi) {
