@@ -2,6 +2,7 @@ package io.legado.app.ui.login
 
 import androidx.appcompat.app.AppCompatActivity
 import io.legado.app.data.entities.BaseSource
+import io.legado.app.help.JsExtensions
 import io.legado.app.utils.sendToClip
 import java.lang.ref.WeakReference
 
@@ -10,7 +11,7 @@ class SourceLoginJsExtensions(
     private val activity: AppCompatActivity,
     private val source: BaseSource?,
     private val callback: Callback
-) {
+): JsExtensions {
     private val activityRef: WeakReference<AppCompatActivity> = WeakReference(activity)
     private val sourceRef: WeakReference<BaseSource?> = WeakReference(source)
     private val callbackRef: WeakReference<Callback> = WeakReference(callback)
