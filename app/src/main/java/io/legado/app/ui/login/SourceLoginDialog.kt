@@ -154,7 +154,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true) {
         }
     }
 
-    private fun setButtonUi(source: BaseSource, rowUis: List<RowUi>) {
+    private fun setButtonUi(source: BaseSource, rowUis: List<RowUi>?) {
         binding.toolBar.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 R.id.menu_ok -> {
