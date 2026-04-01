@@ -69,20 +69,6 @@ class AnalyzeRule(
         return this
     }
 
-    fun setNextChapterUrl(chapterUrl: String?): AnalyzeRule {
-        chapterUrl?.let {
-            this.nextChapterUrl = chapterUrl
-        }
-        return this
-    }
-
-    fun setChapter(chapter: BookChapter?): AnalyzeRule {
-        chapter?.let {
-            this.chapter = chapter
-        }
-        return this
-    }
-
     fun setBaseUrl(baseUrl: String?): AnalyzeRule {
         baseUrl?.let {
             this.baseUrl = baseUrl
@@ -742,6 +728,7 @@ class AnalyzeRule(
     /**
      * 执行JS
      */
+    @JvmOverloads
     fun evalJS(jsStr: String, result: Any? = null): Any? {
         val bindings = SimpleBindings()
         bindings["java"] = this
@@ -829,6 +816,21 @@ class AnalyzeRule(
         private val evalPattern =
             Pattern.compile("@get:\\{[^}]+?\\}|\\{\\{[\\w\\W]*?\\}\\}", Pattern.CASE_INSENSITIVE)
         private val regexPattern = Pattern.compile("\\$\\d{1,2}")
+
+        fun AnalyzeRule.setRuleData(ruleData: RuleDataInterface?): AnalyzeRule {
+            this.ruleData = ruleData
+            return this
+        }
+
+        fun AnalyzeRule.setNextChapterUrl(nextChapterUrl: String?): AnalyzeRule {
+            this.nextChapterUrl = nextChapterUrl
+            return this
+        }
+
+        fun AnalyzeRule.setChapter(chapter: BookChapter?): AnalyzeRule {
+            this.chapter = chapter
+            return this
+        }
     }
 
 }
