@@ -21,6 +21,10 @@ class SourceLoginJsExtensions(
         fun saveLoginData(): Boolean
     }
 
+    override fun getSource(): BaseSource? {
+        return sourceRef.get()
+    }
+
     @JvmOverloads
     fun upLoginData(data: Map<String, Any?>?) {
         callbackRef.get()?.upUiData(data)
