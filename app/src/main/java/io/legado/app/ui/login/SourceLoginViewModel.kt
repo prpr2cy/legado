@@ -19,8 +19,8 @@ class SourceLoginViewModel(application: Application) : BaseViewModel(application
     var book: Book? = null
     var bookType: Int = 0
     var chapter: BookChapter? = null
-    var headerMap: emptyMap<String, String>()
-    var loginInfo: emptyMap<String, String>()
+    var headerMap = emptyMap<String, String>()
+    var loginInfo = emptyMap<String, String>()
 
     fun initData(intent: Intent, success: (bookSource: BaseSource) -> Unit) {
         execute {
