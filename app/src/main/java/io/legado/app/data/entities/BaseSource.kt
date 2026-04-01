@@ -59,8 +59,8 @@ interface BaseSource : JsExtensions {
     }
 
     fun loginUi(): List<RowUi>? {
-        return loginUi?.let {
-            val json = when {
+        val json = loginUi?.let {
+            when {
                 it.startsWith("@js:", true) -> evalJS(
                     it.substring(4)
                 ).toString()
@@ -69,10 +69,10 @@ interface BaseSource : JsExtensions {
                 ).toString()
                 else -> it
             }
-            GSON.fromJsonArray<RowUi>(json).onFailure {
-                it.printOnDebug()
-            }.getOrNull()
         }
+        return GSON.fromJsonArray<RowUi>(json).onFailure {
+            it.printOnDebug()
+        }.getOrNull()
     }
 
     fun getLoginJs(): String? {

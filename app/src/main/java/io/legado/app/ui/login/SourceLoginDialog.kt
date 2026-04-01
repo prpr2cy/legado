@@ -76,14 +76,20 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true) {
                     rowUis = loginUi(evalUiJs(codeStr))
                 }
                 rowUiBuilder(source, rowUis)
+                setButtonU(source, rowUis)
             }
         } else {
             rowUis = loginUi(loginUiStr)
             rowUiBuilder(source, rowUis)
+            setButtonU(source, rowUis)
         }
+        binding.toolBar.setBackgroundColor(primaryColor)
+        binding.toolBar.title = getString(R.string.login_source, source.getTag())
+        binding.toolBar.inflateMenu(R.menu.source_login)
+        binding.toolBar.menu.applyTint(requireContext())
     }
 
-    private fun evalUiJs(rowJs: String): String? {
+    suspend fun evalUiJs(rowJs: String): String? {
         val source = viewModel.source ?: return null
         val loginJS = loginUrl ?: ""
         val result = rowUis?.let { getLoginData(it) } ?: loginInfo
@@ -106,8 +112,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true) {
     }
 
     private fun rowUiBuilder(source: BaseSource, rowUis: List<RowUi>?) {
-        rowUis ?: return
-        rowUis.forEachIndexed { index, rowUi ->
+        rowUis?.forEachIndexed { index, rowUi ->
             when (rowUi.type) {
                 Type.text -> ItemSourceEditBinding.inflate(
                     layoutInflater,
@@ -147,14 +152,9 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true) {
                 }
             }
         }
-        setToobar(source, rowUis)
     }
 
-    private fun setToobar(source: BaseSource, rowUis: List<RowUi>) {
-        binding.toolBar.setBackgroundColor(primaryColor)
-        binding.toolBar.title = getString(R.string.login_source, source.getTag())
-        binding.toolBar.inflateMenu(R.menu.source_login)
-        binding.toolBar.menu.applyTint(requireContext())
+    private fun setButtonUi(source: BaseSource, rowUis: List<RowUi>) {
         binding.toolBar.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 R.id.menu_ok -> {
