@@ -742,7 +742,6 @@ class AnalyzeRule(
     /**
      * 执行JS
      */
-    @JvmOverloads
     fun evalJS(jsStr: String, result: Any? = null): Any? {
         val bindings = SimpleBindings()
         bindings["java"] = this
