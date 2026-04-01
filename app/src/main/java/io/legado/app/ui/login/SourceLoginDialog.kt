@@ -49,6 +49,8 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
     private val viewModel by activityViewModels<SourceLoginViewModel>()
     private var rowUis: List<RowUi>? = null
     private var rowUiName = arrayListOf<String>()
+    private var oKToClose = false
+    private var hasChange = false
     private val sourceLoginJsExtensions by lazy {
         SourceLoginJsExtensions(
             activity as AppCompatActivity,
@@ -98,6 +100,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
 
     @SuppressLint("SetTextI18n")
     private fun handleUpUiData(data: Map<String, Any?>?) {
+        hasChange = true
         val loginData = viewModel.loginInfo
         if (data == null) {
             rowUis?.forEachIndexed { index, rowUi ->
@@ -137,6 +140,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
     private fun handleReUiView() {
         val source = viewModel.source ?: return
         val loginUiStr = source.loginUi ?: return
+        hasChange = true
 
         lifecycleScope.launch(Main) {
             withContext(IO) {
@@ -265,8 +269,8 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
         binding.toolBar.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 R.id.menu_ok -> {
-                    val loginData = getLoginData(rowUis)
-                    login(source, loginData)
+                    oKToClose = true
+                    login(source, getLoginData(rowUis))
                 }
                 R.id.menu_show_login_header -> alert {
                     setTitle(R.string.login_header)
@@ -278,6 +282,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
                     }
                 }
                 R.id.menu_del_login_header -> source.removeLoginHeader()
+                R.id.menu_del_login_info -> source.removeLoginInfo()
                 R.id.menu_log -> showDialogFragment<AppLogDialog>()
             }
             true
@@ -347,7 +352,16 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
     }
 
     override fun onDismiss(dialog: DialogInterface) {
+        if (!oKToClose && hasChange) {
+            val loginInfo = viewModel.loginInfo
+            if (loginInfo.isEmpty()) {
+                viewModel.source?.removeLoginInfo()
+            } else {
+                viewModel.source?.putLoginInfo(GSON.toJson(loginInfo))
+            }
+        }
         super.onDismiss(dialog)
         activity?.finish()
     }
+
 }

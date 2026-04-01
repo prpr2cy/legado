@@ -2,6 +2,7 @@ package io.legado.app.ui.login
 
 import androidx.appcompat.app.AppCompatActivity
 import io.legado.app.data.entities.BaseSource
+import io.legado.app.utils.sendToClip
 import java.lang.ref.WeakReference
 
 @Suppress("unused")
@@ -11,7 +12,6 @@ class SourceLoginJsExtensions(
     private val callback: Callback
 ) {
     private val callbackRef: WeakReference<Callback> = WeakReference(callback)
-
     interface Callback {
         fun upUiData(data: Map<String, Any?>?)
         fun reUiView()
@@ -29,5 +29,9 @@ class SourceLoginJsExtensions(
 
     fun saveLoginInfo(): Boolean {
         return callbackRef.get()?.saveLoginData() ?: false
+    }
+
+    fun copyText(text: String) {
+        activityRef.get()?.sendToClip(text)
     }
 }

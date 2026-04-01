@@ -56,7 +56,8 @@ class SourceLoginViewModel(application: Application) : BaseViewModel(application
                 }
             }
             headerMap = source?.getHeaderMap(true) ?: emptyMap()
-            loginInfo = source?.getLoginInfoMap() ?: mutableMapOf()
+            loginInfo = source?.getLoginInfoMap()?.toMutableMap()
+                ?: mutableMapOf()
             source
         }.onSuccess {
             if (it != null) {

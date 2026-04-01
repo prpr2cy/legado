@@ -21,6 +21,11 @@
         app:showAsAction="never" />
 
     <item
+        android:id="@+id/menu_del_login_info"
+        android:title="@string/del_login_info"
+        app:showAsAction="never" />
+
+    <item
         android:id="@+id/menu_log"
         android:title="@string/log"
         app:showAsAction="never" />

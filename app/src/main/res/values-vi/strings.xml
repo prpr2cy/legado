@@ -906,6 +906,7 @@
     <string name="use_browser_open">Có mở bằng trình duyệt bên ngoài không?</string>
     <string name="see">xem</string>
     <string name="open">mở</string>
+    <string name="del_login_info">xóa thông tin đăng nhập</string>
     <string name="del_login_header">xóa tiêu đề đăng nhập</string>
     <string name="show_login_header">hiển thị tiêu đề đăng nhập</string>
     <string name="login_header">tiêu đề đăng nhập</string>

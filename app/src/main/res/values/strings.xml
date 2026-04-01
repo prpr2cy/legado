@@ -912,6 +912,7 @@
     <string name="use_browser_open">是否使用外部浏览器打开?</string>
     <string name="see">see</string>
     <string name="open">open</string>
+    <string name="del_login_info">del login info</string>
     <string name="del_login_header">del login header</string>
     <string name="show_login_header">show login header</string>
     <string name="login_header">login header</string>
