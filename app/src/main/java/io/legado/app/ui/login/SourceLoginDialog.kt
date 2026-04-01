@@ -37,6 +37,7 @@ import io.legado.app.utils.viewbindingdelegate.viewBinding
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Dispatchers.Main
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import splitties.init.appCtx
 import splitties.views.onClick
@@ -131,7 +132,6 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
                 }
             }
         }
-        viewModel.loginInfo = loginData
     }
 
     private fun handleReUiView() {
@@ -201,14 +201,14 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
         val loginJS = source.getLoginJs() ?: ""
         val loginData = viewModel.loginInfo 
 
-        return kotlin.runCatching {
+        return try {
             source.evalJS("$loginJS\n$jsStr") {
                 put("java", sourceLoginJsExtensions)
                 put("result", loginData)
                 put("book", viewModel.book)
                 put("chapter", viewModel.chapter)
             }.toString()
-        }.onFailure { e ->
+        } catch(e: Exception) {
             AppLog.put(source.getTag() + " loginUi error", e)
             null
         }
@@ -306,7 +306,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
     }
 
     private fun getLoginData(rowUis: List<RowUi>?): HashMap<String, String> {
-        return kotlin.runBlocking(Main) {
+        return runBlocking(Main) {
             val loginData = viewModel.loginInfo
             rowUis?.forEachIndexed { index, rowUi ->
                 when (rowUi.type) {
@@ -319,7 +319,6 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
                     }
                 }
             }
-            viewModel.loginInfo = loginData
             loginData
         }
     }
