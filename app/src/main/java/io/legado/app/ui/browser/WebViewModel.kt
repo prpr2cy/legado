@@ -24,7 +24,6 @@ import io.legado.app.utils.isContentScheme
 import io.legado.app.utils.printOnDebug
 import io.legado.app.utils.toastOnUi
 import io.legado.app.help.WebJsExtensions.Companion.JS_INJECTION
-import io.legado.app.help.WebJsExtensions.Companion.DATA_HTML
 import io.legado.app.utils.writeBytes
 import org.apache.commons.text.StringEscapeUtils
 import java.io.File
@@ -57,23 +56,27 @@ class WebViewModel(application: Application) : BaseViewModel(application) {
             sourceVerificationEnable = intent.getBooleanExtra("sourceVerificationEnable", false)
             refetchAfterSuccess = intent.getBooleanExtra("refetchAfterSuccess", true)
             html = intent.getStringExtra("html")
-            if (url.contains("data:text/html", ignoreCase = true) && html.isNullOrBlank()) {
+            if (url.startsWith("data:text/html", ignoreCase = true) && html.isNullOrBlank()) {
                 val dataUri = url.substringAfter("data:text/html")
                 val metaIndex = dataUri.indexOf(",")
                 if (metaIndex != -1) {
+                    var origin = "data:text/html"
                     val meta = dataUri.substring(0, metaIndex).lowercase()
                     val data = dataUri.substring(metaIndex + 1)
                     val charset = if (meta.contains("charset=")) {
-                        Charset.forName(
-                            meta.substringAfter("charset=").substringBefore(";").trim()
-                        )
+                        val name = meta.substringAfter("charset=")
+                            .substringBefore(";")
+                            .trim()
+                        origin = "${origin};charset=${name}"
+                        Charset.forName(name)
                     } else Charsets.UTF_8
                     html = if (meta.contains("base64")) {
+                        origin = "${origin};base64"
                         String(Base64.decode(data, Base64.DEFAULT), charset)
                     } else  {
                         URLDecoder.decode(data, charset.name())
                     }
-                    url = DATA_HTML
+                    url = "${origin},"
                 }
             }
             html?.let {

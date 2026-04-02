@@ -32,8 +32,6 @@ import io.legado.app.help.http.CookieStore
 import io.legado.app.help.source.SourceVerificationHelp
 import io.legado.app.help.WebCacheManager
 import io.legado.app.help.WebJsExtensions
-import io.legado.app.help.WebJsExtensions.Companion.BLANK_HTML
-import io.legado.app.help.WebJsExtensions.Companion.DATA_HTML
 import io.legado.app.help.WebJsExtensions.Companion.nameCache
 import io.legado.app.help.WebJsExtensions.Companion.nameJava
 import io.legado.app.lib.dialogs.SelectItem
@@ -108,21 +106,21 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
                 }
                 val currentIndex = list.currentIndex
                 val currentItem = list.currentItem
-                val currentUrl = currentItem?.originalUrl ?: BLANK_HTML
+                val currentUrl = currentItem?.originalUrl ?: "about:blank"
                 val currentTitle = currentItem?.title
                 var steps = 1
 
                 for (i in currentIndex - 1 downTo 0) {
                     val item = list.getItemAtIndex(i)
                     val itemUrl = item.originalUrl
-                    if (itemUrl == BLANK_HTML) {
+                    if (itemUrl == "about:blank") {
                         finish()
                         return@addCallback
                     }
                     if (itemUrl != currentUrl || currentTitle != item.title) {
                         break
                     }
-                    if (currentUrl == DATA_HTML) {
+                    if (Uri.parse(currentUrl).scheme == "data") {
                         break
                     }
                     steps++

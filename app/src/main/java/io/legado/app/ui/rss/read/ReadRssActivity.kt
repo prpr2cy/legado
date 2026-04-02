@@ -24,8 +24,6 @@ import io.legado.app.databinding.ActivityRssReadBinding
 import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.config.AppConfig
 import io.legado.app.help.http.CookieStore
-import io.legado.app.help.WebJsExtensions.Companion.BLANK_HTML
-import io.legado.app.help.WebJsExtensions.Companion.DATA_HTML
 import io.legado.app.lib.dialogs.SelectItem
 import io.legado.app.lib.dialogs.selector
 import io.legado.app.lib.theme.accentColor
@@ -92,21 +90,21 @@ class ReadRssActivity : VMBaseActivity<ActivityRssReadBinding, ReadRssViewModel>
                 }
                 val currentIndex = list.currentIndex
                 val currentItem = list.currentItem
-                val currentUrl = currentItem?.originalUrl ?: BLANK_HTML
+                val currentUrl = currentItem?.originalUrl ?: "about:blank"
                 val currentTitle = currentItem?.title
                 var steps = 1
 
                 for (i in currentIndex - 1 downTo 0) {
                     val item = list.getItemAtIndex(i)
                     val itemUrl = item.originalUrl
-                    if (itemUrl == BLANK_HTML) {
+                    if (itemUrl == "about:blank") {
                         finish()
                         return@addCallback
                     }
                     if (itemUrl != currentUrl || currentTitle != item.title) {
                         break
                     }
-                    if (currentUrl == DATA_HTML) {
+                    if (Uri.parse(currentUrl).scheme == "data") {
                         break
                     }
                     steps++
@@ -440,7 +438,7 @@ class ReadRssActivity : VMBaseActivity<ActivityRssReadBinding, ReadRssViewModel>
                 if (title != url
                     && title != view.url
                     && title.isNotBlank()
-                    && url != BLANK_HTML
+                    && url != "about:blank"
                     && url?.contains(title) != true) {
                     binding.titleBar.title = title
                 } else {
