@@ -457,6 +457,7 @@ class AnalyzeUrl(
     }
 
     private fun getByteArrayIfDataUri(): ByteArray? {
+        @Suppress("RegExpRedundantEscape")
         val dataUriFindResult = AppPattern.dataUriRegex.find(urlNoQuery)
         if (dataUriFindResult != null) {
             val dataUriBase64 = dataUriFindResult.groupValues[1]
@@ -602,7 +603,7 @@ class AnalyzeUrl(
          **/
         private var type: String? = null,
         /**
-        * 是否使用 source 请求头
+        * 是否忽略 source 请求头
         **/
         private var ignore: Any? = null,
         /**
