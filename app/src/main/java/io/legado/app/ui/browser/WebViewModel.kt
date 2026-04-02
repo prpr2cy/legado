@@ -49,7 +49,7 @@ class WebViewModel(application: Application) : BaseViewModel(application) {
     ) {
         execute {
             this@WebViewModel.intent = intent
-            var url = intent.getStringExtra("url")
+            val url = intent.getStringExtra("url")
                 ?: throw NoStackTraceException("url不能为空")
             sourceOrigin = intent.getStringExtra("sourceOrigin") ?: ""
             sourceName = intent.getStringExtra("sourceName") ?: ""
@@ -80,7 +80,7 @@ class WebViewModel(application: Application) : BaseViewModel(application) {
                     } else  {
                         URLDecoder.decode(data, charset.name())
                     }
-                    url = "${origin},"
+                    baseUrl = "${origin},"
                 }
             }
             html?.let {
