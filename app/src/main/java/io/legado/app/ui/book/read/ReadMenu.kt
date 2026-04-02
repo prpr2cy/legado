@@ -339,7 +339,7 @@ class ReadMenu @JvmOverloads constructor(
                 val chapterUrl = tvChapterUrl.text.toString().substringBefore(",{")
                 setMessage("${message}\n$chapterUrl")
                 neutralButton(R.string.copy_url) {
-                    sendToClip(chapterUrl)
+                    appCtx.sendToClip(chapterUrl)
                 }
                 okButton {
                     AppConfig.readUrlInBrowser = true
