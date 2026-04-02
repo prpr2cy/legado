@@ -34,6 +34,7 @@ import io.legado.app.ui.browser.WebViewActivity
 import io.legado.app.ui.widget.seekbar.SeekBarChangeListener
 import io.legado.app.utils.*
 import splitties.views.*
+import splitties.init.appCtx
 
 /**
  * 阅读界面菜单
@@ -302,7 +303,6 @@ class ReadMenu @JvmOverloads constructor(
     }
 
     private fun bindEvent() = binding.run {
-        val currentContext = this@ReadMenu.context
         titleBar.toolbar.setOnClickListener {
             ReadBook.book?.let {
                 context.startActivity<BookInfoActivity> {
@@ -313,7 +313,7 @@ class ReadMenu @JvmOverloads constructor(
         }
         val chapterViewClickListener = OnClickListener {
             if (ReadBook.isLocalBook) {
-                currentContext.toastOnUi(R.string.local_book)
+                appCtx.toastOnUi(R.string.local_book)
                 return@OnClickListener
             }
             if (AppConfig.readUrlInBrowser) {
@@ -331,15 +331,15 @@ class ReadMenu @JvmOverloads constructor(
         }
         val chapterViewLongClickListener = OnLongClickListener {
             if (ReadBook.isLocalBook) {
-                currentContext.toastOnUi(R.string.local_book)
+                appCtx.toastOnUi(R.string.local_book)
                 return@OnLongClickListener true
             }
             context.alert(R.string.open_fun) {
                 val message = context.getString(R.string.use_browser_open)
                 val chapterUrl = tvChapterUrl.text.toString().substringBefore(",{")
-                setMessage("${message}\n\n$chapterUrl")
+                setMessage("${message}\n$chapterUrl")
                 neutralButton(R.string.copy_url) {
-                    context.sendToClip(chapterUrl)
+                    sendToClip(chapterUrl)
                 }
                 okButton {
                     AppConfig.readUrlInBrowser = true
