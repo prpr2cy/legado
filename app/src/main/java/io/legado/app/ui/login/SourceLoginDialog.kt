@@ -127,7 +127,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
             parseLoginUi(loginUiStr)
         } ?: return
 
-        withContext(main) {
+        withContext(Main) {
             TransitionManager.beginDelayedTransition(
                 binding.flexbox,
                 AutoTransition().apply {
