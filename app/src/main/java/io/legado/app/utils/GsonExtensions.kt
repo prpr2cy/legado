@@ -1,6 +1,13 @@
 package io.legado.app.utils
 
-import com.google.gson.*
+import com.google.gson.Gson
+import com.google.gson.GsonBuilder
+import com.google.gson.JsonDeserializationContext
+import com.google.gson.JsonDeserializer
+import com.google.gson.JsonElement
+import com.google.gson.JsonParseException
+import com.google.gson.JsonSyntaxException
+import com.google.gson.ToNumberPolicy
 import com.google.gson.internal.LinkedTreeMap
 import com.google.gson.reflect.TypeToken
 import com.google.gson.stream.JsonWriter
@@ -19,8 +26,9 @@ val INITIAL_GSON: Gson by lazy {
         )
         .registerTypeAdapter(Int::class.java, IntJsonDeserializer())
         .registerTypeAdapter(String::class.java, StringJsonDeserializer())
+        .setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE)
         .disableHtmlEscaping()
-        .setPrettyPrinting()
+        .serializeNulls()
         .create()
 }
 
@@ -32,6 +40,7 @@ val GSON: Gson by lazy {
         .registerTypeAdapter(TocRule::class.java, TocRule.jsonDeserializer)
         .registerTypeAdapter(ContentRule::class.java, ContentRule.jsonDeserializer)
         .registerTypeAdapter(ReviewRule::class.java, ReviewRule.jsonDeserializer)
+        .setPrettyPrinting()
         .create()
 }
 

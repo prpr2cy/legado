@@ -1143,4 +1143,5 @@
     <string name="change_page">Jump to Page</string>
     <string name="refresh_explore">Refresh Export</string>
     <string name="show_web_log">Show Web Log</string>
+    <string name="font_weight_text">N/B/L</string>
 </resources>

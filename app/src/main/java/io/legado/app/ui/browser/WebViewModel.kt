@@ -64,23 +64,19 @@ class WebViewModel(application: Application) : BaseViewModel(application) {
                 val dataUri = baseUrl.substringAfter("data:text/html")
                 val metaIndex = dataUri.indexOf(",")
                 if (metaIndex != -1) {
-                    var origin = "data:text/html"
                     val meta = dataUri.substring(0, metaIndex).lowercase()
                     val data = dataUri.substring(metaIndex + 1)
                     val charset = if (meta.contains("charset=")) {
                         val name = meta.substringAfter("charset=")
                             .substringBefore(";")
                             .trim()
-                        origin = "${origin};charset=${name}"
                         Charset.forName(name)
                     } else Charsets.UTF_8
                     html = if (meta.contains("base64")) {
-                        origin = "${origin};base64"
                         String(Base64.decode(data, Base64.DEFAULT), charset)
                     } else  {
                         URLDecoder.decode(data, charset.name())
                     }
-                    baseUrl = "${origin},"
                 }
             }
             html?.let {

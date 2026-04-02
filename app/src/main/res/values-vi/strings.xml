@@ -1134,4 +1134,5 @@
     <string name="change_page">Chuyển đến trang</string>
     <string name="refresh_explore">Làm mới khám phá</string>
     <string name="show_web_log">Ghi nhật ký đầu ra</string>
+    <string name="font_weight_text">Thường/Đậm/Nhạt</string>
 </resources>

@@ -28,7 +28,7 @@ import io.legado.app.model.ReadBook
 import io.legado.app.utils.externalCache
 import io.legado.app.utils.FileUtils
 import io.legado.app.utils.fromJsonObject
-import io.legado.app.utils.GSON
+import io.legado.app.utils.INITIAL_GSON
 import io.legado.app.utils.longToastOnUi
 import io.legado.app.utils.toastOnUi
 import io.legado.app.utils.UrlUtil
@@ -126,7 +126,7 @@ class WebJsExtensions(
                     "body" to response.body(),
                     "headers" to response.headers().toMultimap(),
                     "cookies" to response.headers().values("set-cookie")
-                ).let { GSON.toJson(it) }
+                ).let { INITIAL_GSON.toJson(it) }
             }.onFailure {
                 AppLog.put("connect($urlStr) error\n${it.localizedMessage}", it)
             }.getOrElse {
@@ -138,13 +138,13 @@ class WebJsExtensions(
     @JavascriptInterface
     fun fetch(url: String, option: String): String {
         return kotlin.runCatching {
-            val options = GSON.fromJsonObject<Map<String, Any>>(option).getOrNull()
+            val options = INITIAL_GSON.fromJsonObject<Map<String, Any>>(option).getOrNull()
                 ?: emptyMap<String, Any>()
             val body = options["body"]?.let { value ->
                 when (value) {
                     is String -> value
                     is Number, is Boolean -> value.toString()
-                    else -> GSON.toJson(value)
+                    else -> INITIAL_GSON.toJson(value)
                 }
             }
             val method = options["method"]?.toString()?.uppercase()
@@ -174,7 +174,7 @@ class WebJsExtensions(
                 "body" to response.body(),
                 "headers" to response.headers(),
                 "cookies" to response.cookies()
-            ).let { GSON.toJson(it) }
+            ).let { INITIAL_GSON.toJson(it) }
         }.onFailure {
             AppLog.put("fetch(${url}) error\n${it.localizedMessage}", it)
         }.getOrElse {
@@ -402,15 +402,15 @@ class WebJsExtensions(
                         when (result) {
                             is String -> result
                             is ByteArray -> Base64.encode(result)
-                            is IntArray -> GSON.toJson(result)
-                            is LongArray -> GSON.toJson(result)
-                            is DoubleArray -> GSON.toJson(result)
-                            is ShortArray -> GSON.toJson(result)
-                            is CharArray -> GSON.toJson(result)
-                            is BooleanArray -> GSON.toJson(result)
-                            is Array<*> -> GSON.toJson(result)
-                            is List<*> -> GSON.toJson(result)
-                            is Map<*, *> -> GSON.toJson(result)
+                            is IntArray -> INITIAL_GSON.toJson(result)
+                            is LongArray -> INITIAL_GSON.toJson(result)
+                            is DoubleArray -> INITIAL_GSON.toJson(result)
+                            is ShortArray -> INITIAL_GSON.toJson(result)
+                            is CharArray -> INITIAL_GSON.toJson(result)
+                            is BooleanArray -> INITIAL_GSON.toJson(result)
+                            is Array<*> -> INITIAL_GSON.toJson(result)
+                            is List<*> -> INITIAL_GSON.toJson(result)
+                            is Map<*, *> -> INITIAL_GSON.toJson(result)
                             else -> result.toString()
                         }
                     }
