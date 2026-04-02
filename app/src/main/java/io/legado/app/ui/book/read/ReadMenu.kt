@@ -319,9 +319,11 @@ class ReadMenu @JvmOverloads constructor(
             } else {
                 context.startActivity<WebViewActivity> {
                     val url = tvChapterUrl.text.toString()
+                    val bookSource = ReadBook.bookSource
                     putExtra("title", tvChapterName.text)
                     putExtra("url", url)
-                    IntentData.put(url, ReadBook.bookSource?.getHeaderMap(true))
+                    putExtra("sourceOrigin", bookSource?.bookSourceUrl)
+                    putExtra("sourceName", bookSource?.bookSourceName)
                 }
             }
         }

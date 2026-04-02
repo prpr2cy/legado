@@ -108,8 +108,8 @@ interface BaseSource : JsExtensions {
      */
     fun getHeaderMap(hasLoginHeader: Boolean = false) = HashMap<String, String>().apply {
         header?.let {
-            GSON.fromJsonObject<Map<String, String>>(
-                when {
+            try {
+                val json = when {
                     it.startsWith("@js:", true) -> evalJS(
                         it.substring(4)
                     ).toString()
@@ -118,8 +118,11 @@ interface BaseSource : JsExtensions {
                     ).toString()
                     else -> it
                 }
-            ).getOrNull()?.let { map ->
-                putAll(map)
+                GSON.fromJsonObject<Map<String, String>>(json).getOrNull()?.let { map ->
+                    putAll(map)
+                }
+            } catch (e: Exception) {
+                AppLog.put("执行请求头规则出错", e)
             }
         }
         if (!has(AppConst.UA_NAME, true)) {
@@ -243,12 +246,12 @@ interface BaseSource : JsExtensions {
     @Throws(Exception::class)
     fun evalJS(jsStr: String, bindingsConfig: SimpleBindings.() -> Unit = {}): Any? {
         val bindings = SimpleBindings()
-        bindings.apply(bindingsConfig)
         bindings["java"] = this
         bindings["source"] = this
         bindings["baseUrl"] = getKey()
         bindings["cookie"] = CookieStore
         bindings["cache"] = CacheManager
+        bindings.apply(bindingsConfig)
         val context = RhinoScriptEngine.getScriptContext(bindings)
         val scope = RhinoScriptEngine.getRuntimeScope(context)
         getShareScope()?.let {

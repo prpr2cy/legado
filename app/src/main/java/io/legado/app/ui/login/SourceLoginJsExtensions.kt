@@ -7,7 +7,7 @@ import io.legado.app.utils.sendToClip
 import java.lang.ref.WeakReference
 
 @Suppress("unused")
-class SourceLoginJsExtensions(
+open class SourceLoginJsExtensions(
     private val activity: AppCompatActivity,
     private val source: BaseSource?,
     private val callback: Callback

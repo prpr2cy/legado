@@ -100,8 +100,7 @@ object WebBook {
             page = page,
             baseUrl = bookSource.bookSourceUrl,
             source = bookSource,
-            ruleData = ruleData,
-            headerMapF = bookSource.getHeaderMap(true)
+            ruleData = ruleData
         )
         var res = analyzeUrl.getStrResponseAwait()
         //检测书源是否已登录
@@ -280,7 +279,8 @@ object WebBook {
         nextChapterUrl: String? = null,
         needSave: Boolean = true
     ): String {
-        if (bookSource.getContentRule().content.isNullOrEmpty()) {
+        val contentRule = bookSource.getContentRule()
+        if (contentRule.content.isNullOrEmpty()) {
             Debug.log(bookSource.bookSourceUrl, "⇒正文规则为空,使用章节链接:${bookChapter.url}")
             return bookChapter.url
         }
@@ -305,12 +305,11 @@ object WebBook {
                 baseUrl = book.tocUrl,
                 source = bookSource,
                 ruleData = book,
-                chapter = bookChapter,
-                headerMapF = bookSource.getHeaderMap(true)
+                chapter = bookChapter
             )
             var res = analyzeUrl.getStrResponseAwait(
-                jsStr = bookSource.getContentRule().webJs,
-                sourceRegex = bookSource.getContentRule().sourceRegex
+                jsStr = contentRule.webJs,
+                sourceRegex = contentRule.sourceRegex
             )
             //检测书源是否已登录
             bookSource.loginCheckJs?.let { checkJs ->
