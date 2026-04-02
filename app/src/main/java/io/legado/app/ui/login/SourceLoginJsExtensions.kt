@@ -25,7 +25,7 @@ open class SourceLoginJsExtensions(
     }
 
     @JvmOverloads
-    fun upLoginData(data: Map<String, Any?>?) {
+    fun upLoginData(data: Map<String, Any?>? = null) {
         callbackRef.get()?.upUiData(data)
     }
 

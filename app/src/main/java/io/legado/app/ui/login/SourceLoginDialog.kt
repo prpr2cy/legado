@@ -61,7 +61,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
         )
     }
 
-    override fun upUiData(data: Map<String, Any?>?) {
+    override fun upUiData(data: Map<String, Any?>? = null) {
         lifecycleScope.launch(Main) {
             runCatching {
                 handleUpUiData(data)
@@ -82,7 +82,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
     }
 
     @SuppressLint("SetTextI18n")
-    private fun handleUpUiData(data: Map<String, Any?>?) {
+    private fun handleUpUiData(data: Map<String, Any?>? = null) {
         hasChange = true
         val loginInfo = viewModel.loginInfo
         if (data == null) {

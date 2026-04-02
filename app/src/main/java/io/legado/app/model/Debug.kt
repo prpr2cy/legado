@@ -12,6 +12,7 @@ import io.legado.app.model.rss.Rss
 import io.legado.app.model.webBook.WebBook
 import io.legado.app.utils.HtmlFormatter
 import io.legado.app.utils.isAbsUrl
+import io.legado.app.utils.isDataUrl
 import io.legado.app.utils.stackTraceStr
 import kotlinx.coroutines.CoroutineScope
 import java.text.SimpleDateFormat
@@ -160,7 +161,7 @@ object Debug {
         debugSource = bookSource.bookSourceUrl
         startTime = System.currentTimeMillis()
         when {
-            key.isAbsUrl(), key.isDataUrl() -> {
+            key.isAbsUrl() || key.isDataUrl() -> {
                 val book = Book()
                 book.origin = bookSource.bookSourceUrl
                 book.bookUrl = key
@@ -268,6 +269,10 @@ object Debug {
                 log(debugSource, "︽目录页解析完成")
                 log(debugSource, showTime = false)
                 val toc = chapters.filter { !(it.isVolume && it.url.startsWith(it.title)) }
+                if (toc.isEmpty()) {
+                    log(debugSource, "≡没有正文章节")
+                    return@onSuccess
+                }
                 val nextChapterUrl = toc.getOrNull(1)?.url ?: toc.first().url
                 contentDebug(scope, bookSource, book, toc.first(), nextChapterUrl)
             }
