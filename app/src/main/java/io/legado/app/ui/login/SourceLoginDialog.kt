@@ -217,8 +217,8 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
                     rowUi.style().apply(root)
                     root.id = index + 1000
                     textInputLayout.apply {
+                        isExpandedHintEnabled = false
                         hint = rowUi.name
-                        setPadding(4.dpToPx(), 4.dpToPx(), 0, 0)
                     }
                     if (rowUi.type == Type.password) {
                         editText.inputType =
