@@ -33,8 +33,7 @@ import io.legado.app.ui.book.info.BookInfoActivity
 import io.legado.app.ui.browser.WebViewActivity
 import io.legado.app.ui.widget.seekbar.SeekBarChangeListener
 import io.legado.app.utils.*
-import splitties.views.onClick
-import splitties.views.onLongClick
+import splitties.views.*
 
 /**
  * 阅读界面菜单
@@ -313,6 +312,7 @@ class ReadMenu @JvmOverloads constructor(
         }
         val chapterViewClickListener = OnClickListener {
             if (ReadBook.isLocalBook) {
+                toastOnUi(R.string.local_book)
                 return@OnClickListener
             }
             if (AppConfig.readUrlInBrowser) {
@@ -330,13 +330,14 @@ class ReadMenu @JvmOverloads constructor(
         }
         val chapterViewLongClickListener = OnLongClickListener {
             if (ReadBook.isLocalBook) {
+                toastOnUi(R.string.local_book)
                 return@OnLongClickListener true
             }
             context.alert(R.string.open_fun) {
                 val chapterUrl = tvChapterUrl.text.toString().substringBefore(",{")
                 val message = context.getString(R.string.use_browser_open)
                 setMessage("${message}\n\n$chapterUrl")
-                neutralButton(R.string.copy_text) {
+                neutralButton(R.string.copy_url) {
                     context.sendToClip(chapterUrl)
                 }
                 okButton {
