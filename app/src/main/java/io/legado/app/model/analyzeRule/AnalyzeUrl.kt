@@ -215,7 +215,9 @@ class AnalyzeUrl(
                     webJs = option.getWebJs()
                     option.getJs()?.let { jsStr ->
                         evalJS(jsStr, url)?.toString()?.let {
-                            url = it
+                            if (it.isAbsUrl() || it.isDataUrl()) {
+                                url = it
+                            }
                         }
                     }
                     serverID = option.getServerID()

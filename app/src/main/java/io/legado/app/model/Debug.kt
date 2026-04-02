@@ -160,7 +160,7 @@ object Debug {
         debugSource = bookSource.bookSourceUrl
         startTime = System.currentTimeMillis()
         when {
-            key.isAbsUrl() -> {
+            key.isAbsUrl(), key.isDataUrl() -> {
                 val book = Book()
                 book.origin = bookSource.bookSourceUrl
                 book.bookUrl = key

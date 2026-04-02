@@ -249,7 +249,11 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
                 }
                 R.id.menu_show_login_header -> showLoginHeader(source)
                 R.id.menu_del_login_header -> source.removeLoginHeader()
-                R.id.menu_del_login_info -> source.removeLoginInfo()
+                R.id.menu_del_login_info -> {
+                    viewModel.loginInfo.clear()
+                    source.removeLoginInfo()
+                    handleUpUiData()
+                }
                 R.id.menu_log -> showDialogFragment<AppLogDialog>()
             }
             true
@@ -337,7 +341,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
 
     override fun onDismiss(dialog: DialogInterface) {
         if (!oKToClose && hasChange) {
-            val loginInfo = getLoginInfo(rowUis)
+            val loginInfo = viewModel.loginInfo
             if (loginInfo.isEmpty()) {
                 viewModel.source?.removeLoginInfo()
             } else {
