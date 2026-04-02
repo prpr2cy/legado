@@ -444,19 +444,6 @@ class ReadBookActivity : BaseReadBookActivity(),
                 ReadBook.loadContent(false)
             }
 
-            R.id.menu_copy_url -> {
-                ReadBook.book?.let { book ->
-                    if (book.isLocal) {
-                        toastOnUi(R.string.local_book)
-                    } else {
-                        val chapter = appDb.bookChapterDao.getChapter(book.bookUrl, ReadBook.durChapterIndex)
-                        if (chapter != null) {
-                            sendToClip(chapter.url)
-                        }
-                    }
-                }
-            }
-
             R.id.menu_log -> showDialogFragment<AppLogDialog>()
             R.id.menu_toc_regex -> showDialogFragment(
                 TxtTocRuleDialog(ReadBook.book?.tocUrl)

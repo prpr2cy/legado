@@ -71,11 +71,6 @@
         app:showAsAction="never" />
 
     <item
-        android:id="@+id/menu_copy_url"
-        android:title="@string/copy_url"
-        app:showAsAction="never" />
-
-    <item
         android:id="@+id/menu_enable_replace"
         android:checkable="true"
         android:checked="true"

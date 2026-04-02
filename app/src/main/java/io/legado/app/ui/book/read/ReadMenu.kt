@@ -302,6 +302,7 @@ class ReadMenu @JvmOverloads constructor(
     }
 
     private fun bindEvent() = binding.run {
+        val currentContext = this@ReadMenu.context
         titleBar.toolbar.setOnClickListener {
             ReadBook.book?.let {
                 context.startActivity<BookInfoActivity> {
@@ -312,7 +313,7 @@ class ReadMenu @JvmOverloads constructor(
         }
         val chapterViewClickListener = OnClickListener {
             if (ReadBook.isLocalBook) {
-                toastOnUi(R.string.local_book)
+                currentContext.toastOnUi(R.string.local_book)
                 return@OnClickListener
             }
             if (AppConfig.readUrlInBrowser) {
@@ -330,12 +331,12 @@ class ReadMenu @JvmOverloads constructor(
         }
         val chapterViewLongClickListener = OnLongClickListener {
             if (ReadBook.isLocalBook) {
-                toastOnUi(R.string.local_book)
+                currentContext.toastOnUi(R.string.local_book)
                 return@OnLongClickListener true
             }
             context.alert(R.string.open_fun) {
-                val chapterUrl = tvChapterUrl.text.toString().substringBefore(",{")
                 val message = context.getString(R.string.use_browser_open)
+                val chapterUrl = tvChapterUrl.text.toString().substringBefore(",{")
                 setMessage("${message}\n\n$chapterUrl")
                 neutralButton(R.string.copy_url) {
                     context.sendToClip(chapterUrl)
@@ -359,8 +360,8 @@ class ReadMenu @JvmOverloads constructor(
                 !ReadBook.bookSource?.loginUrl.isNullOrEmpty()
             sourceMenu.menu.findItem(R.id.menu_chapter_pay).isVisible =
                 !ReadBook.bookSource?.loginUrl.isNullOrEmpty()
-                        && ReadBook.curTextChapter?.isVip == true
-                        && ReadBook.curTextChapter?.isPay != true
+                    && ReadBook.curTextChapter?.isVip == true
+                    && ReadBook.curTextChapter?.isPay != true
             sourceMenu.show()
         }
         //亮度跟随
