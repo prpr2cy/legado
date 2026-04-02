@@ -56,8 +56,12 @@ class WebViewModel(application: Application) : BaseViewModel(application) {
             sourceVerificationEnable = intent.getBooleanExtra("sourceVerificationEnable", false)
             refetchAfterSuccess = intent.getBooleanExtra("refetchAfterSuccess", true)
             html = intent.getStringExtra("html")
-            if (url.startsWith("data:text/html", ignoreCase = true) && html.isNullOrBlank()) {
-                val dataUri = url.substringAfter("data:text/html")
+            source = SourceHelp.getSource(sourceOrigin)
+            val analyzeUrl = AnalyzeUrl(url, source = source)
+            baseUrl = analyzeUrl.url
+            headerMap.putAll(analyzeUrl.headerMap)
+            if (baseUrl.startsWith("data:text/html", ignoreCase = true) && html.isNullOrBlank()) {
+                val dataUri = baseUrl.substringAfter("data:text/html")
                 val metaIndex = dataUri.indexOf(",")
                 if (metaIndex != -1) {
                     var origin = "data:text/html"
@@ -94,10 +98,6 @@ class WebViewModel(application: Application) : BaseViewModel(application) {
                 }
                 localHtml = true
             }
-            source = SourceHelp.getSource(sourceOrigin)
-            val analyzeUrl = AnalyzeUrl(url, source = source)
-            baseUrl = analyzeUrl.url
-            headerMap.putAll(analyzeUrl.headerMap)
             if (analyzeUrl.isPost()) {
                 html = analyzeUrl.getStrResponseAwait(useWebView = false).body
             }
