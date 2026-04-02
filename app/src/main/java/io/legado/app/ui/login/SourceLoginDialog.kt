@@ -331,7 +331,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
                 }
             }
         }
-        loginData
+        return loginData
     }
 
     private fun login(source: BaseSource, loginData: MutableMap<String, String>) {
