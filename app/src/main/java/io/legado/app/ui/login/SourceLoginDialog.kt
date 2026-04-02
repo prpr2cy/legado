@@ -205,7 +205,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
 
     @SuppressLint("SetTextI18n")
     private fun rowUiBuilder(source: BaseSource, rowUis: List<RowUi>?) {
-        let loginInfo = viewModel.loginInfo
+        val loginInfo = viewModel.loginInfo
         rowUis?.forEachIndexed { index, rowUi ->
             rowUiName.add(rowUi.name)
             when (rowUi.type) {
