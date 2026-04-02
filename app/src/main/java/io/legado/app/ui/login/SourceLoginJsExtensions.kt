@@ -34,10 +34,6 @@ open class SourceLoginJsExtensions(
         callbackRef.get()?.reUiView()
     }
 
-    fun saveLoginInfo(): Boolean {
-        return callbackRef.get()?.saveLoginData() ?: false
-    }
-
     fun copyText(text: String) {
         activityRef.get()?.sendToClip(text)
     }

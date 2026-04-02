@@ -10,6 +10,8 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.setPadding
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
+import androidx.transition.AutoTransition
+import androidx.transition.TransitionManager
 import io.legado.app.R
 import io.legado.app.base.BaseDialogFragment
 import io.legado.app.constant.AppLog
@@ -37,7 +39,6 @@ import io.legado.app.utils.viewbindingdelegate.viewBinding
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Dispatchers.Main
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import splitties.init.appCtx
 import splitties.views.onClick
@@ -61,100 +62,84 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
     }
 
     override fun upUiData(data: Map<String, Any?>?) {
-        try {
-            activity?.runOnUiThread {
+        lifecycleScope.launch(Main) {
+            runCatching {
                 handleUpUiData(data)
+            }.onFailure { e ->
+                AppLog.put("upLoginData Error: ${e.localizedMessage}", e)
             }
-        } catch (e: Exception) {
-            AppLog.put("upLoginData Error: " + e.localizedMessage, e)
         }
     }
 
     override fun reUiView() {
-        try {
-            activity?.runOnUiThread {
+        lifecycleScope.launch(Main) {
+            runCatching {
                 handleReUiView()
+            }.onFailure { e ->
+                AppLog.put("reLoginView Error: ${e.localizedMessage}", e)
             }
-        } catch (e: Exception) {
-            AppLog.put("reLoginView Error: " + e.localizedMessage, e)
-        }
-    }
-
-    override fun saveLoginData(): Boolean {
-        return try {
-            var result = false
-            val loginData = getLoginData(rowUis)
-            runBlocking(IO) {
-                result = if (loginData.isNotEmpty()) {
-                    viewModel.source?.putLoginInfo(GSON.toJson(loginData)) ?: false
-                } else {
-                    viewModel.source?.removeLoginHeader()
-                    true
-                }
-            }
-            result
-        } catch (e: Exception) {
-            AppLog.put("saveLoginData error", e)
-            false 
         }
     }
 
     @SuppressLint("SetTextI18n")
     private fun handleUpUiData(data: Map<String, Any?>?) {
         hasChange = true
-        val loginData = viewModel.loginInfo
+        val loginInfo = viewModel.loginInfo
         if (data == null) {
             rowUis?.forEachIndexed { index, rowUi ->
                 when (rowUi.type) {
                     Type.text, Type.password -> {
-                        val rowView = binding.root.findViewById<View>(index + 1000)
-                        if (rowView != null) {
-                            val itemBinding = ItemSourceEditBinding.bind(rowView)
-                            val text = rowUi.default ?: ""
-                            itemBinding.editText.setText(text)
-                            loginData[rowUi.name] = text
-                        }
+                        val rowView = binding.root.findViewById<View>(index + 1000) ?: return@forEachIndexed
+                        val itemBinding = ItemSourceEditBinding.bind(rowView)
+                        val text = rowUi.default ?: ""
+                        itemBinding.editText.setText(text)
+                        loginInfo[rowUi.name] = text
                     }
                 }
             }
         } else {
             data.forEach { (key, value) ->
                 val index = rowUiName.indexOf(key)
-                if (index != -1) {
-                    val rowUi = rowUis?.getOrNull(index) ?: return@forEach
-                    val rowView = binding.root.findViewById<View>(index + 1000) ?: return@forEach
-                    when (rowUi.type) {
-                        Type.text, Type.password -> {
-                            val itemBinding = ItemSourceEditBinding.bind(rowView)
-                            val text = value?.toString() ?: rowUi.default ?: ""
-                            itemBinding.editText.setText(text)
-                            loginData[rowUi.name] = text
-                        }
+                if (index == -1) {
+                    loginInfo[key] = value?.toString() ?: ""
+                    return@forEach
+                }
+                val rowUi = rowUis?.getOrNull(index) ?: return@forEach
+                when (rowUi.type) {
+                    Type.text, Type.password -> {
+                        val rowView = binding.root.findViewById<View>(index + 1000) ?: return@forEach
+                        val itemBinding = ItemSourceEditBinding.bind(rowView)
+                        val text = value?.toString() ?: rowUi.default ?: ""
+                        itemBinding.editText.setText(text)
+                        loginInfo[rowUi.name] = text
                     }
-                } else {
-                    loginData[key] = value?.toString() ?: ""
                 }
             }
         }
     }
 
-    private fun handleReUiView() {
+    private suspend fun handleReUiView() {
         val source = viewModel.source ?: return
         val loginUiStr = source.loginUi ?: return
         hasChange = true
 
-        lifecycleScope.launch(Main) {
-            withContext(IO) {
-                val loginUiJson = if (loginUiStr.startsWith("@js:", true) || loginUiStr.startsWith("<js>", true)) {
-                    evalUiJs(parseJsCode(loginUiStr))
-                } else {
-                    loginUiStr
+        val newRowUis = withContext(IO) {
+            parseLoginUi(loginUiStr)
+        } ?: return
+
+        withContext(main) {
+            TransitionManager.beginDelayedTransition(
+                binding.flexbox,
+                AutoTransition().apply {
+                    duration = 250
+                    interpolator = android.view.animation.DecelerateInterpolator()
                 }
-                rowUis = GSON.fromJsonArray<RowUi>(loginUiJson).getOrNull()
-            }
+            )
+
             binding.flexbox.removeAllViews()
             rowUiName.clear()
-            rowUiBuilder(source, rowUis)
+            rowUis = newRowUis
+            rowUiBuilder(source, newRowUis)
         }
     }
 
@@ -169,99 +154,86 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
         val loginUiStr = source.loginUi ?: return
 
         lifecycleScope.launch(Main) {
-            withContext(IO) {
-                val loginUiJson = if (loginUiStr.startsWith("@js:", true) || loginUiStr.startsWith("<js>", true)) {
-                    evalUiJs(parseJsCode(loginUiStr))
-                } else {
-                    loginUiStr
-                }
-                rowUis = GSON.fromJsonArray<RowUi>(loginUiJson).getOrNull()
+            rowUis = withContext(IO) {
+                parseLoginUi(loginUiStr)
             }
             rowUiBuilder(source, rowUis)
             setButtonUi(source, rowUis)
         }
 
-        binding.toolBar.setBackgroundColor(primaryColor)
-        binding.toolBar.title = getString(R.string.login_source, source.getTag())
-        binding.toolBar.inflateMenu(R.menu.source_login)
-        binding.toolBar.menu.applyTint(requireContext())
-    }
-
-    private fun parseJsCode(loginUiStr: String): String {
-        return when {
-            loginUiStr.startsWith("@js:") -> loginUiStr.substring(4)
-            loginUiStr.startsWith("<js>") -> {
-                val endIndex = loginUiStr.lastIndexOf("<")
-                if (endIndex > 4) {
-                    loginUiStr.substring(4, endIndex)
-                } else {
-                    loginUiStr
-                }
-            }
-            else -> loginUiStr
+        binding.toolBar.apply {
+            setBackgroundColor(primaryColor)
+            title = getString(R.string.login_source, source.getTag())
+            inflateMenu(R.menu.source_login)
+            menu.applyTint(requireContext())
         }
     }
 
-    private fun evalUiJs(loginUiJs: String): String? {
+    private suspend fun parseLoginUi(loginUiStr: String): List<RowUi>? {
+        return try {
+            val loginUiJson = when {
+                loginUiStr.startsWith("@js:", true) -> evalUiJs(loginUiStr.substring(4))
+                loginUiStr.startsWith("<js>", true) -> {
+                    val endIndex = loginUiStr.lastIndexOf("<")
+                    if (endIndex > 4) evalUiJs(loginUiStr.substring(4, endIndex)) else loginUiStr
+                }
+                else -> loginUiStr
+            }
+            GSON.fromJsonArray<RowUi>(loginUiJson).getOrNull()
+        } catch (e: Exception) {
+            AppLog.put("parseLoginUi error: ${e.message}", e)
+            null
+        }
+    }
+
+    private suspend fun evalUiJs(jsCode: String): String? {
         val source = viewModel.source ?: return null
         val loginJS = loginUrl ?: ""
-        val loginData = viewModel.loginInfo
 
         return try {
-            source.evalJS("$loginJS\n$loginUiJs") {
+            source.evalJS("$loginJS\n$jsCode") {
                 put("java", sourceLoginJsExtensions)
-                put("result", loginData)
+                put("result", viewModel.loginInfo)
                 put("book", viewModel.book)
                 put("chapter", viewModel.chapter)
             }.toString()
-        } catch(e: Exception) {
-            AppLog.put(source.getTag() + " loginUi error", e)
+        } catch (e: Exception) {
+            AppLog.put("${source.getTag()} loginUi error", e)
             null
         }
     }
 
     @SuppressLint("SetTextI18n")
     private fun rowUiBuilder(source: BaseSource, rowUis: List<RowUi>?) {
+        let loginInfo = viewModel.loginInfo
         rowUis?.forEachIndexed { index, rowUi ->
             rowUiName.add(rowUi.name)
             when (rowUi.type) {
-                Type.text -> ItemSourceEditBinding.inflate(
-                    layoutInflater,
-                    binding.flexbox,
-                    false
-                ).let {
-                    binding.flexbox.addView(it.root)
-                    it.root.id = index + 1000
-                    it.textInputLayout.hint = rowUi.name
-                    it.editText.setText(viewModel.loginInfo[rowUi.name] ?: rowUi.default ?: "")
-                }
+                Type.text, Type.password -> ItemSourceEditBinding.inflate(
+                    layoutInflater, binding.flexbox, false
+                ).apply {
+                    binding.flexbox.addView(root)
+                    rowUi.style().apply(root)
+                    root.id = index + 1000
+                    textInputLayout.hint = rowUi.name
 
-                Type.password -> ItemSourceEditBinding.inflate(
-                    layoutInflater,
-                    binding.flexbox,
-                    false
-                ).let {
-                    binding.flexbox.addView(it.root)
-                    it.root.id = index + 1000
-                    it.textInputLayout.hint = rowUi.name
-                    it.editText.inputType =
-                        InputType.TYPE_TEXT_VARIATION_PASSWORD or InputType.TYPE_CLASS_TEXT
-                    it.editText.setText(viewModel.loginInfo[rowUi.name] ?: rowUi.default ?: "")
+                    if (rowUi.type == Type.password) {
+                        editText.inputType =
+                            InputType.TYPE_TEXT_VARIATION_PASSWORD or InputType.TYPE_CLASS_TEXT
+                    }
+                    editText.setText(loginInfo[rowUi.name] ?: rowUi.default ?: "")
                 }
 
                 Type.button -> ItemFilletTextBinding.inflate(
-                    layoutInflater,
-                    binding.flexbox,
-                    false
-                ).let {
-                    binding.flexbox.addView(it.root)
-                    rowUi.style().apply(it.root)
-                    it.root.id = index + 1000
-                    it.textView.text = rowUi.name
-                    it.textView.setPadding(16.dpToPx())
-                    it.root.onClick {
-                        val loginData = getLoginData(rowUis)
-                        handleButtonClick(source, rowUi, loginData)
+                    layoutInflater, binding.flexbox, false
+                ).apply {
+                    binding.flexbox.addView(root)
+                    rowUi.style().apply(root)
+                    root.id = index + 1000
+                    textView.text = rowUi.name
+                    textView.setPadding(16.dpToPx())
+                    root.onClick {
+                        handleButtonClick(source, rowUi, getLoginInfo(rowUis))
                     }
                 }
             }
@@ -273,18 +245,9 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
             when (item.itemId) {
                 R.id.menu_ok -> {
                     oKToClose = true
-                    val loginData = getLoginData(rowUis)
-                    login(source, loginData)
+                    login(source, getLoginInfo(rowUis))
                 }
-                R.id.menu_show_login_header -> alert {
-                    setTitle(R.string.login_header)
-                    source.getLoginHeader()?.let { loginHeader ->
-                        setMessage(loginHeader)
-                        positiveButton(R.string.copy_text) {
-                            appCtx.sendToClip(loginHeader)
-                        }
-                    }
-                }
+                R.id.menu_show_login_header -> showLoginHeader(source)
                 R.id.menu_del_login_header -> source.removeLoginHeader()
                 R.id.menu_del_login_info -> source.removeLoginInfo()
                 R.id.menu_log -> showDialogFragment<AppLogDialog>()
@@ -293,10 +256,20 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
         }
     }
 
+    private fun showLoginHeader(source: BaseSource) {
+        alert {
+            setTitle(R.string.login_header)
+            source.getLoginHeader()?.let { header ->
+                setMessage(header)
+                positiveButton(R.string.copy_text) { appCtx.sendToClip(header) }
+            }
+        }
+    }
+
     private fun handleButtonClick(
         source: BaseSource,
         rowUi: RowUi,
-        loginData: MutableMap<String, String>
+        loginInfo: MutableMap<String, String>
     ) {
         lifecycleScope.launch(IO) {
             if (rowUi.action.isAbsUrl()) {
@@ -304,50 +277,48 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
             } else if (rowUi.action != null) {
                 val loginJS = loginUrl ?: return@launch
                 val buttonFunctionJS = rowUi.action
-                kotlin.runCatching {
+                try {
                     source.evalJS("$loginJS\n$buttonFunctionJS") {
                         put("java", sourceLoginJsExtensions)
-                        put("result", loginData)
+                        put("result", loginInfo)
                         put("book", viewModel.book)
                         put("chapter", viewModel.chapter)
                     }
-                }.onFailure { e ->
+                } catch (e: Exception) {
                     AppLog.put("LoginUI Button ${rowUi.name} JavaScript error", e)
                 }
             }
         }
     }
 
-    private fun getLoginData(rowUis: List<RowUi>?): MutableMap<String, String> {
-        val loginData = viewModel.loginInfo
+    private fun getLoginInfo(rowUis: List<RowUi>?): MutableMap<String, String> {
+        val loginInfo = viewModel.loginInfo
         rowUis?.forEachIndexed { index, rowUi ->
             when (rowUi.type) {
                 Type.text, Type.password -> {
-                    val rowView = binding.root.findViewById<View>(index + 1000)
-                    if (rowView != null) {
-                        val text = ItemSourceEditBinding.bind(rowView).editText.text?.toString()
-                        loginData[rowUi.name] = text ?: rowUi.default ?: ""
-                    }
+                    val rowView = binding.root.findViewById<View>(index + 1000) ?: return@forEachIndexed
+                    val text = ItemSourceEditBinding.bind(rowView).editText.text?.toString()
+                    loginInfo[rowUi.name] = text ?: rowUi.default ?: ""
                 }
             }
         }
-        return loginData
+        return loginInfo
     }
 
-    private fun login(source: BaseSource, loginData: MutableMap<String, String>) {
+    private fun login(source: BaseSource, loginInfo: MutableMap<String, String>) {
         lifecycleScope.launch(IO) {
-            if (loginData.isEmpty()) {
+            if (loginInfo.isEmpty()) {
                 source.removeLoginInfo()
                 withContext(Main) {
                     dismiss()
                 }
-            } else if (source.putLoginInfo(GSON.toJson(loginData))) {
+            } else if (source.putLoginInfo(GSON.toJson(loginInfo))) {
                 try {
                     val loginJS = loginUrl ?: return@launch
                     val buttonFunctionJS = "if (typeof login=='function') { login.apply(this); } else { throw('Function login not implements!!!') }"
                     source.evalJS("$loginJS\n$buttonFunctionJS") {
                         put("java", sourceLoginJsExtensions)
-                        put("result", loginData)
+                        put("result", loginInfo)
                         put("book", viewModel.book)
                         put("chapter", viewModel.chapter)
                     }
@@ -366,7 +337,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
 
     override fun onDismiss(dialog: DialogInterface) {
         if (!oKToClose && hasChange) {
-            val loginInfo = viewModel.loginInfo
+            val loginInfo = getLoginInfo(rowUis)
             if (loginInfo.isEmpty()) {
                 viewModel.source?.removeLoginInfo()
             } else {
