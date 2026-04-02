@@ -28,10 +28,6 @@ object AudioPlay {
     var bookSource: BookSource? = null
     val loadingChapters = arrayListOf<Int>()
 
-    fun headers(hasLoginHeader: Boolean): Map<String, String>? {
-        return bookSource?.getHeaderMap(hasLoginHeader)
-    }
-
     /**
      * 播放当前章节
      */

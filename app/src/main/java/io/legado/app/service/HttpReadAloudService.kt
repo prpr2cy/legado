@@ -166,8 +166,7 @@ class HttpReadAloudService : BaseReadAloudService(),
                     httpTts.url,
                     speakText = speakText,
                     speakSpeed = speechRate,
-                    source = httpTts,
-                    headerMapF = httpTts.getHeaderMap(true)
+                    source = httpTts
                 )
                 var response = analyzeUrl.getResponseAwait()
                 coroutineContext.ensureActive()

@@ -52,7 +52,6 @@ object WebBook {
             key = key,
             page = page,
             baseUrl = bookSource.bookSourceUrl,
-            headerMapF = bookSource.getHeaderMap(true),
             source = bookSource,
             ruleData = ruleData,
         )
@@ -155,8 +154,7 @@ object WebBook {
                 mUrl = book.bookUrl,
                 baseUrl = bookSource.bookSourceUrl,
                 source = bookSource,
-                ruleData = book,
-                headerMapF = bookSource.getHeaderMap(true)
+                ruleData = book
             )
             var res = analyzeUrl.getStrResponseAwait()
             //检测书源是否已登录
@@ -232,8 +230,7 @@ object WebBook {
                     mUrl = book.tocUrl,
                     baseUrl = book.bookUrl,
                     source = bookSource,
-                    ruleData = book,
-                    headerMapF = bookSource.getHeaderMap(true)
+                    ruleData = book
                 )
                 var res = analyzeUrl.getStrResponseAwait()
                 //检测书源是否已登录

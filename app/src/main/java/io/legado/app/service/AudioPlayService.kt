@@ -175,8 +175,7 @@ class AudioPlayService : BaseService(),
                 url,
                 source = AudioPlay.bookSource,
                 ruleData = AudioPlay.book,
-                chapter = AudioPlay.durChapter,
-                headerMapF = AudioPlay.headers(true),
+                chapter = AudioPlay.durChapter
             )
             exoPlayer.setMediaItem(
                 ExoPlayerHelper.createMediaItem(

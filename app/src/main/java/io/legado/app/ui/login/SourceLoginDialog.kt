@@ -61,7 +61,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
         )
     }
 
-    override fun upUiData(data: Map<String, Any?>? = null) {
+    override fun upUiData(data: Map<String, Any?>?) {
         lifecycleScope.launch(Main) {
             runCatching {
                 handleUpUiData(data)
