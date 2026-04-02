@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.DialogInterface
 import android.os.Bundle
 import android.text.InputType
+import android.view.animation.DecelerateInterpolator
 import android.view.View
 import android.view.ViewGroup
 import androidx.appcompat.app.AppCompatActivity
@@ -132,7 +133,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
                 binding.flexbox,
                 AutoTransition().apply {
                     duration = 250
-                    interpolator = android.view.animation.DecelerateInterpolator()
+                    interpolator = DecelerateInterpolator()
                 }
             )
 
@@ -215,13 +216,14 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
                     binding.flexbox.addView(root)
                     rowUi.style().apply(root)
                     root.id = index + 1000
-                    textInputLayout.hint = rowUi.name
-
                     if (rowUi.type == Type.password) {
                         editText.inputType =
                             InputType.TYPE_TEXT_VARIATION_PASSWORD or InputType.TYPE_CLASS_TEXT
                     }
                     editText.setText(loginInfo[rowUi.name] ?: rowUi.default ?: "")
+                    editText.post {
+                        textInputLayout.hint = rowUi.name
+                    }
                 }
 
                 Type.button -> ItemFilletTextBinding.inflate(
