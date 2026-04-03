@@ -242,8 +242,8 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
         }
 
         // 清理：移除多余的旧View
-        if (newRowUis.size < binding.flexbox.childCount) {
-            for (i in (newRowUis.size - 1) downTo binding.flexbox.childCount) {
+        if (oldRowUis.size > newRowUis.size) {
+            for (i in oldRowUis.size - 1 downTo newRowUis.size) {
                 binding.flexbox.removeViewAt(i)
             }
         }
