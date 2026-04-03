@@ -5,13 +5,10 @@ import android.os.Bundle
 import android.text.InputType
 import android.view.View
 import android.view.ViewGroup
-import android.view.animation.DecelerateInterpolator
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.setPadding
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
-import androidx.transition.AutoTransition
-import androidx.transition.TransitionManager
 import com.google.android.material.textfield.TextInputLayout
 import io.legado.app.R
 import io.legado.app.base.BaseDialogFragment
@@ -146,23 +143,12 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
             return
         }
 
+        rowUiBuilder(source, newRowUis)
         hasChange = true
+        rowUis = newRowUis
 
-        withContext(Main) {
-            TransitionManager.beginDelayedTransition(
-                binding.flexbox,
-                AutoTransition().apply {
-                    duration = 250
-                    interpolator = DecelerateInterpolator()
-                }
-            )
-
-            rowUiBuilder(source, newRowUis)
-            rowUis = newRowUis
-
-            for (i in binding.flexbox.childCount - 1 downTo newRowUis.size) {
-                binding.flexbox.removeViewAt(i)
-            }
+        for (i in binding.flexbox.childCount - 1 downTo newRowUis.size) {
+            binding.flexbox.removeViewAt(i)
         }
     }
 
@@ -259,11 +245,9 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
                         if (rowUi.type == Type.password) {
                             textInputLayout.endIconMode =
                                 TextInputLayout.END_ICON_PASSWORD_TOGGLE
+                            textInputLayout.endIconMaxSize = 24.dpToPx()
                             editText.inputType =
                                 InputType.TYPE_TEXT_VARIATION_PASSWORD or InputType.TYPE_CLASS_TEXT
-                        } else {
-                            textInputLayout.endIconMode =
-                                TextInputLayout.END_ICON_NONE
                         }
                         val text = loginInfo[rowUi.name] ?: rowUi.default ?: ""
                         editText.setText(text)
