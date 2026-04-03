@@ -182,7 +182,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
 
                 else -> {
                     binding.flexbox.getChildAt(index)?.let { view ->
-                        updateView(source, newRowUi, view, loginInfo)
+                        updateViewData(source, newRowUi, view, loginInfo)
                     }
                 }
             }
@@ -198,12 +198,12 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
         rowUiName.addAll(newRowUiName)
     }
 
-    private fun updateView(
+    private fun updateViewData(
         source: BaseSource,
         rowUi: RowUi,
         view: View,
         loginInfo: MutableMap<String, String>
-    ): View {
+    ) {
         when (rowUi.type) {
             Type.text, Type.password -> {
                 val itemBinding = ItemSourceEditBinding.bind(view)
