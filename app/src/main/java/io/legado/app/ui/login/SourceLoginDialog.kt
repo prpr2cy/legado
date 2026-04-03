@@ -98,7 +98,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
                         val view = binding.root.findViewById<View>(index + VIEW_ID_OFFSET)
                         view ?: return@forEachIndexed
                         val itemBinding = ItemSourceEditBinding.bind(view)
-                        val text = rowUi.default ?: ""
+                        val text = rowUi.default
                         itemBinding.editText.setText(text)
                         loginInfo[rowUi.name] = text
                     }
@@ -118,12 +118,12 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
                         val view = binding.root.findViewById<View>(index + VIEW_ID_OFFSET)
                         view ?: return@forEach
                         val itemBinding = ItemSourceEditBinding.bind(view)
-                        val text = value?.toString() ?: rowUi.default ?: ""
+                        val text = value?.toString() ?: rowUi.default
                         itemBinding.editText.setText(text)
                         loginInfo[rowUi.name] = text
                     }
                     else -> {
-                        loginInfo[key] = value?.toString() ?: ""
+                        loginInfo[key] = value?.toString()
                     }
                 }
             }
@@ -249,7 +249,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
                                 InputType.TYPE_TEXT_VARIATION_PASSWORD or InputType.TYPE_CLASS_TEXT
                         }
                         editText.minHeight = 48.dpToPx()
-                        val text = loginInfo[rowUi.name] ?: rowUi.default ?: ""
+                        val text = loginInfo[rowUi.name] ?: rowUi.default
                         editText.setText(text)
                     }
                     binding.flexbox.addView(itemBinding.root, index - unused)
@@ -317,7 +317,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
                     val rowView = binding.root.findViewById<View>(index + VIEW_ID_OFFSET)
                         ?: return@forEachIndexed
                     val text = ItemSourceEditBinding.bind(rowView).editText.text?.toString()
-                    loginInfo[rowUi.name] = text ?: rowUi.default ?: ""
+                    loginInfo[rowUi.name] = text ?: rowUi.default
                 }
             }
         }
