@@ -20,6 +20,7 @@ import io.legado.app.data.entities.BaseSource
 import io.legado.app.data.entities.rule.RowUi
 import io.legado.app.data.entities.rule.RowUi.Type
 import io.legado.app.databinding.DialogLoginBinding
+import io.legado.app.databinding.ItemFilletTextBinding
 import io.legado.app.databinding.ItemSourceEditBinding
 import io.legado.app.lib.dialogs.alert
 import io.legado.app.lib.theme.primaryColor
@@ -53,7 +54,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
     private val binding by viewBinding(DialogLoginBinding::bind)
     private val viewModel by activityViewModels<SourceLoginViewModel>()
     private var loginUiJson: String? = null
-    private var rowUis: MutableList<RowUi?>? = null
+    private var rowUis: List<RowUi>? = null
     private var rowUiName = arrayListOf<String>()
     private var loginUrl: String? = null
     private var isSame = false
@@ -163,67 +164,68 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
         val newRowUiName = ArrayList<String>(newRowUis.size)
         val findIndexs = HashSet<Int>()
 
-        // 第一轮：匹配名称、类型、样式都一样的，直接复用
-        newRowUis.forEachIndexed { index, newRowUi ->
-            newRowUiName.add(newRowUi.name)
-            val oldIndex = rowUiName.indexOf(newRowUi.name)
+        if (rowUis != null) {
+            // 第一轮：匹配名称、类型、样式都一样的，直接复用
+            newRowUis.forEachIndexed { index, newRowUi ->
+                val oldIndex = rowUiName.indexOf(newRowUi.name)
 
-            if (oldIndex != -1) {
-                val oldRowUi = rowUis?.getOrNull(oldIndex)
-                if (oldRowUi != null &&
-                    oldRowUi.type == newRowUi.type &&
-                    compareStyles(oldRowUi, newRowUi)) {
+                if (oldIndex != -1) {
+                    val oldRowUi = rowUis.getOrNull(oldIndex)
+                    if (oldRowUi != null &&
+                        oldRowUi.type == newRowUi.type &&
+                        compareStyles(oldRowUi, newRowUi)) {
 
-                    val childView = binding.flexbox.getChildAt(oldIndex)
-                    if (childView != null) {
-                        if (oldIndex == index) {
-                            // 位置相同，直接更新ID
-                            childView.id = index + VIEW_ID_OFFSET
-                            rowUis?.set(oldIndex, null)
-                            findIndexs.add(index)
-                        } else {
-                            // 位置不同，移动View
-                            binding.flexbox.removeView(childView)
-                            binding.flexbox.addView(childView, index)
-                            childView.id = index + VIEW_ID_OFFSET
+                        val childView = binding.flexbox.getChildAt(oldIndex)
+                        if (childView != null) {
+                            if (oldIndex == index) {
+                                // 位置相同，直接更新ID
+                                childView.id = index + VIEW_ID_OFFSET
+                                rowUis.set(oldIndex, null)
+                                findIndexs.add(index)
+                            } else {
+                                // 位置不同，移动View
+                                binding.flexbox.removeView(childView)
+                                binding.flexbox.addView(childView, index)
+                                childView.id = index + VIEW_ID_OFFSET
 
-                            // 更新名称列表（移除旧位置，插入新位置）
-                            rowUiName.removeAt(oldIndex)
-                            rowUiName.add(index, newRowUi.name)
-                            rowUis?.removeAt(oldIndex)
-                            rowUis?.add(index, null)
-                            findIndexs.add(index)
+                                // 更新名称列表（移除旧位置，插入新位置）
+                                rowUiName.removeAt(oldIndex)
+                                rowUiName.add(index, newRowUi.name)
+                                rowUis?.removeAt(oldIndex)
+                                rowUis?.add(index, null)
+                                findIndexs.add(index)
+                            }
+                            return@forEachIndexed
                         }
-                        return@forEachIndexed
                     }
                 }
             }
-        }
 
-        // 第二轮：匹配类型、样式一样的，更新数据后复用
-        newRowUis.forEachIndexed { index, newRowUi ->
-            if (findIndexs.contains(index)) return@forEachIndexed
+            // 第二轮：匹配类型、样式一样的，更新数据后复用
+            newRowUis.forEachIndexed { index, newRowUi ->
+                if (findIndexs.contains(index)) return@forEachIndexed
 
-            // 查找可复用的旧View
-            rowUis?.forEachIndexed { oldIndex, oldRowUi ->
-                if (oldRowUi == null) return@forEachIndexed
+                // 查找可复用的旧View
+                rowUis?.forEachIndexed { oldIndex, oldRowUi ->
+                    if (oldRowUi == null) return@forEachIndexed
 
-                if (oldRowUi.type == newRowUi.type && compareStyles(oldRowUi, newRowUi)) {
-                    val childView = binding.flexbox.getChildAt(oldIndex)
-                    if (childView != null) {
-                        binding.flexbox.removeView(childView)
+                    if (oldRowUi.type == newRowUi.type && compareStyles(oldRowUi, newRowUi)) {
+                        val childView = binding.flexbox.getChildAt(oldIndex)
+                        if (childView != null) {
+                            binding.flexbox.removeView(childView)
 
-                        // 确定插入位置
-                        val insertIndex = if (oldIndex < index) index + 1 else index
-                        binding.flexbox.addView(childView, insertIndex)
-                        childView.id = index + VIEW_ID_OFFSET
+                            // 确定插入位置
+                            val insertIndex = if (oldIndex < index) index - 1 else index
+                            binding.flexbox.addView(childView, insertIndex)
+                            childView.id = index + VIEW_ID_OFFSET
 
-                        // 更新View的数据
-                        updateViewData(childView, newRowUi, loginInfo)
+                            // 更新View的数据
+                            updateViewData(childView, newRowUi, loginInfo)
 
-                        rowUis?.set(oldIndex, null)
-                        findIndexs.add(index)
-                        return@forEachIndexed
+                            rowUis.set(oldIndex, null)
+                            findIndexs.add(index)
+                            return@forEachIndexed
+                        }
                     }
                 }
             }
@@ -231,6 +233,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
 
         // 第三轮：创建新的View
         newRowUis.forEachIndexed { index, newRowUi ->
+            newRowUiName.add(newRowUi.name)
             if (findIndexs.contains(index)) return@forEachIndexed
 
             val view = createView(source, newRowUi, index, loginInfo)
@@ -243,7 +246,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
         }
 
         // 更新引用
-        rowUis = newRowUis.toMutableList()
+        rowUis = newRowUis
         rowUiName.clear()
         rowUiName.addAll(newRowUiName)
     }
@@ -259,9 +262,9 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
     }
 
     private fun updateViewData(view: View, rowUi: RowUi, loginInfo: MutableMap<String, String>) {
-        val itemBinding = ItemSourceEditBinding.bind(view)
         when (rowUi.type) {
             Type.text, Type.password -> {
+                val itemBinding = ItemSourceEditBinding.bind(view)
                 itemBinding.textInputLayout.apply {
                     isExpandedHintEnabled = false
                     hint = rowUi.name
@@ -270,45 +273,53 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
                 itemBinding.editText.setText(text)
             }
             Type.button -> {
+                val itemBinding = ItemFilletTextBinding.bind(view)
                 itemBinding.textView.text = rowUi.name
             }
         }
     }
 
     private fun createView(source: BaseSource, rowUi: RowUi, index: Int, loginInfo: MutableMap<String, String>): View {
-        val itemBinding = ItemSourceEditBinding.inflate(
-            layoutInflater, binding.flexbox, false
-        )
-
         when (rowUi.type) {
-            Type.text, Type.password -> itemBinding.apply {
-                rowUi.style().apply(root)
-                root.id = index + VIEW_ID_OFFSET
-                textInputLayout.apply {
-                    isExpandedHintEnabled = false
-                    hint = rowUi.name
+            Type.text, Type.password -> {
+                val itemBinding = ItemSourceEditBinding.inflate(
+                    layoutInflater, binding.flexbox, false
+                )
+                itemBinding.apply {
+                    rowUi.style().apply(root)
+                    root.id = index + VIEW_ID_OFFSET
+                    textInputLayout.apply {
+                        isExpandedHintEnabled = false
+                        hint = rowUi.name
+                    }
+                    if (rowUi.type == Type.password) {
+                        textInputLayout.endIconMode =
+                            TextInputLayout.END_ICON_PASSWORD_TOGGLE
+                        editText.inputType =
+                            InputType.TYPE_TEXT_VARIATION_PASSWORD or InputType.TYPE_CLASS_TEXT
+                    }
+                    val text = loginInfo[rowUi.name] ?: rowUi.default ?: ""
+                    editText.setText(text)
                 }
-                if (rowUi.type == Type.password) {
-                    textInputLayout.endIconMode =
-                        TextInputLayout.END_ICON_PASSWORD_TOGGLE 
-                    editText.inputType =
-                        InputType.TYPE_TEXT_VARIATION_PASSWORD or InputType.TYPE_CLASS_TEXT
-                }
-                val text = loginInfo[rowUi.name] ?: rowUi.default ?: ""
-                editText.setText(text)
+                return itemBinding.root
             }
 
-            Type.button -> itemBinding.apply {
-                rowUi.style().apply(root)
-                root.id = index + VIEW_ID_OFFSET
-                textView.text = rowUi.name
-                textView.setPadding(16.dpToPx())
-                root.onClick {
-                    handleButtonClick(source, rowUi, getLoginInfo())
+            Type.button -> {
+                val itemBinding = ItemFilletTextBinding.inflate(
+                    layoutInflater, binding.flexbox, false
+                )
+                itemBinding.apply {
+                    rowUi.style().apply(root)
+                    root.id = index + VIEW_ID_OFFSET
+                    textView.text = rowUi.name
+                    textView.setPadding(16.dpToPx())
+                    root.onClick {
+                        handleButtonClick(source, rowUi, getLoginInfo())
+                    }
                 }
+                return itemBinding.root
             }
         }
-        return itemBinding.root
     }
 
     override fun onStart() {
@@ -323,7 +334,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
 
         lifecycleScope.launch(Main) {
             rowUis = withContext(IO) {
-                parseLoginUi(loginUiStr)?.toMutableList()
+                parseLoginUi(loginUiStr)
             }
             firstUiBuilder(source, rowUis)
             setButtonUi(source, rowUis)
