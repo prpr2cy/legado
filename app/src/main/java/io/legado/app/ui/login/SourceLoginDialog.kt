@@ -280,7 +280,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
         }
     }
 
-    private fun createView(source: BaseSource, rowUi: RowUi, index: Int, loginInfo: MutableMap<String, String>): View {
+    private fun createView(source: BaseSource, rowUi: RowUi, index: Int, loginInfo: MutableMap<String, String>): View? {
         return when (rowUi.type) {
             Type.text, Type.password -> {
                 val itemBinding = ItemSourceEditBinding.inflate(
@@ -320,6 +320,8 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
                 }
                 itemBinding.root
             }
+
+            else -> null
         }
     }
 
