@@ -12,6 +12,7 @@ import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.transition.AutoTransition
 import androidx.transition.TransitionManager
+import com.google.android.material.textfield.TextInputLayout
 import io.legado.app.R
 import io.legado.app.base.BaseDialogFragment
 import io.legado.app.constant.AppLog
@@ -154,39 +155,121 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
                 }
             )
 
-            rowUiName.clear()
-            rowUiBuilder(source, newRowUis)
-            rowUis = newRowUis
+            reUiBuilder(source, newRowUis)
+        }
+    }
 
-            for (i in (binding.flexbox.childCount - 1) downTo newRowUis.size) {
-                binding.flexbox.removeViewAt(i)
+    private fun reUiBuilder(source: BaseSource, newRowUis: List<RowUi>) {
+        val loginInfo = viewModel.loginInfo
+        val oldRowUis: MutableList<RowUi?>? = rowUis?.toMutableList()
+        val newRowUiName = ArrayList<String>(newRowUis.size)
+
+        newRowUis.forEachIndexed { index, newRowUi ->
+            val oldRowUi = oldRowUis.getOrNull(index)
+            when {
+                oldRowUi == null -> {
+                    val view = createView(source, rowUi, index, loginInfo)
+                    binding.flexbox.addView(view, index)
+                    return@forEachIndexed
+                }
+
+                oldRowUi.type != newRowUi.type -> {
+                    val view = createView(source, rowUi, index, loginInfo)
+                    binding.flexbox.removeViewAt(index)
+                    binding.flexbox.addView(view, index)
+                    return@forEachIndexed
+                }
+
+                else -> {
+                    binding.flexbox.getChildAt(index)?.let { view ->
+                        updateView(view, newRowUi, loginInfo)
+                    }
+                }
+            }
+            newRowUiName.add(newRowUi.name)
+        }
+
+        for (i in (binding.flexbox.childCount - 1) downTo newRowUis.size) {
+            binding.flexbox.removeViewAt(i)
+        }
+
+        rowUis = newRowUis
+        rowUiName.clear()
+        rowUiName.addAll(newRowUiName)
+    }
+
+    private fun updateView(view: View, rowUi: RowUi, loginInfo: MutableMap<String, String>) {
+        when (rowUi.type) {
+            Type.text, Type.password -> {
+                val itemBinding = ItemSourceEditBinding.bind(view)
+                itemBinding.apply {
+                    rowUi.style().apply(root)
+                    textInputLayout.hint = rowUi.name
+                    val text = loginInfo[rowUi.name] ?: rowUi.default ?: ""
+                    editText.setText(text)
+                }
+            }
+
+            Type.button -> {
+                val itemBinding = ItemFilletTextBinding.bind(view)
+                itemBinding.apply {
+                    rowUi.style().apply(root)
+                    textView.text = rowUi.name
+                    root.onClick {
+                        handleButtonClick(source, rowUi, getLoginInfo())
+                    }
+                }
             }
         }
     }
 
-    override fun onStart() {
-        super.onStart()
-        setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
-    }
-
-    override fun onFragmentCreated(view: View, savedInstanceState: Bundle?) {
-        val source = viewModel.source ?: return
-        loginUrl = source.getLoginJs()
-        val loginUiStr = source.loginUi ?: return
-
-        lifecycleScope.launch(Main) {
-            rowUis = withContext(IO) {
-                parseLoginUi(loginUiStr)
+    private fun createView(source: BaseSource, rowUi: RowUi, index: Int, loginInfo: MutableMap<String, String>): View {
+        return when (rowUi.type) {
+            Type.text, Type.password -> {
+                val itemBinding = ItemSourceEditBinding.inflate(
+                    layoutInflater, binding.flexbox, false
+                )
+                itemBinding.apply {
+                    rowUi.style().apply(root)
+                    root.id = index + VIEW_ID_OFFSET
+                    textInputLayout.apply {
+                        isExpandedHintEnabled = false
+                        hint = rowUi.name
+                    }
+                    if (rowUi.type == Type.password) {
+                        textInputLayout.endIconMode =
+                            TextInputLayout.END_ICON_PASSWORD_TOGGLE
+                        editText.inputType =
+                            InputType.TYPE_TEXT_VARIATION_PASSWORD or InputType.TYPE_CLASS_TEXT
+                    }
+                    val text = loginInfo[rowUi.name] ?: rowUi.default ?: ""
+                    editText.setText(text)
+                }
+                itemBinding.root
             }
-            rowUiBuilder(source, rowUis)
-            setButtonUi(source, rowUis)
-        }
 
-        binding.toolBar.apply {
-            setBackgroundColor(primaryColor)
-            title = getString(R.string.login_source, source.getTag())
-            inflateMenu(R.menu.source_login)
-            menu.applyTint(requireContext())
+            Type.button -> {
+                val itemBinding = ItemFilletTextBinding.inflate(
+                    layoutInflater, binding.flexbox, false
+                )
+                itemBinding.apply {
+                    rowUi.style().apply(root)
+                    root.id = index + VIEW_ID_OFFSET
+                    textView.text = rowUi.name
+                    textView.setPadding(16.dpToPx())
+                    root.onClick {
+                        handleButtonClick(source, rowUi, getLoginInfo())
+                    }
+                }
+                itemBinding.root
+            }
+
+            else -> {
+                val itemBinding = ItemFilletTextBinding.inflate(
+                    layoutInflater, binding.flexbox, false
+                )
+                itemBinding.root
+            }
         }
     }
 
@@ -207,7 +290,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
             } else {
                 loginUi = loginUiJson
                 isSame = false
-                GSON.fromJsonArray<RowUi>(newLoginUiJson).getOrNull()
+                GSON.fromJsonArray<RowUi>(loginUiJson).getOrNull()
             }
         } catch (e: Exception) {
             AppLog.put("parseLoginUi error: ${e.message}", e)
@@ -232,44 +315,41 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
         }
     }
 
-    private fun rowUiBuilder(source: BaseSource, rowUis: List<RowUi>?) {
+    override fun onStart() {
+        super.onStart()
+        setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+    }
+
+    override fun onFragmentCreated(view: View, savedInstanceState: Bundle?) {
+        val source = viewModel.source ?: return
+        loginUrl = source.getLoginJs()
+        val loginUiStr = source.loginUi ?: return
+
+        lifecycleScope.launch(Main) {
+            rowUis = withContext(IO) {
+                parseLoginUi(loginUiStr)
+            }
+            firstUiBuilder(source, rowUis)
+            setButtonUi(source, rowUis)
+        }
+
+        binding.toolBar.apply {
+            setBackgroundColor(primaryColor)
+            title = getString(R.string.login_source, source.getTag())
+            inflateMenu(R.menu.source_login)
+            menu.applyTint(requireContext())
+        }
+    }
+
+    private fun firstUiBuilder(source: BaseSource, rowUis: List<RowUi>?) {
         val loginInfo = viewModel.loginInfo
+        binding.flexbox.removeAllViews()
+        rowUiName.clear()
 
         rowUis?.forEachIndexed { index, rowUi ->
             rowUiName.add(rowUi.name)
-            when (rowUi.type) {
-                Type.text, Type.password -> ItemSourceEditBinding.inflate(
-                    layoutInflater, binding.flexbox, false
-                ).apply {
-                    binding.flexbox.addView(root, index)
-                    rowUi.style().apply(root)
-                    root.id = index + VIEW_ID_OFFSET
-                    textInputLayout.apply {
-                        isExpandedHintEnabled = false
-                        hint = rowUi.name
-                    }
-                    if (rowUi.type == Type.password) {
-                        textInputLayout.endIconMode =
-                            TextInputLayout.END_ICON_PASSWORD_TOGGLE
-                        editText.inputType =
-                            InputType.TYPE_TEXT_VARIATION_PASSWORD or InputType.TYPE_CLASS_TEXT
-                    }
-                    editText.setText(loginInfo[rowUi.name] ?: rowUi.default ?: "")
-                }
-
-                Type.button -> ItemFilletTextBinding.inflate(
-                    layoutInflater, binding.flexbox, false
-                ).apply {
-                    binding.flexbox.addView(root, index)
-                    rowUi.style().apply(root)
-                    root.id = index + VIEW_ID_OFFSET
-                    textView.text = rowUi.name
-                    textView.setPadding(16.dpToPx())
-                    root.onClick {
-                        handleButtonClick(source, rowUi, getLoginInfo())
-                    }
-                }
-            }
+            val view = createView(source, rowUi, index, loginInfo)
+            binding.flexbox.addView(view)
         }
     }
 
