@@ -142,7 +142,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
             parseLoginUi(loginUiStr)
         } ?: return
 
-        if (isSame) {
+        if (isSame || newRowUis == null) {
             isSame = false
             return
         }
@@ -163,14 +163,15 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
         val loginInfo = viewModel.loginInfo
         val newRowUiName = ArrayList<String>(newRowUis.size)
         val findIndexs = HashSet<Int>()
+        val oldRowUis: MutableList<RowUi?>? = rowUis?.toMutableList()
 
-        if (rowUis != null) {
+        if (oldRowUis != null) {
             // 第一轮：匹配名称、类型、样式都一样的，直接复用
             newRowUis.forEachIndexed { index, newRowUi ->
                 val oldIndex = rowUiName.indexOf(newRowUi.name)
 
                 if (oldIndex != -1) {
-                    val oldRowUi = rowUis.getOrNull(oldIndex)
+                    val oldRowUi = oldRowUis.getOrNull(oldIndex)
                     if (oldRowUi != null &&
                         oldRowUi.type == newRowUi.type &&
                         compareStyles(oldRowUi, newRowUi)) {
@@ -180,7 +181,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
                             if (oldIndex == index) {
                                 // 位置相同，直接更新ID
                                 childView.id = index + VIEW_ID_OFFSET
-                                rowUis.set(oldIndex, null)
+                                oldRowUis.set(oldIndex, null)
                                 findIndexs.add(index)
                             } else {
                                 // 位置不同，移动View
@@ -191,8 +192,8 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
                                 // 更新名称列表（移除旧位置，插入新位置）
                                 rowUiName.removeAt(oldIndex)
                                 rowUiName.add(index, newRowUi.name)
-                                rowUis?.removeAt(oldIndex)
-                                rowUis?.add(index, null)
+                                oldRowUis.removeAt(oldIndex)
+                                oldRowUis.add(index, null)
                                 findIndexs.add(index)
                             }
                             return@forEachIndexed
@@ -206,7 +207,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
                 if (findIndexs.contains(index)) return@forEachIndexed
 
                 // 查找可复用的旧View
-                rowUis?.forEachIndexed { oldIndex, oldRowUi ->
+                oldRowUis.forEachIndexed { oldIndex, oldRowUi ->
                     if (oldRowUi == null) return@forEachIndexed
 
                     if (oldRowUi.type == newRowUi.type && compareStyles(oldRowUi, newRowUi)) {
@@ -222,7 +223,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
                             // 更新View的数据
                             updateViewData(childView, newRowUi, loginInfo)
 
-                            rowUis.set(oldIndex, null)
+                            oldRowUis.set(oldIndex, null)
                             findIndexs.add(index)
                             return@forEachIndexed
                         }
@@ -280,7 +281,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
     }
 
     private fun createView(source: BaseSource, rowUi: RowUi, index: Int, loginInfo: MutableMap<String, String>): View {
-        when (rowUi.type) {
+        return when (rowUi.type) {
             Type.text, Type.password -> {
                 val itemBinding = ItemSourceEditBinding.inflate(
                     layoutInflater, binding.flexbox, false
@@ -301,7 +302,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
                     val text = loginInfo[rowUi.name] ?: rowUi.default ?: ""
                     editText.setText(text)
                 }
-                return itemBinding.root
+                itemBinding.root
             }
 
             Type.button -> {
@@ -317,7 +318,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
                         handleButtonClick(source, rowUi, getLoginInfo())
                     }
                 }
-                return itemBinding.root
+                itemBinding.root
             }
         }
     }
