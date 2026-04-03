@@ -241,7 +241,6 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
                         textInputLayout.apply {
                             isExpandedHintEnabled = false
                             hint = rowUi.name
-                            setPadding(16.dpToPx())
                         }
                         if (rowUi.type == Type.password) {
                             textInputLayout.endIconMode =
@@ -249,6 +248,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
                             editText.inputType =
                                 InputType.TYPE_TEXT_VARIATION_PASSWORD or InputType.TYPE_CLASS_TEXT
                         }
+                        editText.minHeight = 48.dpToPx()
                         val text = loginInfo[rowUi.name] ?: rowUi.default ?: ""
                         editText.setText(text)
                     }
