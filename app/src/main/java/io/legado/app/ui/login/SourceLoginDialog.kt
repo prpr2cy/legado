@@ -165,16 +165,16 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
         val newRowUiName = ArrayList<String>(newRowUis.size)
 
         newRowUis.forEachIndexed { index, newRowUi ->
-            val oldRowUi = oldRowUis.getOrNull(index)
+            val oldRowUi = oldRowUis?.getOrNull(index)
             when {
                 oldRowUi == null -> {
-                    val view = createView(source, rowUi, index, loginInfo)
+                    val view = createView(source, newRowUi, index, loginInfo)
                     binding.flexbox.addView(view, index)
                     return@forEachIndexed
                 }
 
                 oldRowUi.type != newRowUi.type -> {
-                    val view = createView(source, rowUi, index, loginInfo)
+                    val view = createView(source, newRowUi, index, loginInfo)
                     binding.flexbox.removeViewAt(index)
                     binding.flexbox.addView(view, index)
                     return@forEachIndexed
@@ -182,7 +182,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
 
                 else -> {
                     binding.flexbox.getChildAt(index)?.let { view ->
-                        updateView(view, newRowUi, loginInfo)
+                        updateView(source, newRowUi, view, loginInfo)
                     }
                 }
             }
@@ -198,7 +198,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
         rowUiName.addAll(newRowUiName)
     }
 
-    private fun updateView(view: View, rowUi: RowUi, loginInfo: MutableMap<String, String>) {
+    private fun updateView(source: BaseSource, rowUi: RowUi, view: View, loginInfo: MutableMap<String, String>) {
         when (rowUi.type) {
             Type.text, Type.password -> {
                 val itemBinding = ItemSourceEditBinding.bind(view)
