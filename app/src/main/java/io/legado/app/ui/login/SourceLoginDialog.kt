@@ -12,7 +12,6 @@ import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.transition.AutoTransition
 import androidx.transition.TransitionManager
-import com.google.android.material.textfield.TextInputLayout
 import io.legado.app.R
 import io.legado.app.base.BaseDialogFragment
 import io.legado.app.constant.AppLog
@@ -53,7 +52,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
 
     private val binding by viewBinding(DialogLoginBinding::bind)
     private val viewModel by activityViewModels<SourceLoginViewModel>()
-    private var loginUiJson: String? = null
+    private var loginUi: String? = null
     private var rowUis: List<RowUi>? = null
     private var rowUiName = arrayListOf<String>()
     private var loginUrl: String? = null
@@ -94,7 +93,6 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
         hasChange = true
 
         if (data == null) {
-            // 重置为默认值
             rowUis?.forEachIndexed { index, rowUi ->
                 rowUi ?: return@forEachIndexed
                 when (rowUi.type) {
@@ -108,7 +106,6 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
                 }
             }
         } else {
-            // 更新指定数据
             data.forEach { (key, value) ->
                 val index = rowUiName.indexOf(key)
                 if (index == -1) {
@@ -146,6 +143,8 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
             return
         }
 
+        hasChange = true
+
         withContext(Main) {
             TransitionManager.beginDelayedTransition(
                 binding.flexbox,
@@ -154,167 +153,14 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
                     interpolator = DecelerateInterpolator()
                 }
             )
-            newUiBuilder(source, newRowUis)
-        }
-    }
 
-    private fun newUiBuilder(source: BaseSource, newRowUis: List<RowUi>) {
-        val loginInfo = viewModel.loginInfo
-        val oldRowUis: MutableList<RowUi?>? = rowUis?.toMutableList()
-        val indexToView = mutableMapOf<Int, View>()
-        val reuseView = HashSet<View>()
-        val newRowUiName = arrayListOf<String>()
+            rowUiName.clear()
+            rowUiBuilder(source, newRowUis)
+            rowUis = newRowUis
 
-        if (oldRowUis != null) {
-            // 第一轮：名称、类型、样式完全匹配，直接映射
-            newRowUis.forEachIndexed { index, newRowUi ->
-                val oldIndex = rowUiName.indexOf(newRowUi.name)
-                if (oldIndex != -1) {
-                    val oldRowUi = oldRowUis.getOrNull(oldIndex)
-                    if (oldRowUi != null &&
-                        oldRowUi.type == newRowUi.type &&
-                        compareStyles(oldRowUi, newRowUi)) {
-
-                        binding.flexbox.getChildAt(oldIndex)?.let { view ->
-                            indexToView[index] = view
-                            reuseView.add(view)
-                            oldRowUis.set(oldIndex, null)
-                        }
-                    }
-                }
-            }
-
-            // 第二轮：仅类型、样式匹配（需更新数据）
-            for ((index, newRowUi) in newRowUis.withIndex()) {
-                if (indexToView.containsKey(index)) continue
-
-                for ((oldIndex, oldRowUi) in oldRowUis.withIndex()) {
-                    if (oldRowUi == null) continue
-
-                    if (oldRowUi.type == newRowUi.type && compareStyles(oldRowUi, newRowUi)) {
-                        binding.flexbox.getChildAt(oldIndex)?.let { view ->
-                            updateViewData(view, newRowUi, loginInfo)
-                            indexToView[index] = view
-                            reuseView.add(view)
-                            oldRowUis.set(oldIndex, null)
-                        }
-                        break
-                    }
-                }
-            }
-        }
-
-        // 第三轮：创建新 View
-        newRowUis.forEachIndexed { index, newRowUi ->
-            newRowUiName.add(newRowUi.name)
-            if (indexToView.containsKey(index)) return@forEachIndexed
-
-            createView(source, newRowUi, index, loginInfo)?.let { view ->
-                indexToView[index] = view
-            }
-        }
-
-         // 倒序移除未被复用的旧 View（避免索引变化影响）
-        for (i in binding.flexbox.childCount - 1 downTo 0) {
-            val child = binding.flexbox.getChildAt(i)
-            if (!reuseView.contains(child)) {
+            for (i in (binding.flexbox.childCount - 1) downTo newRowUis.size) {
                 binding.flexbox.removeViewAt(i)
             }
-        }
-
-        // 按目标索引顺序，将 View 放到正确位置
-        newRowUis.indices.forEach { index ->
-            val view = indexToView[index]!!
-            val findIndex = binding.flexbox.indexOfChild(view)
-
-            when {
-                findIndex == -1 -> {
-                    binding.flexbox.addView(view, index)
-                }
-                findIndex != index -> {
-                    binding.flexbox.removeViewAt(findIndex)
-                    binding.flexbox.addView(view, index)
-                }
-            }
-            view.id = index + VIEW_ID_OFFSET
-        }
-
-        // 更新引用
-        rowUis = newRowUis
-        rowUiName.clear()
-        rowUiName.addAll(newRowUiName)
-    }
-
-    private fun compareStyles(oldRowUi: RowUi, newRowUi: RowUi): Boolean {
-        return try {
-            val newStyle = GSON.toJson(newRowUi.style())
-            val oldStyle = GSON.toJson(oldRowUi.style())
-            newStyle == oldStyle
-        } catch (e: Exception) {
-            false
-        }
-    }
-
-    private fun updateViewData(view: View, rowUi: RowUi, loginInfo: MutableMap<String, String>) {
-        when (rowUi.type) {
-            Type.text, Type.password -> {
-                val itemBinding = ItemSourceEditBinding.bind(view)
-                itemBinding.textInputLayout.apply {
-                    isExpandedHintEnabled = false
-                    hint = rowUi.name
-                }
-                val text = loginInfo[rowUi.name] ?: rowUi.default ?: ""
-                itemBinding.editText.setText(text)
-            }
-            Type.button -> {
-                val itemBinding = ItemFilletTextBinding.bind(view)
-                itemBinding.textView.text = rowUi.name
-            }
-        }
-    }
-
-    private fun createView(source: BaseSource, rowUi: RowUi, index: Int, loginInfo: MutableMap<String, String>): View? {
-        return when (rowUi.type) {
-            Type.text, Type.password -> {
-                val itemBinding = ItemSourceEditBinding.inflate(
-                    layoutInflater, binding.flexbox, false
-                )
-                itemBinding.apply {
-                    rowUi.style().apply(root)
-                    root.id = index + VIEW_ID_OFFSET
-                    textInputLayout.apply {
-                        isExpandedHintEnabled = false
-                        hint = rowUi.name
-                    }
-                    if (rowUi.type == Type.password) {
-                        textInputLayout.endIconMode =
-                            TextInputLayout.END_ICON_PASSWORD_TOGGLE
-                        editText.inputType =
-                            InputType.TYPE_TEXT_VARIATION_PASSWORD or InputType.TYPE_CLASS_TEXT
-                    }
-                    val text = loginInfo[rowUi.name] ?: rowUi.default ?: ""
-                    editText.setText(text)
-                }
-                itemBinding.root
-            }
-
-            Type.button -> {
-                val itemBinding = ItemFilletTextBinding.inflate(
-                    layoutInflater, binding.flexbox, false
-                )
-                itemBinding.apply {
-                    rowUi.style().apply(root)
-                    root.id = index + VIEW_ID_OFFSET
-                    textView.text = rowUi.name
-                    textView.setPadding(16.dpToPx())
-                    root.onClick {
-                        handleButtonClick(source, rowUi, getLoginInfo())
-                    }
-                }
-                itemBinding.root
-            }
-
-            else -> null
         }
     }
 
@@ -332,7 +178,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
             rowUis = withContext(IO) {
                 parseLoginUi(loginUiStr)
             }
-            firstUiBuilder(source, rowUis)
+            rowUiBuilder(source, rowUis)
             setButtonUi(source, rowUis)
         }
 
@@ -346,7 +192,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
 
     private suspend fun parseLoginUi(loginUiStr: String): List<RowUi>? {
         return try {
-            val newLoginUiJson = when {
+            val loginUiJson = when {
                 loginUiStr.startsWith("@js:", true) -> evalUiJs(loginUiStr.substring(4))
                 loginUiStr.startsWith("<js>", true) -> {
                     val endIndex = loginUiStr.lastIndexOf("<")
@@ -355,11 +201,11 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
                 else -> loginUiStr
             }
 
-            if (newLoginUiJson == loginUiJson && rowUis != null) {
+            if (loginUiJson == loginUi && rowUis != null) {
                 isSame = true
                 rowUis
             } else {
-                loginUiJson = newLoginUiJson
+                loginUi = loginUiJson
                 isSame = false
                 GSON.fromJsonArray<RowUi>(newLoginUiJson).getOrNull()
             }
@@ -386,15 +232,44 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
         }
     }
 
-    private fun firstUiBuilder(source: BaseSource, rowUis: List<RowUi>?) {
+    private fun rowUiBuilder(source: BaseSource, rowUis: List<RowUi>?) {
         val loginInfo = viewModel.loginInfo
-        binding.flexbox.removeAllViews()
-        rowUiName.clear()
 
         rowUis?.forEachIndexed { index, rowUi ->
             rowUiName.add(rowUi.name)
-            val view = createView(source, rowUi, index, loginInfo)
-            binding.flexbox.addView(view)
+            when (rowUi.type) {
+                Type.text, Type.password -> ItemSourceEditBinding.inflate(
+                    layoutInflater, binding.flexbox, false
+                ).apply {
+                    binding.flexbox.addView(root, index)
+                    rowUi.style().apply(root)
+                    root.id = index + VIEW_ID_OFFSET
+                    textInputLayout.apply {
+                        isExpandedHintEnabled = false
+                        hint = rowUi.name
+                    }
+                    if (rowUi.type == Type.password) {
+                        textInputLayout.endIconMode =
+                            TextInputLayout.END_ICON_PASSWORD_TOGGLE
+                        editText.inputType =
+                            InputType.TYPE_TEXT_VARIATION_PASSWORD or InputType.TYPE_CLASS_TEXT
+                    }
+                    editText.setText(loginInfo[rowUi.name] ?: rowUi.default ?: "")
+                }
+
+                Type.button -> ItemFilletTextBinding.inflate(
+                    layoutInflater, binding.flexbox, false
+                ).apply {
+                    binding.flexbox.addView(root, index)
+                    rowUi.style().apply(root)
+                    root.id = index + VIEW_ID_OFFSET
+                    textView.text = rowUi.name
+                    textView.setPadding(16.dpToPx())
+                    root.onClick {
+                        handleButtonClick(source, rowUi, getLoginInfo())
+                    }
+                }
+            }
         }
     }
 
@@ -450,24 +325,21 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
         loginInfo: MutableMap<String, String>
     ) {
         lifecycleScope.launch(IO) {
-            try {
-                when {
-                    rowUi.action.isAbsUrl() -> {
-                        context?.openUrl(rowUi.action!!)
+            if (rowUi.action.isAbsUrl()) {
+                context?.openUrl(rowUi.action!!)
+            } else if (rowUi.action != null) {
+                val loginJS = loginUrl ?: return@launch
+                val buttonFunctionJS = rowUi.action
+                try {
+                    source.evalJS("$loginJS\n$buttonFunctionJS") {
+                        put("java", sourceLoginJsExtensions)
+                        put("result", loginInfo)
+                        put("book", viewModel.book)
+                        put("chapter", viewModel.chapter)
                     }
-                    rowUi.action != null -> {
-                        val loginJS = loginUrl ?: return@launch
-                        val buttonFunctionJS = rowUi.action
-                        source.evalJS("$loginJS\n$buttonFunctionJS") {
-                            put("java", sourceLoginJsExtensions)
-                            put("result", loginInfo)
-                            put("book", viewModel.book)
-                            put("chapter", viewModel.chapter)
-                        }
-                    }
+                } catch (e: Exception) {
+                    AppLog.put("LoginUI Button ${rowUi.name} JavaScript error", e)
                 }
-            } catch (e: Exception) {
-                AppLog.put("LoginUI Button ${rowUi.name} JavaScript error", e)
             }
         }
     }
@@ -482,9 +354,9 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
             } else if (source.putLoginInfo(GSON.toJson(loginInfo))) {
                 try {
                     val loginJS = loginUrl ?: return@launch
-                    val checkFunction = "if (typeof login === 'function') { login.apply(this); } " +
+                    val buttonFunctionJS = "if (typeof login === 'function') { login.apply(this); } " +
                         "else { throw('Function login not implemented!') }"
-                    source.evalJS("$loginJS\n$checkFunction") {
+                    source.evalJS("$loginJS\n$buttonFunctionJS") {
                         put("java", sourceLoginJsExtensions)
                         put("result", loginInfo)
                         put("book", viewModel.book)
@@ -515,4 +387,5 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
         super.onDismiss(dialog)
         activity?.finish()
     }
+
 }
