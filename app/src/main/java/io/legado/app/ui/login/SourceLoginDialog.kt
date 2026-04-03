@@ -159,89 +159,90 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
     }
 
     private fun newUiBuilder(source: BaseSource, newRowUis: List<RowUi>) {
-         val loginInfo = viewModel.loginInfo
-         val oldRowUis: MutableList<RowUi?>? = rowUis?.toMutableList()
-         val indexToView = mutableMapOf<Int, View>()
-         val reuseView = HashSet<View>()
-         val newRowUiName = arrayListOf<String>()
+        val loginInfo = viewModel.loginInfo
+        val oldRowUis: MutableList<RowUi?>? = rowUis?.toMutableList()
+        val indexToView = mutableMapOf<Int, View>()
+        val reuseView = HashSet<View>()
+        val newRowUiName = arrayListOf<String>()
 
-         if (oldRowUis != null) {
-             // 第一轮：名称、类型、样式完全匹配（直接更新）
-             newRowUis.forEachIndexed { index, newRowUi ->zj
-                 val oldIndex = rowUiName.indexOf(newRowUi.name)
-                 if (oldIndex != -1) {
-                     val oldRowUi = oldRowUis.getOrNull(oldIndex)
-                     if (oldRowUi != null &&
-                         oldRowUi.type == newRowUi.type &&
-                         compareStyles(oldRowUi, newRowUi)) {
+        if (oldRowUis != null) {
+            // 第一轮：名称、类型、样式完全匹配，直接映射
+            newRowUis.forEachIndexed { index, newRowUi ->
+                val oldIndex = rowUiName.indexOf(newRowUi.name)
+                if (oldIndex != -1) {
+                    val oldRowUi = oldRowUis.getOrNull(oldIndex)
+                    if (oldRowUi != null &&
+                        oldRowUi.type == newRowUi.type &&
+                        compareStyles(oldRowUi, newRowUi)) {
 
-                         binding.flexbox.getChildAt(oldIndex)?.let { view ->
-                             indexToView[index] = view
-                             reuseView.add(view)
-                             oldRowUis.set(oldIndex, null)
-                         }
-                     }
-                 }
-             }
+                        binding.flexbox.getChildAt(oldIndex)?.let { view ->
+                            indexToView[index] = view
+                            reuseView.add(view)
+                            oldRowUis.set(oldIndex, null)
+                        }
+                    }
+                }
+            }
 
-             // 第二轮：仅类型、样式匹配（需更新数据）
-             newRowUis.forEachIndexed { index, newRowUi ->
-                 if (indexToView.containsKey(index)) return@forEachIndexed
+            // 第二轮：仅类型、样式匹配（需更新数据）
+            for ((index, newRowUi) in newRowUis.withIndex()) {
+                if (indexToView.containsKey(index)) continue
 
-                 oldRowUis.forEachIndexed { oldIndex, oldRowUi ->
-                     if (oldRowUi == null) return@forEachIndexed
+                for ((oldIndex, oldRowUi) in oldRowUis.withIndex()) {
+                    if (oldRowUi == null) continue
 
-                     if (oldRowUi.type == newRowUi.type && compareStyles(oldRowUi, newRowUi)) {
-                         binding.flexbox.getChildAt(oldIndex)?.let { view ->
-                             updateViewData(view, newRowUi, loginInfo)
-                             indexToView[index] = view
-                             reuseView.add(view)
-                             oldRowUis.set(oldIndex, null)
-                             return@forEachIndexed
-                         }
-                     }
-                 }
-             }
-         }
+                    if (oldRowUi.type == newRowUi.type && compareStyles(oldRowUi, newRowUi)) {
+                        binding.flexbox.getChildAt(oldIndex)?.let { view ->
+                            updateViewData(view, newRowUi, loginInfo)
+                            indexToView[index] = view
+                            reuseView.add(view)
+                            oldRowUis.set(oldIndex, null)
+                        }
+                        break
+                    }
+                }
+            }
+        }
 
-         // 第三轮：创建新 View
-         newRowUis.forEachIndexed { index, newRowUi ->
-             newRowUiName.add(newRowUi.name)
-             if (indexToView.containsKey(index)) return@forEachIndexed
+        // 第三轮：创建新 View
+        newRowUis.forEachIndexed { index, newRowUi ->
+            newRowUiName.add(newRowUi.name)
+            if (indexToView.containsKey(index)) return@forEachIndexed
 
-             val view = createView(source, newRowUi, index, loginInfo)
-             indexToView[index] = view
-         }
+            createView(source, newRowUi, index, loginInfo)?.let { view ->
+                indexToView[index] = view
+            }
+        }
 
          // 倒序移除未被复用的旧 View（避免索引变化影响）
-         for (i in binding.flexbox.childCount - 1 downTo 0) {
-             val child = binding.flexbox.getChildAt(i)
-             if (!reuseView.contains(child)) {
-                 binding.flexbox.removeViewAt(i)
-             }
-         }
+        for (i in binding.flexbox.childCount - 1 downTo 0) {
+            val child = binding.flexbox.getChildAt(i)
+            if (!reuseView.contains(child)) {
+                binding.flexbox.removeViewAt(i)
+            }
+        }
 
-         // 按目标索引顺序，将 View 放到正确位置
-         newRowUis.indices.forEach { index ->
-             val view = indexToView[index]
-             val findIndex = binding.flexbox.indexOfChild(view)
+        // 按目标索引顺序，将 View 放到正确位置
+        newRowUis.indices.forEach { index ->
+            val view = indexToView[index]!!
+            val findIndex = binding.flexbox.indexOfChild(view)
 
-             when {
-                 findIndex == -1 -> {
-                     binding.flexbox.addView(view, index)
-                 }
-                 findIndex != index -> {
-                     binding.flexbox.removeViewAt(findIndex)
-                     binding.flexbox.addView(view, index)
-                 }
-             }
-             view.id = index + VIEW_ID_OFFSET
-         }
+            when {
+                findIndex == -1 -> {
+                    binding.flexbox.addView(view, index)
+                }
+                findIndex != index -> {
+                    binding.flexbox.removeViewAt(findIndex)
+                    binding.flexbox.addView(view, index)
+                }
+            }
+            view.id = index + VIEW_ID_OFFSET
+        }
 
-         // 更新引用
-         rowUis = newRowUis
-         rowUiName.clear()
-         rowUiName.addAll(newRowUiName)
+        // 更新引用
+        rowUis = newRowUis
+        rowUiName.clear()
+        rowUiName.addAll(newRowUiName)
     }
 
     private fun compareStyles(oldRowUi: RowUi, newRowUi: RowUi): Boolean {
