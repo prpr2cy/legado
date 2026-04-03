@@ -105,7 +105,6 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
                         itemBinding.editText.setText(text)
                         loginInfo[rowUi.name] = text
                     }
-                    else -> {}
                 }
             }
         } else {
@@ -238,6 +237,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
             if (findIndexs.contains(index)) return@forEachIndexed
 
             val view = createView(source, newRowUi, index, loginInfo)
+            binding.flexbox.removeViewAt(index)
             binding.flexbox.addView(view, index)
         }
 
