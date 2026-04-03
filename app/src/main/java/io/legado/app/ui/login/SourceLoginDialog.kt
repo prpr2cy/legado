@@ -149,6 +149,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
         hasChange = true
 
         withContext(Main) {
+        /*
             TransitionManager.beginDelayedTransition(
                 binding.flexbox,
                 AutoTransition().apply {
@@ -156,7 +157,8 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
                     interpolator = DecelerateInterpolator()
                 }
             )
-
+*/
+            rowUiName.clear()
             reUiBuilder(source, newRowUis)
         }
     }
@@ -166,6 +168,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
         val oldRowUis: MutableList<RowUi?>? = rowUis?.toMutableList()
         val newRowUiName = ArrayList<String>(newRowUis.size)
 
+/*
         newRowUis.forEachIndexed { index, newRowUi ->
             val oldRowUi = oldRowUis?.getOrNull(index)
             when {
@@ -188,14 +191,17 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
             }
             newRowUiName.add(newRowUi.name)
         }
+*/
+        newRowUis.forEachIndexed { index, newRowUi ->
+            rowUiName.add(newRowUi.name)
+            val view = createView(source, newRowUi, index, loginInfo)
+            binding.flexbox.addView(view)
+        }
 
         for (i in (binding.flexbox.childCount - 1) downTo newRowUis.size) {
             binding.flexbox.removeViewAt(i)
         }
-
         rowUis = newRowUis
-        rowUiName.clear()
-        rowUiName.addAll(newRowUiName)
     }
 
     private fun updateViewData(
@@ -342,7 +348,9 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
             rowUis = withContext(IO) {
                 parseLoginUi(loginUiStr)
             }
-            firstUiBuilder(source, rowUis)
+            binding.flexbox.removeAllViews()
+            rowUiName.clear()
+            rowUiBuilder(source, rowUis)
             setButtonUi(source, rowUis)
         }
 
@@ -354,10 +362,8 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
         }
     }
 
-    private fun firstUiBuilder(source: BaseSource, rowUis: List<RowUi>?) {
+    private fun rowUiBuilder(source: BaseSource, rowUis: List<RowUi>?) {
         val loginInfo = viewModel.loginInfo
-        binding.flexbox.removeAllViews()
-        rowUiName.clear()
 
         rowUis?.forEachIndexed { index, rowUi ->
             rowUiName.add(rowUi.name)
