@@ -163,10 +163,11 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
          val oldRowUis: MutableList<RowUi?>? = rowUis?.toMutableList()
          val indexToView = mutableMapOf<Int, View>()
          val reuseView = HashSet<View>()
+         val newRowUiName = arrayListOf<String>()
 
          if (oldRowUis != null) {
-             // 第一轮：名称、类型、样式完全匹配
-             newRowUis.forEachIndexed { index, newRowUi ->
+             // 第一轮：名称、类型、样式完全匹配（直接更新）
+             newRowUis.forEachIndexed { index, newRowUi ->zj
                  val oldIndex = rowUiName.indexOf(newRowUi.name)
                  if (oldIndex != -1) {
                      val oldRowUi = oldRowUis.getOrNull(oldIndex)
@@ -174,10 +175,9 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
                          oldRowUi.type == newRowUi.type &&
                          compareStyles(oldRowUi, newRowUi)) {
 
-                         binding.flexbox.getChildAt(oldIndex)?.let { childView ->
-                             childView.id = index + VIEW_ID_OFFSET
-                             indexToView[index] = childView
-                             reuseView.add(childView)
+                         binding.flexbox.getChildAt(oldIndex)?.let { view ->
+                             indexToView[index] = view
+                             reuseView.add(view)
                              oldRowUis.set(oldIndex, null)
                          }
                      }
@@ -192,11 +192,10 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
                      if (oldRowUi == null) return@forEachIndexed
 
                      if (oldRowUi.type == newRowUi.type && compareStyles(oldRowUi, newRowUi)) {
-                         binding.flexbox.getChildAt(oldIndex)?.let { childView ->
-                             childView.id = index + VIEW_ID_OFFSET
-                             updateViewData(childView, newRowUi, loginInfo)
-                             indexToView[index] = childView
-                             reuseView.add(childView)
+                         binding.flexbox.getChildAt(oldIndex)?.let { view ->
+                             updateViewData(view, newRowUi, loginInfo)
+                             indexToView[index] = view
+                             reuseView.add(view)
                              oldRowUis.set(oldIndex, null)
                              return@forEachIndexed
                          }
@@ -205,14 +204,13 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
              }
          }
 
-         // 第三轮：创建新 View（oldIndex = -1）
+         // 第三轮：创建新 View
          newRowUis.forEachIndexed { index, newRowUi ->
              newRowUiName.add(newRowUi.name)
              if (indexToView.containsKey(index)) return@forEachIndexed
 
-             val childView = createView(source, newRowUi, index, loginInfo)
-             childView.id = index + VIEW_ID_OFFSET
-             indexToView[index] = childView
+             val view = createView(source, newRowUi, index, loginInfo)
+             indexToView[index] = view
          }
 
          // 倒序移除未被复用的旧 View（避免索引变化影响）
@@ -225,18 +223,19 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
 
          // 按目标索引顺序，将 View 放到正确位置
          newRowUis.indices.forEach { index ->
-             val view = indexToView[index]!!
+             val view = indexToView[index]
              val findIndex = binding.flexbox.indexOfChild(view)
 
              when {
                  findIndex == -1 -> {
-                     binding.flexbox.addView(view, targetIndex)
+                     binding.flexbox.addView(view, index)
                  }
                  findIndex != index -> {
                      binding.flexbox.removeViewAt(findIndex)
                      binding.flexbox.addView(view, index)
                  }
              }
+             view.id = index + VIEW_ID_OFFSET
          }
 
          // 更新引用
