@@ -98,8 +98,9 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
                 rowUi ?: return@forEachIndexed
                 when (rowUi.type) {
                     Type.text, Type.password -> {
-                        val rowView = binding.root.findViewById<View>(index + VIEW_ID_OFFSET) ?: return@forEachIndexed
-                        val itemBinding = ItemSourceEditBinding.bind(rowView)
+                        val view = binding.root.findViewById<View>(index + VIEW_ID_OFFSET)
+                        view ?: return@forEachIndexed
+                        val itemBinding = ItemSourceEditBinding.bind(view)
                         val text = rowUi.default ?: ""
                         itemBinding.editText.setText(text)
                         loginInfo[rowUi.name] = text
@@ -117,8 +118,9 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
                 val rowUi = rowUis?.getOrNull(index) ?: return@forEach
                 when (rowUi.type) {
                     Type.text, Type.password -> {
-                        val rowView = binding.root.findViewById<View>(index + VIEW_ID_OFFSET) ?: return@forEach
-                        val itemBinding = ItemSourceEditBinding.bind(rowView)
+                        val view = binding.root.findViewById<View>(index + VIEW_ID_OFFSET)
+                        view ?: return@forEach
+                        val itemBinding = ItemSourceEditBinding.bind(view)
                         val text = value?.toString() ?: rowUi.default ?: ""
                         itemBinding.editText.setText(text)
                         loginInfo[rowUi.name] = text
@@ -170,14 +172,12 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
                 oldRowUi == null -> {
                     val view = createView(source, newRowUi, index, loginInfo)
                     binding.flexbox.addView(view, index)
-                    return@forEachIndexed
                 }
 
                 oldRowUi.type != newRowUi.type -> {
                     val view = createView(source, newRowUi, index, loginInfo)
                     binding.flexbox.removeViewAt(index)
                     binding.flexbox.addView(view, index)
-                    return@forEachIndexed
                 }
 
                 else -> {
@@ -198,7 +198,12 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
         rowUiName.addAll(newRowUiName)
     }
 
-    private fun updateView(source: BaseSource, rowUi: RowUi, view: View, loginInfo: MutableMap<String, String>) {
+    private fun updateView(
+        source: BaseSource,
+        rowUi: RowUi,
+        view: View,
+        loginInfo: MutableMap<String, String>
+    ): View {
         when (rowUi.type) {
             Type.text, Type.password -> {
                 val itemBinding = ItemSourceEditBinding.bind(view)
@@ -223,7 +228,12 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
         }
     }
 
-    private fun createView(source: BaseSource, rowUi: RowUi, index: Int, loginInfo: MutableMap<String, String>): View {
+    private fun createView(
+        source: BaseSource,
+        rowUi: RowUi,
+        index: Int,
+        loginInfo: MutableMap<String, String>
+    ): View {
         return when (rowUi.type) {
             Type.text, Type.password -> {
                 val itemBinding = ItemSourceEditBinding.inflate(
@@ -317,7 +327,10 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
 
     override fun onStart() {
         super.onStart()
-        setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+        setLayout(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.MATCH_PARENT
+        )
     }
 
     override fun onFragmentCreated(view: View, savedInstanceState: Bundle?) {
