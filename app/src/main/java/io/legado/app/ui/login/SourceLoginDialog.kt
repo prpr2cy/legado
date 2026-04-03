@@ -241,11 +241,11 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
                         textInputLayout.apply {
                             isExpandedHintEnabled = false
                             hint = rowUi.name
+                            setPadding(16.dpToPx())
                         }
                         if (rowUi.type == Type.password) {
                             textInputLayout.endIconMode =
                                 TextInputLayout.END_ICON_PASSWORD_TOGGLE
-                            textInputLayout.endIconSize = 24.dpToPx()
                             editText.inputType =
                                 InputType.TYPE_TEXT_VARIATION_PASSWORD or InputType.TYPE_CLASS_TEXT
                         }
