@@ -149,14 +149,14 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
         hasChange = true
 
         withContext(Main) {
-/*            TransitionManager.beginDelayedTransition(
+            TransitionManager.beginDelayedTransition(
                 binding.flexbox,
                 AutoTransition().apply {
                     duration = 250
                     interpolator = DecelerateInterpolator()
                 }
             )
-*/
+
             rowUiBuilder(source, newRowUis)
             rowUis = newRowUis
 
@@ -240,6 +240,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
 
     private fun rowUiBuilder(source: BaseSource, rowUis: List<RowUi>?) {
         val loginInfo = viewModel.loginInfo
+        var unused = 0
         rowUiName.clear()
 
         rowUis?.forEachIndexed { index, rowUi ->
@@ -260,11 +261,14 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
                                 TextInputLayout.END_ICON_PASSWORD_TOGGLE
                             editText.inputType =
                                 InputType.TYPE_TEXT_VARIATION_PASSWORD or InputType.TYPE_CLASS_TEXT
+                        } else {
+                            textInputLayout.endIconMode =
+                                TextInputLayout.END_ICON_NONE
                         }
                         val text = loginInfo[rowUi.name] ?: rowUi.default ?: ""
                         editText.setText(text)
                     }
-                    binding.flexbox.addView(itemBinding.root, index)
+                    binding.flexbox.addView(itemBinding.root, index - unused)
                     rowUiName.add(rowUi.name)
                 }
 
@@ -281,9 +285,11 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
                             handleButtonClick(source, rowUi, getLoginInfo())
                         }
                     }
-                    binding.flexbox.addView(itemBinding.root, index)
+                    binding.flexbox.addView(itemBinding.root, index - unused)
                     rowUiName.add(rowUi.name)
                 }
+
+                else -> unused++
             }
         }
     }
