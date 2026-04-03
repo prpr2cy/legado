@@ -160,7 +160,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
             rowUiBuilder(source, newRowUis)
             rowUis = newRowUis
 
-            for (i in (binding.flexbox.childCount - 1) downTo newRowUis.size) {
+            for (i in binding.flexbox.childCount - 1 downTo newRowUis.size) {
                 binding.flexbox.removeViewAt(i)
             }
         }
@@ -264,7 +264,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
                         val text = loginInfo[rowUi.name] ?: rowUi.default ?: ""
                         editText.setText(text)
                     }
-                    binding.flexbox.addView(itemBinding.root)
+                    binding.flexbox.addView(itemBinding.root, index)
                     rowUiName.add(rowUi.name)
                 }
 
@@ -278,11 +278,10 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
                         textView.text = rowUi.name
                         textView.setPadding(16.dpToPx())
                         root.onClick {
-                                handleButtonClick(source, rowUi, getLoginInfo())
-                            }
+                            handleButtonClick(source, rowUi, getLoginInfo())
                         }
                     }
-                    binding.flexbox.addView(itemBinding.root)
+                    binding.flexbox.addView(itemBinding.root, index)
                     rowUiName.add(rowUi.name)
                 }
             }
