@@ -25,7 +25,7 @@ fun ReadContext.readBool(path: String): Boolean? = read(path, Boolean::class.jav
 fun ReadContext.readInt(path: String): Int? = read(path, Int::class.java)
 fun ReadContext.readLong(path: String): Long? = read(path, Long::class.java)
 
-private val Gson by lazy {
+val JGson by lazy {
     GsonBuilder().disableHtmlEscaping()
         .setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE)
         .serializeNulls()
@@ -57,10 +57,10 @@ fun toJsonString(raw: Any?): String = when (raw) {
     is Number -> raw.toJsonString()
     is String -> raw
     is CharSequence -> raw.toString()
-    is Map<*, *> -> Gson.toJson(toAnyValue(raw))
-    is List<*> -> Gson.toJson(toAnyValue(raw))
-    is Array<*> -> Gson.toJson(toAnyValue(raw))
-    is JsonElement -> Gson.toJson(raw)
+    is Map<*, *> -> JGson.toJson(toAnyValue(raw))
+    is List<*> -> JGson.toJson(toAnyValue(raw))
+    is Array<*> -> JGson.toJson(toAnyValue(raw))
+    is JsonElement -> JGson.toJson(raw)
     else -> raw.toString()
 }
 

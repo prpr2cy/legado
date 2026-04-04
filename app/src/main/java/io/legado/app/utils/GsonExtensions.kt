@@ -5,7 +5,10 @@ import com.google.gson.GsonBuilder
 import com.google.gson.JsonDeserializationContext
 import com.google.gson.JsonDeserializer
 import com.google.gson.JsonElement
+import com.google.gson.JsonObject
 import com.google.gson.JsonParseException
+import com.google.gson.JsonSerializer
+import com.google.gson.JsonSerializationContext
 import com.google.gson.JsonSyntaxException
 import com.google.gson.ToNumberPolicy
 import com.google.gson.internal.LinkedTreeMap
@@ -20,6 +23,20 @@ import java.lang.reflect.Type
 
 val INITIAL_GSON: Gson by lazy {
     GsonBuilder()
+        .registerTypeHierarchyAdapter(Map::class.java, object: JsonSerializer<Map<*, *>> {
+            override fun serialize(
+                src: Map<*, *>,
+                typeOfSrc: Type,
+                context: JsonSerializationContext
+            ): JsonElement {
+                val jsonObject = JsonObject()
+                src.forEach { (k, v) ->
+                    val keyStr = k?.toString() ?: "null"
+                    jsonObject.add(keyStr, context.serialize(v))
+                }
+                return jsonObject
+            }
+        })
         .registerTypeAdapter(
             object : TypeToken<Map<String?, Any?>?>() {}.type,
             MapDeserializerDoubleAsIntFix()
@@ -28,7 +45,6 @@ val INITIAL_GSON: Gson by lazy {
         .registerTypeAdapter(String::class.java, StringJsonDeserializer())
         .setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE)
         .disableHtmlEscaping()
-        .serializeNulls()
         .create()
 }
 
