@@ -215,7 +215,6 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
             rowUis = withContext(IO) {
                 parseLoginUi(loginUiStr)
             }
-            binding.flexbox.removeAllViews()
             rowUiBuilder(source, rowUis)
             setButtonUi(source, rowUis)
         }
