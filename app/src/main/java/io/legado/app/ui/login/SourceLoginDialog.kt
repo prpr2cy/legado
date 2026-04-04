@@ -287,7 +287,13 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
                     oKToClose = true
                     login(source, getLoginInfo())
                 }
-                R.id.menu_show_login_header -> showLoginHeader(source)
+                R.id.menu_show_login_header -> alert {
+                    setTitle(R.string.login_header)
+                    source.getLoginHeader()?.let { header ->
+                        setMessage(header)
+                        positiveButton(R.string.copy_text) { appCtx.sendToClip(header) }
+                    }
+                }
                 R.id.menu_del_login_header -> source.removeLoginHeader()
                 R.id.menu_del_login_info -> {
                     viewModel.loginInfo.clear()
@@ -297,16 +303,6 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
                 R.id.menu_log -> showDialogFragment<AppLogDialog>()
             }
             true
-        }
-    }
-
-    private fun showLoginHeader(source: BaseSource) {
-        alert {
-            setTitle(R.string.login_header)
-            source.getLoginHeader()?.let { header ->
-                setMessage(header)
-                positiveButton(R.string.copy_text) { appCtx.sendToClip(header) }
-            }
         }
     }
 
