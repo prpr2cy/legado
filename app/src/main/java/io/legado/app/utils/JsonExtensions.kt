@@ -9,7 +9,7 @@ import com.jayway.jsonpath.JsonPath
 import com.jayway.jsonpath.Option
 import com.jayway.jsonpath.ParseContext
 import com.jayway.jsonpath.ReadContext
-import io.legado.app.constant.AppLog
+import io.legado.app.exception.NoStackTraceException
 import java.math.BigDecimal
 
 val jsonPath: ParseContext by lazy {
@@ -20,10 +20,13 @@ val jsonPath: ParseContext by lazy {
     )
 }
 
-fun ReadContext.readString(path: String): String? = read(path, String::class.java)
-fun ReadContext.readBool(path: String): Boolean? = read(path, Boolean::class.java)
-fun ReadContext.readInt(path: String): Int? = read(path, Int::class.java)
-fun ReadContext.readLong(path: String): Long? = read(path, Long::class.java)
+fun ReadContext.readString(path: String): String? = this.read(path, String::class.java)
+
+fun ReadContext.readBool(path: String): Boolean? = this.read(path, Boolean::class.java)
+
+fun ReadContext.readInt(path: String): Int? = this.read(path, Int::class.java)
+
+fun ReadContext.readLong(path: String): Long? = this.read(path, Long::class.java)
 
 private val Gson by lazy {
     GsonBuilder().disableHtmlEscaping()
@@ -57,6 +60,13 @@ fun toJsonString(raw: Any?): String = when (raw) {
     is Number -> raw.toJsonString()
     is String -> raw
     is CharSequence -> raw.toString()
+    is ByteArray -> Gson.toJson(raw)
+    is IntArray -> Gson.toJson(raw)
+    is LongArray -> Gson.toJson(raw)
+    is DoubleArray -> Gson.toJson(raw)
+    is ShortArray -> Gson.toJson(raw)
+    is CharArray -> Gson.toJson(raw)
+    is BooleanArray -> Gson.toJson(raw)
     is Map<*, *> -> Gson.toJson(toAnyValue(raw))
     is List<*> -> Gson.toJson(toAnyValue(raw))
     is Array<*> -> Gson.toJson(toAnyValue(raw))
@@ -143,18 +153,16 @@ private inline fun <T> parseToMapImpl(
                 }
             }
             else -> {
-                AppLog.put("parseToMap 不支持的类型: ${raw?.javaClass?.name.orEmpty()}")
-                emptyMap()
+                throw NoStackTraceException("parseToMap不支持的类型: ${raw?.javaClass?.name.orEmpty()}")
             }
         }
     } catch (e: Exception) {
-        AppLog.put("parseToMap 转换失败: ${raw?.javaClass?.name.orEmpty()}", e)
-        emptyMap()
+        throw NoStackTraceException("parseToMap转换失败: ${raw?.javaClass?.name.orEmpty()}\n${e.message}")
     }
 }
 
 fun parseToMap(raw: Any?): Map<String, String> =
     parseToMapImpl(raw) { toJsonString(it) }
 
-fun parseToMapWithAny(raw: Any?): Map<String, Any?> =
+fun parseToMapAny(raw: Any?): Map<String, Any?> =
     parseToMapImpl(raw) { toAnyValue(it) }

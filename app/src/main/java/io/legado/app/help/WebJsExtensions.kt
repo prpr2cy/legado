@@ -141,13 +141,7 @@ class WebJsExtensions(
         return kotlin.runCatching {
             val options = INITIAL_GSON.fromJsonObject<Map<String, Any>>(option).getOrNull()
                 ?: emptyMap<String, Any>()
-            val body = options["body"]?.let { value ->
-                when (value) {
-                    is String -> value
-                    is Number, is Boolean -> value.toString()
-                    else -> toJsonString(value)
-                }
-            }
+            val body = options["body"]?.let { toJsonString(it) }
             val method = options["method"]?.toString()?.uppercase()
                 ?: if (body != null) "POST" else "GET"
             val headers = (options["headers"] as? Map<*, *>)
@@ -401,18 +395,8 @@ class WebJsExtensions(
                     val jsCode = p0 ?: throw NoStackTraceException("error null")
                     analyzeRule.evalJS(jsCode)?.let { result ->
                         when (result) {
-                            is String -> result
                             is ByteArray -> Base64.encode(result)
-                            is IntArray -> toJsonString(result)
-                            is LongArray -> toJsonString(result)
-                            is DoubleArray -> toJsonString(result)
-                            is ShortArray -> toJsonString(result)
-                            is CharArray -> toJsonString(result)
-                            is BooleanArray -> toJsonString(result)
-                            is Array<*> -> toJsonString(result)
-                            is List<*> -> toJsonString(result)
-                            is Map<*, *> -> toJsonString(result)
-                            else -> result.toString()
+                            else -> toJsonString(result)
                         }
                     }
                 }

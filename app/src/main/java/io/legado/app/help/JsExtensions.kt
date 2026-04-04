@@ -500,7 +500,7 @@ interface JsExtensions : JsEncodeUtils {
 
     fun convertToMap(obj: Any?, flag: Boolean): MutableMap<String, Any?> {
         return if (flag) {
-            parseToMapWithAny(obj).toMutableMap()
+            parseToMapAny(obj).toMutableMap()
         } else {
             parseToMap(obj).toMutableMap()
         }
