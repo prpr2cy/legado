@@ -134,12 +134,14 @@ class RssSourceEditActivity :
             R.id.menu_copy_source -> sendToClip(GSON.toJson(getRssSource()))
             R.id.menu_paste_source -> viewModel.pasteSource { upSourceView(it) }
             R.id.menu_qr_code_camera -> qrCodeResult.launch()
-            R.id.menu_share_str -> share(GSON.toJson(getRssSource()))
+            /*
             R.id.menu_share_qr -> shareWithQr(
                 GSON.toJson(getRssSource()),
                 getString(R.string.share_rss_source),
                 ErrorCorrectionLevel.L
             )
+            */
+            R.id.menu_share_str -> share(GSON.toJson(getRssSource()))
             R.id.menu_log -> showDialogFragment<AppLogDialog>()
             R.id.menu_help -> showHelp("ruleHelp")
         }
