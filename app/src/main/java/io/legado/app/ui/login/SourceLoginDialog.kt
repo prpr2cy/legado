@@ -243,14 +243,10 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
                     itemBinding.apply {
                         rowUi.style().apply(root)
                         root.id = index + VIEW_ID_OFFSET
-                        textInputLayout.apply {
-                            isExpandedHintEnabled = false
-                            hint = rowUi.name
-                        }
+                        textInputLayout.hint = rowUi.name
                         if (rowUi.type == Type.password) {
                             textInputLayout.endIconMode =
                                 TextInputLayout.END_ICON_PASSWORD_TOGGLE
-                            textInputLayout.endIconMaxSize = 36.dpToPx()
                             editText.inputType =
                                 InputType.TYPE_TEXT_VARIATION_PASSWORD or InputType.TYPE_CLASS_TEXT
                         }
