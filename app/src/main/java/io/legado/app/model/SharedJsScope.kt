@@ -1,5 +1,6 @@
 package io.legado.app.model
 
+import androidx.collection.LruCache
 import com.google.gson.reflect.TypeToken
 import com.script.SimpleBindings
 import com.script.rhino.RhinoScriptEngine
@@ -16,14 +17,13 @@ import org.mozilla.javascript.Scriptable
 import splitties.init.appCtx
 import java.io.File
 import java.lang.ref.WeakReference
-import kotlin.collections.set
 
 object SharedJsScope {
 
-    private val cacheFolder = File(appCtx.filesDir, "shareJs")
+    private val cacheFolder = File(appCtx.cacheDir, "shareJs")
     private val aCache = ACache.get(cacheFolder)
 
-    private val scopeMap = hashMapOf<String, WeakReference<Scriptable>>()
+    private val scopeMap = LruCache<String, WeakReference<Scriptable>>(16)
 
     fun getScope(jsLib: String?): Scriptable? {
         if (jsLib.isNullOrBlank()) {
@@ -54,7 +54,7 @@ object SharedJsScope {
                                     url(value)
                                 }.body
                             }
-                            if (js !== null) {
+                            if (js != null) {
                                 aCache.put(fileName, js)
                             } else {
                                 throw NoStackTraceException("下载jsLib-${value}失败")
@@ -66,9 +66,33 @@ object SharedJsScope {
             } else {
                 RhinoScriptEngine.eval(jsLib, scope)
             }
-            scopeMap[key] = WeakReference(scope)
+            scopeMap.put(key, WeakReference(scope))
         }
         return scope
+    }
+
+    fun remove(jsLib: String?) {
+        if (jsLib.isNullOrBlank()) {
+            return
+        }
+        if (jsLib.isJsonObject()) {
+            val jsMap: Map<String, String> = GSON.fromJson(
+                jsLib,
+                TypeToken.getParameterized(
+                    Map::class.java,
+                    String::class.java,
+                    String::class.java
+                ).type
+            )
+            jsMap.values.forEach { value ->
+                if (value.isAbsUrl()) {
+                    val fileName = MD5Utils.md5Encode(value)
+                    aCache.remove(fileName)
+                }
+            }
+        }
+        val key = MD5Utils.md5Encode(jsLib)
+        scopeMap.remove(key)
     }
 
 }

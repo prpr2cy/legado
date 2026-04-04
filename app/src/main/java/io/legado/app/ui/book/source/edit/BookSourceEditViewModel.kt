@@ -14,6 +14,7 @@ import io.legado.app.help.http.CookieStore
 import io.legado.app.help.http.newCallStrResponse
 import io.legado.app.help.http.okHttpClient
 import io.legado.app.help.storage.ImportOldData
+import io.legado.app.model.SharedJsScope
 import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonArray
 import io.legado.app.utils.fromJsonObject
@@ -51,8 +52,12 @@ class BookSourceEditViewModel(application: Application) : BaseViewModel(applicat
             if (source.bookSourceUrl.isBlank() || source.bookSourceName.isBlank()) {
                 throw NoStackTraceException(context.getString(R.string.non_null_name_url))
             }
-            if (source.equal(bookSource ?: BookSource())) {
+            val oldSource = bookSource ?: BookSource()
+            if (source.equal(oldSource)) {
                 return@execute source
+            }
+            if (oldSource.jsLib != source.jsLib) {
+                SharedJsScope.remove(oldSource.jsLib)
             }
             bookSource?.let {
                 appDb.bookSourceDao.delete(it)

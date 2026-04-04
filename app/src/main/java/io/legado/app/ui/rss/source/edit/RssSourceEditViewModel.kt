@@ -10,6 +10,7 @@ import io.legado.app.exception.NoStackTraceException
 import io.legado.app.help.ConcurrentRateLimiter
 import io.legado.app.help.RuleComplete
 import io.legado.app.help.http.CookieStore
+import io.legado.app.model.SharedJsScope
 import io.legado.app.utils.GSON
 import io.legado.app.utils.fromJsonObject
 import io.legado.app.utils.getClipText
@@ -41,8 +42,12 @@ class RssSourceEditViewModel(application: Application) : BaseViewModel(applicati
             if (source.sourceUrl.isBlank() || source.sourceName.isBlank()) {
                 throw NoStackTraceException(context.getString(R.string.non_null_name_url))
             }
-            if (source.equal(rssSource ?: RssSource())) {
+            val oldSource = rssSource ?: RssSource()
+            if (source.equal(oldSource)) {
                 return@execute source
+            }
+            if (oldSource.jsLib != source.jsLib) {
+                SharedJsScope.remove(oldSource.jsLib)
             }
             rssSource?.let {
                 appDb.rssSourceDao.delete(it)
