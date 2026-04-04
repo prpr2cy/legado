@@ -250,7 +250,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
                         if (rowUi.type == Type.password) {
                             textInputLayout.endIconMode =
                                 TextInputLayout.END_ICON_PASSWORD_TOGGLE
-                            textInputLayout.endIconMinSize = 36.dpToPx()
+                            textInputLayout.endIconMaxSize = 36.dpToPx()
                             editText.inputType =
                                 InputType.TYPE_TEXT_VARIATION_PASSWORD or InputType.TYPE_CLASS_TEXT
                         }
