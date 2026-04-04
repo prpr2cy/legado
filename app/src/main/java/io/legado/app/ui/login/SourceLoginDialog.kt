@@ -253,7 +253,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
                             editText.inputType =
                                 InputType.TYPE_TEXT_VARIATION_PASSWORD or InputType.TYPE_CLASS_TEXT
                         }
-                        editText.minHeight = 46.dpToPx()
+                        editText.minHeight = 47.dpToPx()
                         val text = loginInfo[rowUi.name] ?: rowUi.default ?: ""
                         editText.setText(text)
                     }
