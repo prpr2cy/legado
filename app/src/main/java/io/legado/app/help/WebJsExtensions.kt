@@ -48,13 +48,11 @@ import splitties.init.appCtx
 class WebJsExtensions(
     source: BaseSource,
     activity: AppCompatActivity?,
-    webView: WebView,
-    callback: Callback? = null
+    webView: WebView
 ) {
-    private val sourceRef: WeakReference<BaseSource?> = WeakReference(source)
+    private val sourceRef: WeakReference<BaseSource> = WeakReference(source)
     private val activityRef: WeakReference<AppCompatActivity> = WeakReference(activity)
-    private val webViewRef: WeakReference<WebView?> = WeakReference(webView)
-    private val callbackRef: WeakReference<Callback> = WeakReference(callback)
+    private val webViewRef: WeakReference<WebView> = WeakReference(webView)
 
     private val analyzeRule by lazy {
         AnalyzeRule(source = getSource())
