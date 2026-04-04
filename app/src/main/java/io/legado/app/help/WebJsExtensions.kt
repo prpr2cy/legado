@@ -28,9 +28,10 @@ import io.legado.app.model.ReadBook
 import io.legado.app.utils.externalCache
 import io.legado.app.utils.FileUtils
 import io.legado.app.utils.fromJsonObject
-import io.legado.app.utils.JGson
+import io.legado.app.utils.INITIAL_GSON
 import io.legado.app.utils.longToastOnUi
 import io.legado.app.utils.toastOnUi
+import io.legado.app.utils.toJsonString
 import io.legado.app.utils.UrlUtil
 import java.lang.ref.WeakReference
 import java.io.File
@@ -126,7 +127,7 @@ class WebJsExtensions(
                     "body" to response.body(),
                     "headers" to response.headers().toMultimap(),
                     "cookies" to response.headers().values("set-cookie")
-                ).let { JGson.toJson(it) }
+                ).let { toJsonString(it) }
             }.onFailure {
                 AppLog.put("connect($urlStr) error\n${it.localizedMessage}", it)
             }.getOrElse {
@@ -138,13 +139,13 @@ class WebJsExtensions(
     @JavascriptInterface
     fun fetch(url: String, option: String): String {
         return kotlin.runCatching {
-            val options = JGson.fromJsonObject<Map<String, Any>>(option).getOrNull()
+            val options = INITIAL_GSON.fromJsonObject<Map<String, Any>>(option).getOrNull()
                 ?: emptyMap<String, Any>()
             val body = options["body"]?.let { value ->
                 when (value) {
                     is String -> value
                     is Number, is Boolean -> value.toString()
-                    else -> JGson.toJson(value)
+                    else -> toJsonString(value)
                 }
             }
             val method = options["method"]?.toString()?.uppercase()
@@ -174,7 +175,7 @@ class WebJsExtensions(
                 "body" to response.body(),
                 "headers" to response.headers(),
                 "cookies" to response.cookies()
-            ).let { JGson.toJson(it) }
+            ).let { toJsonString(it) }
         }.onFailure {
             AppLog.put("fetch(${url}) error\n${it.localizedMessage}", it)
         }.getOrElse {
@@ -402,15 +403,15 @@ class WebJsExtensions(
                         when (result) {
                             is String -> result
                             is ByteArray -> Base64.encode(result)
-                            is IntArray -> JGson.toJson(result)
-                            is LongArray -> JGson.toJson(result)
-                            is DoubleArray -> JGson.toJson(result)
-                            is ShortArray -> JGson.toJson(result)
-                            is CharArray -> JGson.toJson(result)
-                            is BooleanArray -> JGson.toJson(result)
-                            is Array<*> -> JGson.toJson(result)
-                            is List<*> -> JGson.toJson(result)
-                            is Map<*, *> -> JGson.toJson(result)
+                            is IntArray -> toJsonString(result)
+                            is LongArray -> toJsonString(result)
+                            is DoubleArray -> toJsonString(result)
+                            is ShortArray -> toJsonString(result)
+                            is CharArray -> toJsonString(result)
+                            is BooleanArray -> toJsonString(result)
+                            is Array<*> -> toJsonString(result)
+                            is List<*> -> toJsonString(result)
+                            is Map<*, *> -> toJsonString(result)
                             else -> result.toString()
                         }
                     }

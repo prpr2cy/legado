@@ -23,20 +23,6 @@ import java.lang.reflect.Type
 
 val INITIAL_GSON: Gson by lazy {
     GsonBuilder()
-        .registerTypeHierarchyAdapter(Map::class.java, object: JsonSerializer<Map<*, *>> {
-            override fun serialize(
-                src: Map<*, *>,
-                typeOfSrc: Type,
-                context: JsonSerializationContext
-            ): JsonElement {
-                val jsonObject = JsonObject()
-                src.forEach { (k, v) ->
-                    val keyStr = k?.toString() ?: "null"
-                    jsonObject.add(keyStr, context.serialize(v))
-                }
-                return jsonObject
-            }
-        })
         .registerTypeAdapter(
             object : TypeToken<Map<String?, Any?>?>() {}.type,
             MapDeserializerDoubleAsIntFix()

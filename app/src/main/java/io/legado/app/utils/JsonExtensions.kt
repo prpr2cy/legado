@@ -1,6 +1,6 @@
 package io.legado.app.utils
 
-import com.google.gson.Gson
+import com.google.gson.GsonBuilder
 import com.google.gson.JsonElement
 import com.google.gson.JsonParser
 import com.google.gson.ToNumberPolicy
@@ -25,8 +25,9 @@ fun ReadContext.readBool(path: String): Boolean? = read(path, Boolean::class.jav
 fun ReadContext.readInt(path: String): Int? = read(path, Int::class.java)
 fun ReadContext.readLong(path: String): Long? = read(path, Long::class.java)
 
-val JGson: Gson by lazy {
-    INITIAL_GSON.newBuilder()
+private val Gson by lazy {
+    GsonBuilder().disableHtmlEscaping()
+        .setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE)
         .serializeNulls()
         .create()
 }
@@ -56,10 +57,10 @@ fun toJsonString(raw: Any?): String = when (raw) {
     is Number -> raw.toJsonString()
     is String -> raw
     is CharSequence -> raw.toString()
-    is Map<*, *> -> JGson.toJson(toAnyValue(raw))
-    is List<*> -> JGson.toJson(toAnyValue(raw))
-    is Array<*> -> JGson.toJson(toAnyValue(raw))
-    is JsonElement -> JGson.toJson(raw)
+    is Map<*, *> -> Gson.toJson(toAnyValue(raw))
+    is List<*> -> Gson.toJson(toAnyValue(raw))
+    is Array<*> -> Gson.toJson(toAnyValue(raw))
+    is JsonElement -> Gson.toJson(raw)
     else -> raw.toString()
 }
 
