@@ -56,15 +56,6 @@ class WebJsExtensions(
     private val webViewRef: WeakReference<WebView?> = WeakReference(webView)
     private val callbackRef: WeakReference<Callback> = WeakReference(callback)
 
-    interface Callback {
-        fun upConfig(config: String)
-    }
-
-    @JavascriptInterface
-    fun upConfig(config: String) {
-        callbackRef.get()?.upConfig(config)
-    }
-
     private val analyzeRule by lazy {
         AnalyzeRule(source = getSource())
     }
@@ -393,7 +384,7 @@ class WebJsExtensions(
             when (funName) {
                 "runAwait" -> {
                     val jsCode = p0 ?: throw NoStackTraceException("error null")
-                    analyzeRule.evalJS(jsCode)?.let { result ->
+                    analyzeRule.evalJS(jsCode).let { result ->
                         when (result) {
                             is ByteArray -> Base64.encode(result)
                             else -> toJsonString(result)
