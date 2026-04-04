@@ -545,7 +545,7 @@ class WebJsExtensions(
                 });
             };
             function fetchAwait(url, options) {
-                const optionStr = options ? JSON.stringify(options) : '{}';
+                const optionStr = options ? typeof(options) == 'string' ? options : JSON.stringify(options) : '{}';
                 return new Promise((resolve, reject) => {
                     const id = requestId('fetchAwait');
                     JSBridgeCallbacks[id] = { resolve, reject };
