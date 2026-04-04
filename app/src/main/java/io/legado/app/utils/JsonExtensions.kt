@@ -25,9 +25,8 @@ fun ReadContext.readBool(path: String): Boolean? = read(path, Boolean::class.jav
 fun ReadContext.readInt(path: String): Int? = read(path, Int::class.java)
 fun ReadContext.readLong(path: String): Long? = read(path, Long::class.java)
 
-val JGson by lazy {
-    GsonBuilder().disableHtmlEscaping()
-        .setObjectToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE)
+val JGson: Gson by lazy {
+    INITIAL_GSON.newBuilder()
         .serializeNulls()
         .create()
 }
