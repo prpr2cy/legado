@@ -44,7 +44,7 @@ class ConcurrentRateLimiter(source: BaseSource?) {
     )
 
     /**
-     * 尝试获取访问许可（非阻塞）
+     * 获取访问许可，并发限制
      */
     @Throws(ConcurrentException::class)
     private fun fetchStart(): ConcurrentRecord? {
@@ -59,47 +59,29 @@ class ConcurrentRateLimiter(source: BaseSource?) {
             if (rateIndex > 0) {
                 val accessLimit = concurrentRate.take(rateIndex).toIntOrNull() ?: 1
                 val interval = concurrentRate.substring(rateIndex + 1).toIntOrNull() ?: 0
-                // 初始frequency为0，获取许可后才+1
-                ConcurrentRecord(System.currentTimeMillis(), accessLimit, interval, 0)
+                ConcurrentRecord(System.currentTimeMillis(), accessLimit, interval, 1)
             } else {
                 val interval = concurrentRate.toIntOrNull() ?: 0
-                // 初始frequency为0，获取许可后才+1
-                ConcurrentRecord(System.currentTimeMillis(), 1, interval, 0)
+                ConcurrentRecord(System.currentTimeMillis(), 1, interval, 1)
             }
         }
 
         if (isNewRecord) {
-            // 新记录不等待直接获取
-            fetchRecord.frequency = 1
             return fetchRecord
         }
 
         val waitTime: Long = synchronized(fetchRecord) {
-
             // 并发控制为 次数/毫秒 , 非并发实际为1/毫秒
             val nextTime = fetchRecord.time + fetchRecord.interval.toLong()
             val nowTime = System.currentTimeMillis()
 
             if (nowTime >= nextTime) {
-                // 已经过了限制时间，重置
+                // 已经过了限制时间，重置开始时间
                 fetchRecord.time = nowTime
-                fetchRecord.frequency = 1  // 重置后为当前请求计数
-                return@synchronized 0
-            }
-
-            // 间隔模式
-            if (fetchRecord.accessLimit == 1) {
-                // 间隔模式下，frequency表示正在进行的请求数
-                // 如果有请求正在进行，需要等待
-                if (fetchRecord.frequency > 0) {
-                    return@synchronized nextTime - nowTime
-                }
-                // 没有请求在进行，可以执行，增加计数
                 fetchRecord.frequency = 1
                 return@synchronized 0
             }
 
-            // 频率模式
             if (fetchRecord.frequency < fetchRecord.accessLimit) {
                 fetchRecord.frequency++
                 return@synchronized 0
@@ -119,18 +101,6 @@ class ConcurrentRateLimiter(source: BaseSource?) {
     }
 
     /**
-     * 释放访问许可（只在间隔模式下需要）
-     */
-    fun fetchEnd(record: ConcurrentRecord?) {
-        if (record != null && record.accessLimit == 1) {
-            synchronized(record) {
-                // 确保不会减到负数
-                record.frequency = (record.frequency - 1).coerceAtLeast(0)
-            }
-        }
-    }
-
-    /**
      * 获取并发记录，若处于限流状态则自动等待
      */
     suspend fun getConcurrentRecord(): ConcurrentRecord? {
@@ -144,7 +114,7 @@ class ConcurrentRateLimiter(source: BaseSource?) {
     }
 
     /**
-     * 获取并发记录（同步版本，会阻塞调用）
+     * 获取并发记录（同步版本）
      */
     fun getConcurrentRecordBlocking(): ConcurrentRecord? {
         while (true) {
@@ -160,24 +130,16 @@ class ConcurrentRateLimiter(source: BaseSource?) {
      * 并发控制扩展函数
      */
     suspend inline fun <T> withLimit(block: () -> T): T {
-        val record = getConcurrentRecord()
-        return try {
-            block()
-        } finally {
-            fetchEnd(record)
-        }
+        getConcurrentRecord()
+        return block()
     }
 
     /**
      * 并发控制扩展函数（同步版本）
      */
     inline fun <T> withLimitBlocking(block: () -> T): T {
-        val record = getConcurrentRecordBlocking()
-        return try {
-            block()
-        } finally {
-            fetchEnd(record)
-        }
+        getConcurrentRecordBlocking()
+        return block()
     }
 
     /**
