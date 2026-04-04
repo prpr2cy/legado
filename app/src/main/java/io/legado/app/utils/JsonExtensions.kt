@@ -55,23 +55,20 @@ private fun Number.toJsonString(): String = when(this) {
 }
 
 fun toJsonString(raw: Any?): String = when (raw) {
-    null -> ""
+    null -> "null"
     is Boolean -> raw.toString()
     is Number -> raw.toJsonString()
     is String -> raw
     is CharSequence -> raw.toString()
-    is ByteArray -> Gson.toJson(raw)
-    is IntArray -> Gson.toJson(raw)
-    is LongArray -> Gson.toJson(raw)
-    is DoubleArray -> Gson.toJson(raw)
-    is ShortArray -> Gson.toJson(raw)
-    is CharArray -> Gson.toJson(raw)
-    is BooleanArray -> Gson.toJson(raw)
     is Map<*, *> -> Gson.toJson(toAnyValue(raw))
     is List<*> -> Gson.toJson(toAnyValue(raw))
     is Array<*> -> Gson.toJson(toAnyValue(raw))
     is JsonElement -> Gson.toJson(raw)
-    else -> raw.toString()
+    else -> try {
+        Gson.toJson(raw)
+    } catch (e: Exception) {
+        raw.toString()
+    }
 }
 
 private fun toAnyValue(raw: Any?): Any? = when (raw) {
