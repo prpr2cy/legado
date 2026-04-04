@@ -43,11 +43,10 @@ class RssSourceEditViewModel(application: Application) : BaseViewModel(applicati
                 throw NoStackTraceException(context.getString(R.string.non_null_name_url))
             }
             val oldSource = rssSource ?: RssSource()
-            if (source.equal(oldSource)) {
-                return@execute source
-            }
-            if (oldSource.jsLib != source.jsLib) {
-                SharedJsScope.remove(oldSource.jsLib)
+            if (!source.equal(oldSource)) {
+                if (oldSource.jsLib != source.jsLib) {
+                    SharedJsScope.remove(oldSource.jsLib)
+                }
             }
             rssSource?.let {
                 appDb.rssSourceDao.delete(it)

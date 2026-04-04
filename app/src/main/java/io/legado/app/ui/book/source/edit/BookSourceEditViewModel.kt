@@ -53,11 +53,11 @@ class BookSourceEditViewModel(application: Application) : BaseViewModel(applicat
                 throw NoStackTraceException(context.getString(R.string.non_null_name_url))
             }
             val oldSource = bookSource ?: BookSource()
-            if (source.equal(oldSource)) {
-                return@execute source
-            }
-            if (oldSource.jsLib != source.jsLib) {
-                SharedJsScope.remove(oldSource.jsLib)
+            if (!source.equal(oldSource)) {
+                source.lastUpdateTime = System.currentTimeMillis()
+                if (oldSource.jsLib != source.jsLib) {
+                    SharedJsScope.remove(oldSource.jsLib)
+                }
             }
             bookSource?.let {
                 appDb.bookSourceDao.delete(it)
@@ -66,7 +66,6 @@ class BookSourceEditViewModel(application: Application) : BaseViewModel(applicat
                     appDb.cacheDao.deleteSourceVariables(it.bookSourceUrl)
                 }
             }
-            source.lastUpdateTime = System.currentTimeMillis()
             appDb.bookSourceDao.insert(source)
             bookSource = source
             ConcurrentRateLimiter.remove(source.bookSourceUrl) //删除并发限制缓存
