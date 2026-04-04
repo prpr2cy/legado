@@ -93,7 +93,7 @@ interface BaseSource : JsExtensions {
         if (!loginJs.isNullOrBlank()) {
             @Language("js")
             val js = """$loginJs
-                if(typeof login=='function'){
+                if (typeof login=='function') {
                     login.apply(this);
                 } else {
                     throw('Function login not implements!!!')

@@ -212,9 +212,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
         val loginUiStr = source.loginUi ?: return
 
         lifecycleScope.launch(Main) {
-            rowUis = withContext(IO) {
-                parseLoginUi(loginUiStr)
-            }
+            rowUis = source.loginUi()
             rowUiBuilder(source, rowUis)
             setButtonUi(source, rowUis)
         }
