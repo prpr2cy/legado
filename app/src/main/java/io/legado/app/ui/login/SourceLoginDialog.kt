@@ -263,6 +263,12 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
                 else -> unused++
             }
         }
+
+        binding.flexbox.apply {
+            isFocusable = true 
+            isFocusableInTouchMode = true 
+            requestFocus()
+        }
     }
 
     private fun setMenuUi(source: BaseSource) {
