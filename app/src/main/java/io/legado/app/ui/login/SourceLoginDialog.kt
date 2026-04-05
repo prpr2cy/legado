@@ -265,8 +265,8 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
         }
 
         binding.flexbox.apply {
-            isFocusable = true 
-            isFocusableInTouchMode = true 
+            isFocusable = true
+            isFocusableInTouchMode = true
             requestFocus()
         }
     }
