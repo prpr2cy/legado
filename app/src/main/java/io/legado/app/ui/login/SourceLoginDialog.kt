@@ -144,15 +144,15 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
             } else {
                 source.loginUi
             }
-            if (newloginUi == loginUi) return@launch
-            val newRowUis = parseLoginUi(newloginUi) ?: return@launch
+            if (newLoginUi == loginUi) return@launch
+            val newRowUis = parseLoginUi(newLoginUi) ?: return@launch
             rowUiBuilder(source, newRowUis)
 
             for (i in binding.flexbox.childCount - 1 downTo newRowUis.size) {
                 binding.flexbox.removeViewAt(i)
             }
 
-            loginUi = newloginUi
+            loginUi = newLoginUi
             rowUis = newRowUis
             hasChange = true
         }
