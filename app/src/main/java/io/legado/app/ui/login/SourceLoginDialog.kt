@@ -212,16 +212,18 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
         val loginUiStr = source.loginUi ?: return
 
         lifecycleScope.launch(Main) {
-            rowUis = source.loginUi()
+            rowUis = withContext(IO) {
+                parseLoginUi(loginUiStr)
+            }
             rowUiBuilder(source, rowUis)
             setButtonUi(source, rowUis)
-        }
 
-        binding.toolBar.apply {
-            setBackgroundColor(primaryColor)
-            title = getString(R.string.login_source, source.getTag())
-            inflateMenu(R.menu.source_login)
-            menu.applyTint(requireContext())
+            binding.toolBar.apply {
+                setBackgroundColor(primaryColor)
+                title = getString(R.string.login_source, source.getTag())
+                inflateMenu(R.menu.source_login)
+                menu.applyTint(requireContext())
+            }
         }
     }
 
