@@ -138,26 +138,21 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
         val loginUiJs = source.getLoginUiJs()
         loginUrl = source.getLoginJs()
 
-        if (loginUiJs != null) {
-            lifecycleScope.launch(Main) {
-                val newLoginUi = withContext(IO) { evalUiJs(loginUiJs) }
-                if (newloginUi == loginUi) return@handleReUiView
-                rowUis = parseLoginUi(loginUi) ?: return@handleReUiView
-                hasChange = true
-                loginUi = newLoginUi
-                rowUiBuilder(source, rowUis)
+        lifecycleScope.launch(Main) {
+            val newLoginUi = if (loginUiJs != null) {
+                withContext(IO) { evalUiJs(loginUiJs) }
+            } else {
+                source.loginUi
             }
-        } else {
-            val newloginUi = source.loginUi
-            if (newloginUi == loginUi) return
-            rowUis = parseLoginUi(loginUi) ?: return
-            hasChange = true
-            loginUi = newloginUi
+            if (newloginUi == loginUi) return@launch
+            rowUis = parseLoginUi(loginUi) ?: return@launch
             rowUiBuilder(source, rowUis)
-        }
+            loginUi = newloginUi
+            hasChange = true
 
-        for (i in binding.flexbox.childCount - 1 downTo rowUis.size) {
-            binding.flexbox.removeViewAt(i)
+            for (i in binding.flexbox.childCount - 1 downTo rowUis.size) {
+                binding.flexbox.removeViewAt(i)
+            }
         }
     }
 
