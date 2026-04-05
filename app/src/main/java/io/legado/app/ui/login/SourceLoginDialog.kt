@@ -135,24 +135,24 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
 
     private suspend fun handleReUiView() {
         val source = viewModel.source ?: return
-        val loginUiJs = source.getLoginUiJs()
         loginUrl = source.getLoginJs()
 
-        lifecycleScope.launch(Main) {
-            val newLoginUi = if (loginUiJs != null) {
-                withContext(IO) { evalUiJs(loginUiJs) }
-            } else {
-                source.loginUi
+        val newRowUis = withContext(IO) {
+            val newLoginUi = source.loginUiJs()?.let { evalUiJs(it) } ?: source.loginUi
+            newLoginUi ?: return@withContext null
+            if (newLoginUi == loginUi) return@withContext null
+            parseLoginUi(newLoginUi)?.also {
+                loginUi = newLoginUi
             }
-            if (newLoginUi == loginUi) return@launch
-            val newRowUis = parseLoginUi(newLoginUi) ?: return@launch
+        } ?: return
+
+        withContext(Main) {
             rowUiBuilder(source, newRowUis)
 
             for (i in binding.flexbox.childCount - 1 downTo newRowUis.size) {
                 binding.flexbox.removeViewAt(i)
             }
 
-            loginUi = newLoginUi
             rowUis = newRowUis
             hasChange = true
         }
@@ -170,14 +170,14 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
                 put("chapter", viewModel.chapter)
             }.toString()
         } catch (e: Exception) {
-            AppLog.put("${source.getTag()} loginUi error", e)
+            AppLog.put("${source.getTag()} loginUi js error", e)
             null
         }
     }
 
     private fun parseLoginUi(loginUi: String?): List<RowUi>? {
         return GSON.fromJsonArray<RowUi>(loginUi).onFailure {
-            AppLog.put("loginUi json parse err:" + it.localizedMessage, it)
+            AppLog.put("loginUi json parse error: " + it.localizedMessage, it)
         }.getOrNull()
     }
 
@@ -191,18 +191,15 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
 
     override fun onFragmentCreated(view: View, savedInstanceState: Bundle?) {
         val source = viewModel.source ?: return
-        val loginUiJs = source.getLoginUiJs()
         loginUrl = source.getLoginJs()
         binding.root.visibility = View.INVISIBLE
 
         lifecycleScope.launch(Main) {
-            loginUi = if (loginUiJs != null) {
-                withContext(IO) { evalUiJs(loginUiJs) }
-            } else {
-                source.loginUi
+            rowUis = withContext(IO) {
+                loginUi = source.loginUiJs()?.let { evalUiJs(it) } ?: source.loginUi
+                loginUrl ?: return@launch
+                parseLoginUi(loginUi)
             }
-            loginUi ?: return@launch
-            rowUis = parseLoginUi(loginUi)
             rowUiBuilder(source, rowUis)
             setMenuUi(source)
             binding.root.visibility = View.VISIBLE
@@ -329,7 +326,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
                         put("chapter", viewModel.chapter)
                     }
                 } catch (e: Exception) {
-                    AppLog.put("LoginUI Button ${rowUi.name} JavaScript error", e)
+                    AppLog.put("loginUI button ${rowUi.name} js error", e)
                 }
             }
         }

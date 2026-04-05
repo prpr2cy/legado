@@ -58,7 +58,7 @@ interface BaseSource : JsExtensions {
         return this
     }
 
-    fun getLoginUiJs(): String? {
+    fun loginUiJs(): String? {
         return loginUi?.let {
             when {
                 it.startsWith("@js:") -> it.substring(4)
