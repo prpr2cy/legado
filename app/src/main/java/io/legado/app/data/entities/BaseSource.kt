@@ -58,6 +58,16 @@ interface BaseSource : JsExtensions {
         return this
     }
 
+    fun getLoginUiJs(): String? {
+        return loginUi?.let {
+            when {
+                it.startsWith("@js:") -> it.substring(4)
+                it.startsWith("<js>") -> it.substring(4, it.lastIndexOf("<"))
+                else -> null
+            }
+        }
+    }
+
     fun loginUi(): List<RowUi>? {
         val json = loginUi?.let {
             when {

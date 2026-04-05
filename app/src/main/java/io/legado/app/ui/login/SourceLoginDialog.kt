@@ -51,10 +51,9 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
     private val binding by viewBinding(DialogLoginBinding::bind)
     private val viewModel by activityViewModels<SourceLoginViewModel>()
     private var loginUi: String? = null
+    private var loginUrl: String? = null
     private var rowUis: List<RowUi>? = null
     private var rowUiName = arrayListOf<String>()
-    private var loginUrl: String? = null
-    private var isSame = false
     private var oKToClose = false
     private var hasChange = false
 
@@ -136,57 +135,38 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
 
     private suspend fun handleReUiView() {
         val source = viewModel.source ?: return
-        val loginUiStr = source.loginUi ?: return
+        val loginUiJs = source.getLoginUiJs()
+        loginUrl = source.getLoginJs()
 
-        val newRowUis = withContext(IO) {
-            parseLoginUi(loginUiStr)
-        } ?: return
-
-        if (isSame || newRowUis == null) {
-            isSame = false
-            return
+        if (loginUiJs != null) {
+            lifecycleScope.launch(Main) {
+                val newLoginUi = withContext(IO) { evalUiJs(loginUiJs) }
+                if (newloginUi == loginUi) return
+                hasChange = true
+                loginUi = newloginUi
+                rowUis = parseLoginUi(loginUi)
+                rowUiBuilder(source, rowUis)
+            }
+        } else {
+            val newloginUi = source.loginUi
+            if (newloginUi == loginUi) return
+            hasChange = true
+            loginUi = newloginUi
+            rowUis = parseLoginUi(loginUi)
+            rowUiBuilder(source, rowUis)
         }
 
-        rowUiBuilder(source, newRowUis)
-        hasChange = true
-        rowUis = newRowUis
-
-        for (i in binding.flexbox.childCount - 1 downTo newRowUis.size) {
+        for (i in binding.flexbox.childCount - 1 downTo rowUis.size) {
             binding.flexbox.removeViewAt(i)
         }
     }
 
-    private suspend fun parseLoginUi(loginUiStr: String): List<RowUi>? {
-        return try {
-            val loginUiJson = when {
-                loginUiStr.startsWith("@js:", true) -> evalUiJs(loginUiStr.substring(4))
-                loginUiStr.startsWith("<js>", true) -> {
-                    val endIndex = loginUiStr.lastIndexOf("<")
-                    if (endIndex > 4) evalUiJs(loginUiStr.substring(4, endIndex)) else loginUiStr
-                }
-                else -> loginUiStr
-            }
-
-            if (loginUiJson == loginUi && rowUis != null) {
-                isSame = true
-                rowUis
-            } else {
-                loginUi = loginUiJson
-                isSame = false
-                GSON.fromJsonArray<RowUi>(loginUiJson).getOrNull()
-            }
-        } catch (e: Exception) {
-            AppLog.put("parseLoginUi error: ${e.message}", e)
-            null
-        }
-    }
-
-    private suspend fun evalUiJs(jsCode: String): String? {
+    private suspend fun evalUiJs(loginUiJs: String): String? {
         val source = viewModel.source ?: return null
         val loginJS = loginUrl ?: ""
 
         return try {
-            source.evalJS("$loginJS\n$jsCode") {
+            source.evalJS("$loginJS\n$loginUiJs") {
                 put("java", sourceLoginJsExtensions)
                 put("result", viewModel.loginInfo)
                 put("book", viewModel.book)
@@ -196,6 +176,12 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
             AppLog.put("${source.getTag()} loginUi error", e)
             null
         }
+    }
+
+    private suspend fun parseLoginUi(loginUi: String?): List<RowUi>? {
+        return GSON.fromJsonArray<RowUi>(loginUi).onFailure {
+            AppLog.put("loginUi json parse err:" + it.localizedMessage, it)
+        }.getOrNull()
     }
 
     override fun onStart() {
@@ -208,22 +194,21 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
 
     override fun onFragmentCreated(view: View, savedInstanceState: Bundle?) {
         val source = viewModel.source ?: return
+        loginUi = source.loginUi ?: return
+        val loginUiJs = source.getLoginUiJs()
         loginUrl = source.getLoginJs()
-        val loginUiStr = source.loginUi ?: return
 
-        lifecycleScope.launch(Main) {
-            rowUis = withContext(IO) {
-                parseLoginUi(loginUiStr)
+        if (loginUiJs != null) {
+            lifecycleScope.launch(Main) {
+                loginUi = withContext(IO) { evalUiJs(loginUiJs) }
+                rowUis = parseLoginUi(loginUi)
+                rowUiBuilder(source, rowUis)
+                setMenuUi(source)
             }
+        } else {
+            rowUis = parseLoginUi(loginUi)
             rowUiBuilder(source, rowUis)
-            setButtonUi(source, rowUis)
-
-            binding.toolBar.apply {
-                setBackgroundColor(primaryColor)
-                title = getString(R.string.login_source, source.getTag())
-                inflateMenu(R.menu.source_login)
-                menu.applyTint(requireContext())
-            }
+            setMenuUi(source)
         }
     }
 
@@ -279,7 +264,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
         }
     }
 
-    private fun setButtonUi(source: BaseSource, rowUis: List<RowUi>?) {
+    private fun setMenuUi(source: BaseSource) {
         binding.toolBar.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 R.id.menu_ok -> {
@@ -302,6 +287,13 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
                 R.id.menu_log -> showDialogFragment<AppLogDialog>()
             }
             true
+        }
+
+        binding.toolBar.apply {
+            setBackgroundColor(primaryColor)
+            title = getString(R.string.login_source, source.getTag())
+            inflateMenu(R.menu.source_login)
+            menu.applyTint(requireContext())
         }
     }
 
