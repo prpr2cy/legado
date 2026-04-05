@@ -36,6 +36,7 @@ import io.legado.app.utils.toastOnUi
 import io.legado.app.utils.viewbindingdelegate.viewBinding
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Dispatchers.Main
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import splitties.init.appCtx
@@ -56,6 +57,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
     private var rowUiName = arrayListOf<String>()
     private var oKToClose = false
     private var hasChange = false
+    private var prepareJob: Job? = null
 
     private val sourceLoginJsExtensions by lazy {
         SourceLoginJsExtensions(
@@ -192,9 +194,9 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
     override fun onFragmentCreated(view: View, savedInstanceState: Bundle?) {
         val source = viewModel.source ?: return
         loginUrl = source.getLoginJs()
-        binding.root.visibility = View.INVISIBLE
 
-        lifecycleScope.launch(Main) {
+        prepareJob = lifecycleScope.launch(Main) {
+            binding.root.visibility = View.INVISIBLE
             rowUis = withContext(IO) {
                 loginUi = source.loginUiJs()?.let { evalUiJs(it) } ?: source.loginUi
                 loginUrl ?: return@withContext null
@@ -204,6 +206,11 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
             setMenuUi(source)
             binding.root.visibility = View.VISIBLE
         }
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        prepareJob?.cancel()
     }
 
     private fun rowUiBuilder(source: BaseSource, rowUis: List<RowUi>?) {
