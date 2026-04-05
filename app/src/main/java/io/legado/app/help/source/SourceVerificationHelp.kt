@@ -68,6 +68,7 @@ object SourceVerificationHelp {
         val result = getResult(source.getKey())
             ?: throw NoStackTraceException("验证结果为空")
         clearResult(source.getKey())
+        if (result.second.isEmpty()) throw NoStackTraceException("验证结果为空")
         return result
     }
 
