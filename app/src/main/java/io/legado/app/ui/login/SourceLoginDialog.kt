@@ -217,7 +217,6 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
         val loginInfo = viewModel.loginInfo
         var unused = 0
         rowUiName.clear()
-        binding.flexbox.clearFocus()
 
         rowUis?.forEachIndexed { index, rowUi ->
             when (rowUi.type) {
@@ -263,6 +262,8 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
                 else -> unused++
             }
         }
+
+        binding.flexbox.clearFocus()
     }
 
     private fun setMenuUi(source: BaseSource) {
