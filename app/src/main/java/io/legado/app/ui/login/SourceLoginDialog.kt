@@ -145,14 +145,16 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
                 source.loginUi
             }
             if (newloginUi == loginUi) return@launch
-            rowUis = parseLoginUi(loginUi) ?: return@launch
-            rowUiBuilder(source, rowUis)
-            loginUi = newloginUi
-            hasChange = true
+            val newRowUis = parseLoginUi(newloginUi) ?: return@launch
+            rowUiBuilder(source, newRowUis)
 
-            for (i in binding.flexbox.childCount - 1 downTo rowUis.size) {
+            for (i in binding.flexbox.childCount - 1 downTo newRowUis.size) {
                 binding.flexbox.removeViewAt(i)
             }
+
+            loginUi = newloginUi
+            rowUis = newRowUis
+            hasChange = true
         }
     }
 
@@ -189,18 +191,16 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
 
     override fun onFragmentCreated(view: View, savedInstanceState: Bundle?) {
         val source = viewModel.source ?: return
-        loginUi = source.loginUi ?: return
         val loginUiJs = source.getLoginUiJs()
         loginUrl = source.getLoginJs()
 
-        if (loginUiJs != null) {
-            lifecycleScope.launch(Main) {
-                loginUi = withContext(IO) { evalUiJs(loginUiJs) }
-                rowUis = parseLoginUi(loginUi)
-                rowUiBuilder(source, rowUis)
-                setMenuUi(source)
+        lifecycleScope.launch(Main) {
+            loginUi = if (loginUiJs != null) {
+                withContext(IO) { evalUiJs(loginUiJs) }
+            } else {
+                source.loginUi
             }
-        } else {
+            loginUi ?: return@launch
             rowUis = parseLoginUi(loginUi)
             rowUiBuilder(source, rowUis)
             setMenuUi(source)
