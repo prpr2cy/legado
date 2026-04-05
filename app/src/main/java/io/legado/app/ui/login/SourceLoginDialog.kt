@@ -141,18 +141,18 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
         if (loginUiJs != null) {
             lifecycleScope.launch(Main) {
                 val newLoginUi = withContext(IO) { evalUiJs(loginUiJs) }
-                if (newloginUi == loginUi) return
+                if (newloginUi == loginUi) return@handleReUiView
+                rowUis = parseLoginUi(loginUi) ?: return@handleReUiView
                 hasChange = true
-                loginUi = newloginUi
-                rowUis = parseLoginUi(loginUi)
+                loginUi = newLoginUi
                 rowUiBuilder(source, rowUis)
             }
         } else {
             val newloginUi = source.loginUi
             if (newloginUi == loginUi) return
+            rowUis = parseLoginUi(loginUi) ?: return
             hasChange = true
             loginUi = newloginUi
-            rowUis = parseLoginUi(loginUi)
             rowUiBuilder(source, rowUis)
         }
 
@@ -178,7 +178,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
         }
     }
 
-    private suspend fun parseLoginUi(loginUi: String?): List<RowUi>? {
+    private fun parseLoginUi(loginUi: String?): List<RowUi>? {
         return GSON.fromJsonArray<RowUi>(loginUi).onFailure {
             AppLog.put("loginUi json parse err:" + it.localizedMessage, it)
         }.getOrNull()
