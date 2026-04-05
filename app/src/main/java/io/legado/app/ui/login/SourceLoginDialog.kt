@@ -197,7 +197,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
         lifecycleScope.launch(Main) {
             rowUis = withContext(IO) {
                 loginUi = source.loginUiJs()?.let { evalUiJs(it) } ?: source.loginUi
-                loginUrl ?: return@launch
+                loginUrl ?: return@withContext null
                 parseLoginUi(loginUi)
             }
             rowUiBuilder(source, rowUis)
