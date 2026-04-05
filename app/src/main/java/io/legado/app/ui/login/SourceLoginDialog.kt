@@ -193,6 +193,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
         val source = viewModel.source ?: return
         val loginUiJs = source.getLoginUiJs()
         loginUrl = source.getLoginJs()
+        binding.root.visibility = View.INVISIBLE
 
         lifecycleScope.launch(Main) {
             loginUi = if (loginUiJs != null) {
@@ -204,6 +205,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
             rowUis = parseLoginUi(loginUi)
             rowUiBuilder(source, rowUis)
             setMenuUi(source)
+            binding.root.visibility = View.VISIBLE
         }
     }
 
