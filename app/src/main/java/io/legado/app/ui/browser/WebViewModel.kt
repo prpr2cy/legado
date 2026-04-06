@@ -65,8 +65,8 @@ class WebViewModel(application: Application) : BaseViewModel(application) {
                 baseUrl = injectJsToDataUri(baseUrl)
                 localHtml = true
             }
-            if (html != null) {
-                html = injectJs(html)
+            html?.let {
+                html = injectJs(it)
                 localHtml = true
             }
             if (analyzeUrl.isPost()) {
