@@ -100,7 +100,7 @@ class WebViewModel(application: Application) : BaseViewModel(application) {
             val meta = dataUri.substring(0, metaIndex).lowercase()
             val data = dataUri.substring(metaIndex + 1).trim()
             if (meta.contains("charset=") && !meta.contains("charset=utf-8")) {
-                throw NoStackTraceException("不支持非UTF-8编码的dataUri\n${dataUri}")
+                throw NoStackTraceException("不支持非UTF-8编码的dataUri")
             }
             if (meta.contains("base64")) {
                 val decodeData = String(Base64.decode(data, Base64.NO_WRAP), Charsets.UTF_8)
@@ -114,7 +114,7 @@ class WebViewModel(application: Application) : BaseViewModel(application) {
                 "${meta},${encodeData}"
             }
         } else {
-            throw NoStackTraceException("dataUri格式不正确:\n${dataUri}")
+            throw NoStackTraceException("dataUri格式不正确")
         }
     }
 
