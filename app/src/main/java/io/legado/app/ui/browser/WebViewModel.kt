@@ -60,38 +60,12 @@ class WebViewModel(application: Application) : BaseViewModel(application) {
             val analyzeUrl = AnalyzeUrl(url, source = source)
             baseUrl = analyzeUrl.url
             headerMap.putAll(analyzeUrl.headerMap)
-            if (baseUrl.startsWith("data:text/html", ignoreCase = true) && html.isNullOrBlank()) {
-                val dataUri = baseUrl.substringAfter("data:text/html")
-                val metaIndex = dataUri.indexOf(",")
-                if (metaIndex != -1) {
-                    val meta = dataUri.substring(0, metaIndex).lowercase()
-                    val data = dataUri.substring(metaIndex + 1)
-                    val charset = if (meta.contains("charset=")) {
-                        val name = meta.substringAfter("charset=")
-                            .substringBefore(";")
-                            .trim()
-                        Charset.forName(name)
-                    } else Charsets.UTF_8
-                    html = if (meta.contains("base64")) {
-                        String(Base64.decode(data, Base64.DEFAULT), charset)
-                    } else  {
-                        URLDecoder.decode(data, charset.name())
-                    }
-                }
+            if (baseUrl.startsWith("data:text/html", ignoreCase = true) && html == null) {
+                baseUrl = injectJsToDataUri(baseUrl)
+                localHtml = true
             }
-            html?.let {
-                val headIndex = it.indexOf("<head", ignoreCase = true)
-                html = if (headIndex != -1) {
-                    val closingHeadIndex = it.indexOf(">", startIndex = headIndex)
-                    if (closingHeadIndex != -1) {
-                        val insertPos = closingHeadIndex + 1
-                        StringBuilder(it).insert(insertPos, "<script>$JS_INJECTION</script>").toString()
-                    } else {
-                        "<head><script>$JS_INJECTION</script></head>$it"
-                    }
-                } else {
-                    "<head><script>$JS_INJECTION</script></head>$it"
-                }
+            if (html != null) {
+                html = injectJs(html)
                 localHtml = true
             }
             if (analyzeUrl.isPost()) {
@@ -102,6 +76,44 @@ class WebViewModel(application: Application) : BaseViewModel(application) {
         }.onError {
             context.toastOnUi("error\n${it.localizedMessage}")
             it.printOnDebug()
+        }
+    }
+
+    private fun injectJs(html: String): String {
+        val headIndex = html.indexOf("<head", ignoreCase = true)
+        return if (headIndex != -1) {
+            val closingHeadIndex = html.indexOf(">", startIndex = headIndex)
+            if (closingHeadIndex != -1) {
+                val insertPos = closingHeadIndex + 1
+                StringBuilder(html).insert(insertPos, "<script>$JS_INJECTION</script>").toString()
+            } else {
+                "<head><script>$JS_INJECTION</script></head>$html"
+            }
+        } else {
+            "<head><script>$JS_INJECTION</script></head>$html"
+        }   
+    }
+
+    private fun injectJsToDataUri(dataUri: String): String {
+        val metaIndex = dataUri.indexOf(",")
+        return if (metaIndex != -1) {
+            val meta = dataUri.substring(0, metaIndex).lowercase()
+            val data = dataUri.substring(metaIndex + 1).trim()
+            val charset = if (meta.contains("charset=")) {
+                val name = meta.substringAfter("charset=").substringBefore(";").trim()
+                Charset.forName(name)
+            } else Charsets.UTF_8
+            if (meta.contains("base64")) {
+                val html = String(Base64.decode(data, Base64.DEFAULT), charset)
+                val data = Base64.encodeToString(injectJs(html).toByteArray(charset), Base64.DEFAULT)
+                "${meta},${data}"
+            } else  {
+                val html = URLDecoder.decode(data, charset.name())
+                val data = URLDecoder.encode(injectJs(html), charset.name())
+                "${meta},${data}"
+            }
+        } else {
+            throw NoStackTraceException("dataUri格式不正确: ${dataUri}")
         }
     }
 
@@ -128,6 +140,21 @@ class WebViewModel(application: Application) : BaseViewModel(application) {
         }.onSuccess {
             context.toastOnUi("保存成功")
         }
+    }
+
+    private fun injectJs(html: String): String {
+        val headIndex = html.indexOf("<head", ignoreCase = true)
+        return if (headIndex != -1) {
+            val closingHeadIndex = html.indexOf(">", startIndex = headIndex)
+            if (closingHeadIndex != -1) {
+                val insertPos = closingHeadIndex + 1
+                StringBuilder(html).insert(insertPos, "<script>$JS_INJECTION</script>").toString()
+            } else {
+                "<head><script>$JS_INJECTION</script></head>$html"
+            }
+        } else {
+            "<head><script>$JS_INJECTION</script></head>$html"
+        }   
     }
 
     private suspend fun webData2bitmap(data: String): ByteArray? {
