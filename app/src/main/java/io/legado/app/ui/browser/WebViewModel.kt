@@ -27,8 +27,6 @@ import io.legado.app.help.WebJsExtensions.Companion.JS_INJECTION
 import io.legado.app.utils.writeBytes
 import org.apache.commons.text.StringEscapeUtils
 import java.io.File
-import java.net.URLDecoder
-import java.net.URLEncoder
 import java.nio.charset.Charset
 import java.util.Date
 
@@ -100,21 +98,22 @@ class WebViewModel(application: Application) : BaseViewModel(application) {
         return if (metaIndex != -1) {
             val meta = dataUri.substring(0, metaIndex).lowercase()
             val data = dataUri.substring(metaIndex + 1).trim()
-            val charset = if (meta.contains("charset=")) {
-                val name = meta.substringAfter("charset=").substringBefore(";").trim()
-                Charset.forName(name)
-            } else Charsets.UTF_8
+            if (meta.contains("charset=") && !meta.contains("charset=utf-8")) {
+                throw NoStackTraceException("不支持非UTF-8编码的dataUri\n${dataUri}")
+            }
             if (meta.contains("base64")) {
-                val html = String(Base64.decode(data, Base64.DEFAULT), charset)
-                val data = Base64.encodeToString(injectJs(html).toByteArray(charset), Base64.DEFAULT)
-                "${meta},${data}"
+                val decodeData = String(Base64.decode(data, Base64.NO_WRAP), Charsets.UTF_8)
+                val encodeData = Base64.encodeToString(
+                    injectJs(decodeData).toByteArray(), Base64.NO_WRAP
+                )
+                "${meta},${encodeData}"
             } else  {
-                val html = URLDecoder.decode(data, charset.name())
-                val data = URLEncoder.encode(injectJs(html), charset.name())
-                "${meta},${data}"
+                val decodeData = Uri.decode(data)
+                val encodeData = Uri.encode(injectJs(decodeData), null)
+                "${meta},${encodeData}"
             }
         } else {
-            throw NoStackTraceException("dataUri格式不正确: ${dataUri}")
+            throw NoStackTraceException("dataUri格式不正确:\n${dataUri}")
         }
     }
 
