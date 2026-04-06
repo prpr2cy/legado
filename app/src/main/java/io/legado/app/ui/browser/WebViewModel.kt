@@ -59,13 +59,14 @@ class WebViewModel(application: Application) : BaseViewModel(application) {
             val analyzeUrl = AnalyzeUrl(url, source = source)
             baseUrl = analyzeUrl.url
             headerMap.putAll(analyzeUrl.headerMap)
-            if (baseUrl.startsWith("data:text/html", ignoreCase = true) && html == null) {
+            if (baseUrl.startsWith("data:text/html", ignoreCase = true) && html.isNullorBlank()) {
                 baseUrl = injectJsToDataUri(baseUrl)
                 localHtml = true
-            }
-            html?.let {
-                html = injectJs(it)
-                localHtml = true
+            } else {
+                html?.let {
+                    html = injectJs(it)
+                    localHtml = true
+                }
             }
             if (analyzeUrl.isPost()) {
                 html = analyzeUrl.getStrResponseAwait(useWebView = false).body
