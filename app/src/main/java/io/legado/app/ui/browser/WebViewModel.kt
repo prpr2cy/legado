@@ -28,6 +28,7 @@ import io.legado.app.utils.writeBytes
 import org.apache.commons.text.StringEscapeUtils
 import java.io.File
 import java.net.URLDecoder
+import java.net.URLEncoder
 import java.nio.charset.Charset
 import java.util.Date
 
@@ -109,7 +110,7 @@ class WebViewModel(application: Application) : BaseViewModel(application) {
                 "${meta},${data}"
             } else  {
                 val html = URLDecoder.decode(data, charset.name())
-                val data = URLDecoder.encode(injectJs(html), charset.name())
+                val data = URLEncoder.encode(injectJs(html), charset.name())
                 "${meta},${data}"
             }
         } else {
@@ -140,21 +141,6 @@ class WebViewModel(application: Application) : BaseViewModel(application) {
         }.onSuccess {
             context.toastOnUi("保存成功")
         }
-    }
-
-    private fun injectJs(html: String): String {
-        val headIndex = html.indexOf("<head", ignoreCase = true)
-        return if (headIndex != -1) {
-            val closingHeadIndex = html.indexOf(">", startIndex = headIndex)
-            if (closingHeadIndex != -1) {
-                val insertPos = closingHeadIndex + 1
-                StringBuilder(html).insert(insertPos, "<script>$JS_INJECTION</script>").toString()
-            } else {
-                "<head><script>$JS_INJECTION</script></head>$html"
-            }
-        } else {
-            "<head><script>$JS_INJECTION</script></head>$html"
-        }   
     }
 
     private suspend fun webData2bitmap(data: String): ByteArray? {
