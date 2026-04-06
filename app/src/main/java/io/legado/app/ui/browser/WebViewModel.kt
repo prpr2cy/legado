@@ -59,7 +59,7 @@ class WebViewModel(application: Application) : BaseViewModel(application) {
             val analyzeUrl = AnalyzeUrl(url, source = source)
             baseUrl = analyzeUrl.url
             headerMap.putAll(analyzeUrl.headerMap)
-            if (baseUrl.startsWith("data:text/html", ignoreCase = true) && html.isNullorBlank()) {
+            if (baseUrl.startsWith("data:text/html", ignoreCase = true) && html.isNullOrBlank()) {
                 baseUrl = injectJsToDataUri(baseUrl)
                 localHtml = true
             } else {
