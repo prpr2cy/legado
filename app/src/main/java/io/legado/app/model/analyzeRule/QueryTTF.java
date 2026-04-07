@@ -2,9 +2,7 @@ package io.legado.app.model.analyzeRule;
 
 import android.os.ConditionVariable;
 import android.util.Log;
-
 import androidx.annotation.Keep;
-
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;

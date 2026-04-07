@@ -41,7 +41,6 @@ class CodeView @JvmOverloads constructor(context: Context, attrs: AttributeSet? 
     private val mErrorHashSet: SortedMap<Int, Int> = TreeMap()
     private val mSyntaxPatternMap: MutableMap<Pattern, Int> = HashMap()
     private var mIndentCharacterList = mutableListOf('{', '+', '-', '*', '/', '=')
-
     private val isAndroid8 = Build.VERSION.SDK_INT in 26..27
 
     private fun sendToClipboard(text: String) {

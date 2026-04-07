@@ -1,6 +1,5 @@
 package io.legado.app.help.http
 
-import com.github.luben.zstd.ZstdInputStream
 import io.legado.app.utils.EncodingDetect
 import io.legado.app.utils.GSON
 import io.legado.app.utils.Utf8BomUtils
@@ -132,7 +131,6 @@ fun <T> ResponseBody.unCompress(
                 "gzip" -> GZIPInputStream(input)
                 "deflate" -> InflaterInputStream(input)
                 "br" -> BrotliInputStream(input)
-                "zstd" -> ZstdInputStream(input)
                 else -> input
             }
         } catch (e: IOException) {

@@ -2,9 +2,7 @@ package io.legado.app.model.analyzeRule;
 
 import android.os.Build;
 import android.util.LruCache;
-
 import androidx.annotation.Keep;
-
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -20,7 +18,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.zip.InflaterInputStream;
-
 import org.brotli.dec.BrotliInputStream;
 
 @Keep
