@@ -336,7 +336,7 @@ class ReadMenu @JvmOverloads constructor(
             }
             context.alert(R.string.open_fun) {
                 val message = context.getString(R.string.use_browser_open)
-                val chapterUrl = tvChapterUrl.text.toString().substringBefore(",{")
+                val chapterUrl = tvChapterUrl.text.toString()
                 setMessage("${message}\n\n$chapterUrl")
                 neutralButton(R.string.copy_url) {
                     appCtx.sendToClip(chapterUrl)

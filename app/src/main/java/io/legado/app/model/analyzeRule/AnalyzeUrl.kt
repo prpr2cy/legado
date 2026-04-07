@@ -81,6 +81,7 @@ class AnalyzeUrl(
     private var ignoreHeader: Boolean = false
     private var useWebView: Boolean = false
     private var webJs: String? = null
+    private var isWebUrl: Boolean = false
     private val enabledCookieJar = source?.enabledCookieJar ?: false
     private val domain: String
     private val rateLimiter = ConcurrentRateLimiter(source)
@@ -114,6 +115,12 @@ class AnalyzeUrl(
         replaceKeyPageJs()
         //处理URL
         analyzeUrl()
+        //处理webJs的URL
+        if (isWebUrl == true) {
+            isWebUrl = false
+            ruleUrl = url
+            analyzeUrl()
+        }
     }
 
     /**
@@ -217,6 +224,7 @@ class AnalyzeUrl(
                         evalJS(jsStr, url)?.toString()?.let {
                             if (it.isAbsUrl() || it.isDataUrl()) {
                                 url = it
+                                isWebUrl = true
                             }
                         }
                     }
