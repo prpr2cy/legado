@@ -306,6 +306,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
 
     private fun getLoginInfo(): MutableMap<String, String> {
         val loginInfo = viewModel.loginInfo
+        val preLoginInfo = loginInfo.toMap()
         rowUis?.forEachIndexed { index, rowUi ->
             rowUi ?: return@forEachIndexed
             when (rowUi.type) {
@@ -316,6 +317,9 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
                     loginInfo[rowUi.name] = text ?: rowUi.default ?: ""
                 }
             }
+        }
+        if (!loginInfo.equals(preLoginInfo)) {
+            hasChange = true
         }
         return loginInfo
     }
