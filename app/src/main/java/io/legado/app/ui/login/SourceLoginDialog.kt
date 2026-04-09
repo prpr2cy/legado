@@ -55,7 +55,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
     private var loginUrl: String? = null
     private var rowUis: List<RowUi>? = null
     private var rowUiName = arrayListOf<String>()
-    private var preLoginInfo: Map<String, String>() = emptyMap()
+    private var preLoginInfo: Map<String, String> = emptyMap()
     private var oKToClose: Boolean = false
     private var prepareJob: Job? = null
 
