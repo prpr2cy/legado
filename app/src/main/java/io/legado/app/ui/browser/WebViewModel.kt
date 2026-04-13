@@ -64,7 +64,7 @@ class WebViewModel(application: Application) : BaseViewModel(application) {
                 localHtml = true
             } else {
                 html?.let {
-                    html = Uri.encode(injectJs(Uri.decode(it)), null)
+                    html = injectJs(Uri.decode(it))
                     localHtml = true
                 }
             }
