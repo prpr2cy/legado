@@ -376,7 +376,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
                         put("book", viewModel.book)
                         put("chapter", viewModel.chapter)
                     }
-                    context?.toastOnUi(R.string.success)
+                    // context?.toastOnUi(R.string.success)
                     withContext(Main) {
                         dismiss()
                     }
