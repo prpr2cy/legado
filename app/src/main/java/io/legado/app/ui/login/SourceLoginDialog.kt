@@ -55,7 +55,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
     private var loginUrl: String? = null
     private var rowUis: List<RowUi>? = null
     private var rowUiName = arrayListOf<String>()
-    private var preLoginInfo: Map<String, String> = emptyMap()
+    private var hasChange: Boolean = false
     private var oKToClose: Boolean = false
     private var prepareJob: Job? = null
 
@@ -87,8 +87,20 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
         }
     }
 
+    override fun saveLoginInfo(): Boolean {
+        val source = viewModel.source ?: return false
+        val loginInfo = viewModel.loginInfo
+        return if (loginInfo.isEmpty()) {
+            source.removeLoginInfo()
+            true
+        } else {
+            source.putLoginInfo(GSON.toJson(loginInfo))
+        }
+    }
+
     private fun handleUpUiData(data: Map<String, Any?>? = null) {
         val loginInfo = viewModel.loginInfo
+        hasChange = true
 
         if (data == null) {
             rowUis?.forEachIndexed { index, rowUi ->
@@ -192,7 +204,6 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
     override fun onFragmentCreated(view: View, savedInstanceState: Bundle?) {
         val source = viewModel.source ?: return
         loginUrl = source.getLoginJs()
-        preLoginInfo = viewModel.loginInfo.toMap()
 
         prepareJob = lifecycleScope.launch(Main) {
             binding.root.visibility = View.INVISIBLE
@@ -379,7 +390,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
 
     override fun onDismiss(dialog: DialogInterface) {
         val loginInfo = viewModel.loginInfo
-        if (!oKToClose && !loginInfo.equals(preLoginInfo)) {
+        if (!oKToClose && hasChange) {
             if (loginInfo.isEmpty()) {
                 viewModel.source?.removeLoginInfo()
             } else {
