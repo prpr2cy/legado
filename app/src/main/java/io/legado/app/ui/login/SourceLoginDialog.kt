@@ -88,6 +88,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
     }
 
     override fun saveLoginInfo(): Boolean {
+        if (oKToClose) return true
         val source = viewModel.source ?: return false
         val loginInfo = viewModel.loginInfo
         return if (loginInfo.isEmpty()) {
@@ -389,8 +390,8 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
     }
 
     override fun onDismiss(dialog: DialogInterface) {
-        val loginInfo = viewModel.loginInfo
         if (!oKToClose && hasChange) {
+            val loginInfo = viewModel.loginInfo
             if (loginInfo.isEmpty()) {
                 viewModel.source?.removeLoginInfo()
             } else {
