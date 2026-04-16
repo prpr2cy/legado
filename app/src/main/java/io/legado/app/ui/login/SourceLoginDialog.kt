@@ -87,10 +87,14 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
         }
     }
 
-    override fun saveLoginInfo(): Boolean {
-        if (oKToClose) return true
+    override fun saveLoginInfo(infoMap: Map<String, String>?): Boolean {
         val source = viewModel.source ?: return false
-        val loginInfo = viewModel.loginInfo
+        if (oKToClose) return true
+        val loginInfo = infoMap?.let {
+            (source.getLoginInfoMap()?.toMutableMap() ?: mutableMapOf()).apply {
+                putAll(it)
+            }
+        } ?: viewModel.loginInfo
         return if (loginInfo.isEmpty()) {
             source.removeLoginInfo()
             true

@@ -18,7 +18,7 @@ open class SourceLoginJsExtensions(
     interface Callback {
         fun upUiData(data: Map<String, Any?>?)
         fun reUiView()
-        fun saveLoginInfo(): Boolean
+        fun saveLoginInfo(infoMap: Map<String, String>?): Boolean
     }
 
     override fun getSource(): BaseSource? {
@@ -34,8 +34,8 @@ open class SourceLoginJsExtensions(
         callbackRef.get()?.reUiView()
     }
 
-    fun saveLoginInfo(): Boolean {
-        return callbackRef.get()?.saveLoginInfo() ?: false
+    fun saveLoginInfo(infoMap: Map<String, String>? = null): Boolean {
+        return callbackRef.get()?.saveLoginInfo(infoMap) ?: false
     }
 
     fun copyText(text: String) {
