@@ -34,6 +34,7 @@ open class SourceLoginJsExtensions(
         callbackRef.get()?.reUiView()
     }
 
+    @JvmOverloads
     fun saveLoginInfo(infoMap: Map<String, String>? = null): Boolean {
         return callbackRef.get()?.saveLoginInfo(infoMap) ?: false
     }
