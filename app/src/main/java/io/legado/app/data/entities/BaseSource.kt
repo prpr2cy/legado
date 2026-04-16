@@ -169,6 +169,14 @@ interface BaseSource : JsExtensions {
         CacheManager.put("loginHeader_${getKey()}", header)
     }
 
+    fun putLoginHeader(headerMap: Map<String, String>) {
+        val cookie = headerMap?.get("Cookie") ?: headerMap?.get("cookie")
+        cookie?.let {
+            CookieStore.replaceCookie(getKey(), it)
+        }
+        CacheManager.put("loginHeader_${getKey()}", GSON.toJson(headerMap))
+    }
+
     fun removeLoginHeader() {
         CacheManager.delete("loginHeader_${getKey()}")
         CookieStore.removeCookie(getKey())
@@ -206,6 +214,10 @@ interface BaseSource : JsExtensions {
             AppLog.put("保存登陆信息出错", e)
             false
         }
+    }
+
+    fun putLoginInfo(infoMap: Map<String, String>): Boolean {
+        return putLoginInfo(GSON.toJson(infoMap))
     }
 
     fun removeLoginInfo() {
