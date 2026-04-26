@@ -4,7 +4,6 @@ package io.legado.app.utils
 
 import android.webkit.CookieManager
 
-
 @Suppress("unused")
 fun CookieManager.removeCookie(domain: String) {
     val cm = CookieManager.getInstance()
@@ -16,7 +15,9 @@ fun CookieManager.removeCookie(domain: String) {
         val cookieGlob: String? = cm.getCookie(url)
         cookieGlob?.splitNotBlank(";")?.forEach {
             val cookieName = it.substringBefore("=")
-            cm.setCookie(url, "$cookieName=; Expires=Wed, 31 Dec 2000 23:59:59 GMT")
+            if (!cookieName.isNullOrBlank()) {
+                cm.setCookie(url, "$cookieName=; Max-Age=0; Expires=Wed, 31 Dec 2000 23:59:59 GMT")
+            }
         }
     }
 }

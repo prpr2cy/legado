@@ -72,12 +72,9 @@ object CookieStore : CookieManagerInterface {
      */
     override fun getCookie(url: String): String {
         val domain = NetworkUtils.getSubDomain(url)
-
         val cookie = getCookieNoSession(url)
         val sessionCookie = CookieManager.getSessionCookie(domain)
-
         val cookieMap = mergeCookiesToMap(cookie, sessionCookie)
-
         var cookieString = mapToCookie(cookieMap) ?: ""
         while (cookieString.length > 4096) {
             val removeKey = cookieMap.keys.random()
@@ -109,20 +106,11 @@ object CookieStore : CookieManagerInterface {
         appDb.cookieDao.delete(domain)
         CacheManager.deleteMemory("${domain}_cookie")
         CacheManager.deleteMemory("${domain}_session_cookie")
-        removeWebCookie(url)
+        webCookieManager.removeCookie(domain)
     }
 
     fun removeWebCookie(url: String) {
-        val baseUrl = NetworkUtils.getBaseUrl(url) ?: return
-        removeWebCookie(baseUrl, null, null)
-    }
-
-    fun removeWebCookie(url: String, autoDomain: Boolean) {
-        val baseUrl = NetworkUtils.getBaseUrl(url) ?: return
-        val domain = if (autoDomain) {
-            NetworkUtils.getSubDomainOrNull(url)
-        } else null
-        removeWebCookie(baseUrl, null, domain)
+        removeWebCookie(url, null, null)
     }
 
     fun removeWebCookie(
@@ -131,8 +119,8 @@ object CookieStore : CookieManagerInterface {
         domain: String? = null
     ) {
         try {
-            if (url.isNullOrBlank()) return
-            val cookie = getWebCookie(url)
+            val baseUrl = NetworkUtils.getBaseUrl(url) ?: return
+            val cookie = getWebCookie(baseUrl)
             if (cookie.isNullOrBlank()) return
             val safePath = when {
                 path.isNullOrBlank() -> "/"
@@ -146,7 +134,7 @@ object CookieStore : CookieManagerInterface {
                         append("$name=; Max-Age=0; Path=$safePath")
                         if (!domain.isNullOrBlank()) append("; Domain=$domain")
                     }
-                    webCookieManager.setCookie(url, cookieValue)
+                    webCookieManager.setCookie(baseUrl, cookieValue)
                 }
             }
             webCookieManager.flush()
