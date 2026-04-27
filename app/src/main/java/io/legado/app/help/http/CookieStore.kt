@@ -127,14 +127,22 @@ object CookieStore : CookieManagerInterface {
                 !path.startsWith("/") -> "/$path"
                 else -> path
             }
+            val valueParts = if (domain == null) {
+                val subDomain = NetworkUtils.getSubDomain(url)
+                arrayOf(
+                    "Path=$safePath",
+                    "Path=$safePath; Domain=$subDomain",
+                    "Path=$safePath; Domain=.$subDomain"
+                )
+            } else {
+                arrayOf("Path=$safePath; Domain=$domain")
+            }
             cookie.splitNotBlank(";").forEach {
                 val name = it.substringBefore("=")
                 if (!name.isNullOrBlank()) {
-                    val cookieValue = buildString {
-                        append("$name=; Max-Age=0; Path=$safePath")
-                        if (!domain.isNullOrBlank()) append("; Domain=$domain")
+                    valueParts.forEach { part ->
+                        webCookieManager.setCookie(baseUrl, "$name=; Max-Age=0; $part")
                     }
-                    webCookieManager.setCookie(baseUrl, cookieValue)
                 }
             }
             webCookieManager.flush()
