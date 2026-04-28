@@ -73,7 +73,7 @@ class AnalyzeUrl(
     val headerMap = LinkedHashMap<String, String>()
     private var urlNoQuery: String = ""
     private var queryStr: String? = null
-    private val fieldMap = LinkedHashMap<String, String>()
+    private val fieldMap = LinkedHashMap<String, MutableList<String>>()
     private var charset: String? = null
     private var method = RequestMethod.GET
     private var proxy: String? = null
@@ -282,19 +282,22 @@ class AnalyzeUrl(
             val queryPair = query.splitNotBlank("=", limit = 2)
             val key = queryPair[0]
             val value = queryPair.getOrNull(1) ?: ""
-            if (charset.isNullOrEmpty()) {
-                if (NetworkUtils.hasUrlEncoded(value)) {
-                    fieldMap[key] = value
-                } else {
-                    fieldMap[key] = URLEncoder.encode(value, "UTF-8")
+
+            // 编码处理
+            val encodedValue = when {
+                charset.isNullOrEmpty() -> {
+                    if (NetworkUtils.hasUrlEncoded(value)) value 
+                    else URLEncoder.encode(value, "UTF-8")
                 }
-            } else if (charset == "escape") {
-                fieldMap[key] = EncoderUtils.escape(value)
-            } else {
-                fieldMap[key] = URLEncoder.encode(value, charset)
+                charset == "escape" -> EncoderUtils.escape(value)
+                else -> URLEncoder.encode(value, charset)
             }
+        
+            // 支持多值：如果key已存在，添加到列表
+            fieldMap.getOrPut(key) { mutableListOf() }.add(encodedValue)
         }
     }
+
 
     /**
      * 执行JS

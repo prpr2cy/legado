@@ -29,6 +29,12 @@ import okhttp3.Response
 import okhttp3.ResponseBody
 import org.brotli.dec.BrotliInputStream
 
+// 类型定义：支持多值的参数结构
+typealias MultiValueParams = Map<String, List<String>>
+
+// 扩展函数：将单值 Map 转为多值结构（向后兼容）
+fun Map<String, String>.toMultiValue(): MultiValueParams = mapValues { listOf(it.value) }
+
 suspend fun OkHttpClient.newCallResponse(
     retry: Int = 0,
     builder: Request.Builder.() -> Unit
@@ -143,18 +149,36 @@ fun <T> ResponseBody.unCompress(
     return input.use(success)
 }
 
-fun Request.Builder.addHeaders(headers: Map<String, String>) {
-    headers.forEach {
-        addHeader(it.key, it.value)
+// ==================== Headers 多值支持 ====================
+
+/**
+ * 添加 Headers，支持多值（同 Key 多个 Value）
+ */
+fun Request.Builder.addHeaders(headers: MultiValueParams) {
+    headers.forEach { (key, values) ->
+        values.forEach { value ->
+            addHeader(key, value)  // 使用 addHeader 而非 header，允许重复 Key
+        }
     }
 }
 
-// ==================== 通用构建方法 ====================
+/**
+ * 单值 Headers（向后兼容）
+ */
+fun Request.Builder.addHeaders(headers: Map<String, String>) {
+    headers.forEach { (key, value) ->
+        addHeader(key, value)
+    }
+}
 
-private fun buildFormBody(form: Map<String, String>, encoded: Boolean): FormBody {
+// ==================== 内部构建方法（支持多值） ====================
+
+private fun buildFormBody(form: MultiValueParams, encoded: Boolean): FormBody {
     return FormBody.Builder().apply {
-        form.forEach { (key, value) ->
-            if (encoded) addEncoded(key, value) else add(key, value)
+        form.forEach { (key, values) ->
+            values.forEach { value ->
+                if (encoded) addEncoded(key, value) else add(key, value)
+            }
         }
     }.build()
 }
@@ -180,36 +204,88 @@ private fun buildMultipartBody(type: String?, form: Map<String, Any>): Multipart
                     }
                     addFormDataPart(key, fileName, requestBody)
                 }
+                is List<*> -> {
+                    // 支持多值文件字段
+                    value.forEach { item ->
+                        when (item) {
+                            is Map<*, *> -> {
+                                val fileName = item["fileName"] as String
+                                val file = item["file"]
+                                val mediaType = (item["contentType"] as? String)?.toMediaType()
+                                val requestBody = when (file) {
+                                    is File -> file.asRequestBody(mediaType)
+                                    is ByteArray -> file.toRequestBody(mediaType)
+                                    is String -> file.toRequestBody(mediaType)
+                                    else -> GSON.toJson(file).toRequestBody(mediaType)
+                                }
+                                addFormDataPart(key, fileName, requestBody)
+                            }
+                            else -> addFormDataPart(key, item.toString())
+                        }
+                    }
+                }
                 else -> addFormDataPart(key, value.toString())
             }
         }
     }.build()
 }
 
-private fun buildUrlWithQuery(url: String, queryMap: Map<String, String>, encoded: Boolean): okhttp3.HttpUrl {
+private fun buildUrlWithQuery(url: String, queryMap: MultiValueParams, encoded: Boolean): okhttp3.HttpUrl {
     return url.toHttpUrl().newBuilder().apply {
-        queryMap.forEach { (key, value) ->
-            if (encoded) addEncodedQueryParameter(key, value) else addQueryParameter(key, value)
+        queryMap.forEach { (key, values) ->
+            values.forEach { value ->
+                if (encoded) addEncodedQueryParameter(key, value) else addQueryParameter(key, value)
+            }
         }
     }.build()
 }
 
 // ==================== GET & HEAD ====================
 
-fun Request.Builder.get(url: String, queryMap: Map<String, String>, encoded: Boolean = false) {
+/**
+ * GET 请求 - 多值参数版本
+ */
+fun Request.Builder.get(url: String, queryMap: MultiValueParams, encoded: Boolean = false) {
     url(buildUrlWithQuery(url, queryMap, encoded))
     get()
 }
 
-fun Request.Builder.head(url: String, queryMap: Map<String, String> = emptyMap(), encoded: Boolean = false) {
+/**
+ * GET 请求 - 单值参数版本（向后兼容）
+ */
+fun Request.Builder.get(url: String, queryMap: Map<String, String>, encoded: Boolean = false) {
+    get(url, queryMap.toMultiValue(), encoded)
+}
+
+/**
+ * HEAD 请求 - 多值参数版本
+ */
+fun Request.Builder.head(url: String, queryMap: MultiValueParams, encoded: Boolean = false) {
     url(buildUrlWithQuery(url, queryMap, encoded))
     head()
 }
 
+/**
+ * HEAD 请求 - 单值参数版本（向后兼容）
+ */
+fun Request.Builder.head(url: String, queryMap: Map<String, String> = emptyMap(), encoded: Boolean = false) {
+    head(url, queryMap.toMultiValue(), encoded)
+}
+
 // ==================== POST ====================
 
-fun Request.Builder.postForm(form: Map<String, String>, encoded: Boolean = false) {
+/**
+ * POST Form - 多值参数版本
+ */
+fun Request.Builder.postForm(form: MultiValueParams, encoded: Boolean = false) {
     post(buildFormBody(form, encoded))
+}
+
+/**
+ * POST Form - 单值参数版本（向后兼容）
+ */
+fun Request.Builder.postForm(form: Map<String, String>, encoded: Boolean = false) {
+    postForm(form.toMultiValue(), encoded)
 }
 
 fun Request.Builder.postMultipart(type: String?, form: Map<String, Any>) {
@@ -222,8 +298,18 @@ fun Request.Builder.postJson(json: String?) {
 
 // ==================== PUT ====================
 
-fun Request.Builder.putForm(form: Map<String, String>, encoded: Boolean = false) {
+/**
+ * PUT Form - 多值参数版本
+ */
+fun Request.Builder.putForm(form: MultiValueParams, encoded: Boolean = false) {
     put(buildFormBody(form, encoded))
+}
+
+/**
+ * PUT Form - 单值参数版本（向后兼容）
+ */
+fun Request.Builder.putForm(form: Map<String, String>, encoded: Boolean = false) {
+    putForm(form.toMultiValue(), encoded)
 }
 
 fun Request.Builder.putMultipart(type: String?, form: Map<String, Any>) {
@@ -236,8 +322,18 @@ fun Request.Builder.putJson(json: String?) {
 
 // ==================== PATCH ====================
 
-fun Request.Builder.patchForm(form: Map<String, String>, encoded: Boolean = false) {
+/**
+ * PATCH Form - 多值参数版本
+ */
+fun Request.Builder.patchForm(form: MultiValueParams, encoded: Boolean = false) {
     patch(buildFormBody(form, encoded))
+}
+
+/**
+ * PATCH Form - 单值参数版本（向后兼容）
+ */
+fun Request.Builder.patchForm(form: Map<String, String>, encoded: Boolean = false) {
+    patchForm(form.toMultiValue(), encoded)
 }
 
 fun Request.Builder.patchMultipart(type: String?, form: Map<String, Any>) {
@@ -250,13 +346,33 @@ fun Request.Builder.patchJson(json: String?) {
 
 // ==================== DELETE ====================
 
-fun Request.Builder.delete(url: String, queryMap: Map<String, String> = emptyMap(), encoded: Boolean = false) {
+/**
+ * DELETE 带 URL 查询参数 - 多值版本
+ */
+fun Request.Builder.delete(url: String, queryMap: MultiValueParams, encoded: Boolean = false) {
     url(buildUrlWithQuery(url, queryMap, encoded))
     delete()
 }
 
-fun Request.Builder.deleteForm(form: Map<String, String>, encoded: Boolean = false) {
+/**
+ * DELETE 带 URL 查询参数 - 单值版本（向后兼容）
+ */
+fun Request.Builder.delete(url: String, queryMap: Map<String, String> = emptyMap(), encoded: Boolean = false) {
+    delete(url, queryMap.toMultiValue(), encoded)
+}
+
+/**
+ * DELETE 带 Form Body - 多值版本
+ */
+fun Request.Builder.deleteForm(form: MultiValueParams, encoded: Boolean = false) {
     delete(buildFormBody(form, encoded))
+}
+
+/**
+ * DELETE 带 Form Body - 单值版本（向后兼容）
+ */
+fun Request.Builder.deleteForm(form: Map<String, String>, encoded: Boolean = false) {
+    deleteForm(form.toMultiValue(), encoded)
 }
 
 fun Request.Builder.deleteJson(json: String?) {
