@@ -2,7 +2,6 @@ package io.legado.app.utils
 
 import androidx.annotation.Keep
 import java.net.URI
-import java.net.URLDecoder
 
 @Keep
 @Suppress("MemberVisibilityCanBePrivate")
@@ -11,7 +10,9 @@ class JsURL(url: String, baseUrl: String? = null) {
     val host: String
     val origin: String
     val path: String?
+    val rawPath: String?
     val query: String?
+    val rawQuery: String?
     val params: Map<String, String>?
 
     init {
@@ -29,13 +30,13 @@ class JsURL(url: String, baseUrl: String? = null) {
             "${mUrl.scheme}://$host"
         }
 
-        path = mUrl.path?.let {
-            URLDecoder.decode(it, "UTF-8")
-        }
+        path = mUrl.path
 
-        query = mUrl.query?.let {
-            URLDecoder.decode(it, "UTF-8")
-        }
+        rawPath = mUrl.rawPath
+
+        query = mUrl.query
+
+        rawQuery = mUrl.rawQuery
 
         params = query?.let { _ ->
             hashMapOf<String, String>().apply {
