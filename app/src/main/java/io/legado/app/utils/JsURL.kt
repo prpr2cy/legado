@@ -1,42 +1,53 @@
 package io.legado.app.utils
 
 import androidx.annotation.Keep
-import java.net.URL
+import java.net.URI
 import java.net.URLDecoder
 
 @Keep
 @Suppress("MemberVisibilityCanBePrivate")
 class JsURL(url: String, baseUrl: String? = null) {
 
-    val searchParams: Map<String, String>?
     val host: String
     val origin: String
-    val pathname: String
+    val path: String?
+    val query: String?
+    val params: Map<String, String>?
 
     init {
         val mUrl = if (!baseUrl.isNullOrEmpty()) {
-            val base = URL(baseUrl)
-            URL(base, url)
+            URI(baseUrl).resolve(url)
         } else {
-            URL(url)
+            URI(url)
         }
+
         host = mUrl.host
+
         origin = if (mUrl.port > 0) {
-            "${mUrl.protocol}://$host:${mUrl}:${mUrl.port}"
+            "${mUrl.scheme}://$host:${mUrl.port}"
         } else {
-            "${mUrl.protocol}://$host:${mUrl}"
+            "${mUrl.scheme}://$host"
         }
-        pathname = mUrl.path
-        val query = mUrl.query
-        searchParams = query?.let { _ ->
-            val map = hashMapOf<String, String>()
-            query.split("&").forEach {
-                val x = it.split("=")
-                map[x[0]] = URLDecoder.decode(x[1], "utf-8")
+
+        path = mUrl.path?.let {
+            URLDecoder.decode(it, "UTF-8")
+        }
+
+        query = mUrl.query?.let {
+            URLDecoder.decode(it, "UTF-8")
+        }
+
+        params = query?.let { _ ->
+            hashMapOf<String, String>().apply {
+                query.split("&").forEach {
+                    val idx = it.indexOf("=")
+                    when {
+                        idx > 0 -> put(it.substring(0, idx), it.substring(idx + 1))
+                        idx == 0 -> put("", it.substring(1)) // 以 = 开头的情况
+                        it.isNotEmpty() -> put(it, "") // 有 key 无 value 的情况
+                    }
+                }
             }
-            map
         }
     }
-
-
 }

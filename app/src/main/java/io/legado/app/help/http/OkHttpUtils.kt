@@ -22,6 +22,7 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.asRequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
@@ -148,70 +149,120 @@ fun Request.Builder.addHeaders(headers: Map<String, String>) {
     }
 }
 
-fun Request.Builder.get(url: String, queryMap: Map<String, String>, encoded: Boolean = false) {
-    val httpBuilder = url.toHttpUrl().newBuilder()
-    queryMap.forEach {
-        if (encoded) {
-            httpBuilder.addEncodedQueryParameter(it.key, it.value)
-        } else {
-            httpBuilder.addQueryParameter(it.key, it.value)
+// ==================== 通用构建方法 ====================
+
+private fun buildFormBody(form: Map<String, String>, encoded: Boolean): FormBody {
+    return FormBody.Builder().apply {
+        form.forEach { (key, value) ->
+            if (encoded) addEncoded(key, value) else add(key, value)
         }
-    }
-    url(httpBuilder.build())
+    }.build()
 }
 
-fun Request.Builder.postForm(form: Map<String, String>, encoded: Boolean = false) {
-    val formBody = FormBody.Builder()
-    form.forEach {
-        if (encoded) {
-            formBody.addEncoded(it.key, it.value)
-        } else {
-            formBody.add(it.key, it.value)
+private fun buildJsonBody(json: String): RequestBody {
+    return json.toRequestBody("application/json; charset=UTF-8".toMediaType())
+}
+
+private fun buildMultipartBody(type: String?, form: Map<String, Any>): MultipartBody {
+    return MultipartBody.Builder().apply {
+        type?.let { setType(it.toMediaType()) }
+        form.forEach { (key, value) ->
+            when (value) {
+                is Map<*, *> -> {
+                    val fileName = value["fileName"] as String
+                    val file = value["file"]
+                    val mediaType = (value["contentType"] as? String)?.toMediaType()
+                    val requestBody = when (file) {
+                        is File -> file.asRequestBody(mediaType)
+                        is ByteArray -> file.toRequestBody(mediaType)
+                        is String -> file.toRequestBody(mediaType)
+                        else -> GSON.toJson(file).toRequestBody(mediaType)
+                    }
+                    addFormDataPart(key, fileName, requestBody)
+                }
+                else -> addFormDataPart(key, value.toString())
+            }
         }
-    }
-    post(formBody.build())
+    }.build()
+}
+
+private fun buildUrlWithQuery(url: String, queryMap: Map<String, String>, encoded: Boolean): okhttp3.HttpUrl {
+    return url.toHttpUrl().newBuilder().apply {
+        queryMap.forEach { (key, value) ->
+            if (encoded) addEncodedQueryParameter(key, value) else addQueryParameter(key, value)
+        }
+    }.build()
+}
+
+// ==================== GET & HEAD ====================
+
+fun Request.Builder.get(url: String, queryMap: Map<String, String>, encoded: Boolean = false) {
+    url(buildUrlWithQuery(url, queryMap, encoded))
+    get()
+}
+
+fun Request.Builder.head(url: String, queryMap: Map<String, String> = emptyMap(), encoded: Boolean = false) {
+    url(buildUrlWithQuery(url, queryMap, encoded))
+    head()
+}
+
+// ==================== POST ====================
+
+fun Request.Builder.postForm(form: Map<String, String>, encoded: Boolean = false) {
+    post(buildFormBody(form, encoded))
 }
 
 fun Request.Builder.postMultipart(type: String?, form: Map<String, Any>) {
-    val multipartBody = MultipartBody.Builder()
-    type?.let {
-        multipartBody.setType(type.toMediaType())
-    }
-    form.forEach {
-        when (val value = it.value) {
-            is Map<*, *> -> {
-                val fileName = value["fileName"] as String
-                val file = value["file"]
-                val mediaType = (value["contentType"] as? String)?.toMediaType()
-                val requestBody = when (file) {
-                    is File -> {
-                        file.asRequestBody(mediaType)
-                    }
-
-                    is ByteArray -> {
-                        file.toRequestBody(mediaType)
-                    }
-
-                    is String -> {
-                        file.toRequestBody(mediaType)
-                    }
-
-                    else -> {
-                        GSON.toJson(file).toRequestBody(mediaType)
-                    }
-                }
-                multipartBody.addFormDataPart(it.key, fileName, requestBody)
-            }
-
-            else -> multipartBody.addFormDataPart(it.key, it.value.toString())
-        }
-    }
-    post(multipartBody.build())
+    post(buildMultipartBody(type, form))
 }
 
 fun Request.Builder.postJson(json: String?) {
-    json?.let {
-        val requestBody = json.toRequestBody("application/json; charset=UTF-8".toMediaType())
-        post(requestBody)
-    }
+    json?.let { post(buildJsonBody(it)) }
+}
+
+// ==================== PUT ====================
+
+fun Request.Builder.putForm(form: Map<String, String>, encoded: Boolean = false) {
+    put(buildFormBody(form, encoded))
+}
+
+fun Request.Builder.putMultipart(type: String?, form: Map<String, Any>) {
+    put(buildMultipartBody(type, form))
+}
+
+fun Request.Builder.putJson(json: String?) {
+    json?.let { put(buildJsonBody(it)) }
+}
+
+// ==================== PATCH ====================
+
+fun Request.Builder.patchForm(form: Map<String, String>, encoded: Boolean = false) {
+    patch(buildFormBody(form, encoded))
+}
+
+fun Request.Builder.patchMultipart(type: String?, form: Map<String, Any>) {
+    patch(buildMultipartBody(type, form))
+}
+
+fun Request.Builder.patchJson(json: String?) {
+    json?.let { patch(buildJsonBody(it)) }
+}
+
+// ==================== DELETE ====================
+
+fun Request.Builder.delete(url: String, queryMap: Map<String, String> = emptyMap(), encoded: Boolean = false) {
+    url(buildUrlWithQuery(url, queryMap, encoded))
+    delete()
+}
+
+fun Request.Builder.deleteForm(form: Map<String, String>, encoded: Boolean = false) {
+    delete(buildFormBody(form, encoded))
+}
+
+fun Request.Builder.deleteJson(json: String?) {
+    json?.let { delete(buildJsonBody(it)) }
+}
+
+fun Request.Builder.deleteMultipart(type: String?, form: Map<String, Any>) {
+    delete(buildMultipartBody(type, form))
 }

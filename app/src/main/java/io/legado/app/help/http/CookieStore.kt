@@ -106,13 +106,11 @@ object CookieStore : CookieManagerInterface {
         appDb.cookieDao.delete(domain)
         CacheManager.deleteMemory("${domain}_cookie")
         CacheManager.deleteMemory("${domain}_session_cookie")
-        webCookieManager.removeCookie(domain)
+        // webCookieManager.removeCookie(domain)
+        removeWebCookie(url)
     }
 
-    fun removeWebCookie(url: String) {
-        removeWebCookie(url, null, null)
-    }
-
+    @JvmOverloads
     fun removeWebCookie(
         url: String,
         path: String? = null,
@@ -131,11 +129,29 @@ object CookieStore : CookieManagerInterface {
                 val subDomain = NetworkUtils.getSubDomain(url)
                 arrayOf(
                     "Path=$safePath",
+                    "Path=$safePath; Secure",
+                    "Path=$safePath; Partitioned",
+                    "Path=$safePath; Secure; Partitioned",
                     "Path=$safePath; Domain=$subDomain",
-                    "Path=$safePath; Domain=.$subDomain"
+                    "Path=$safePath; Domain=$subDomain; Secure",
+                    "Path=$safePath; Domain=$subDomain; Partitioned",
+                    "Path=$safePath; Domain=$subDomain; Secure; Partitioned",
+                    "Path=$safePath; Domain=.$subDomain",
+                    "Path=$safePath; Domain=.$subDomain; Secure",
+                    "Path=$safePath; Domain=.$subDomain; Partitioned",
+                    "Path=$safePath; Domain=.$subDomain; Secure; Partitioned"
                 )
             } else {
-                arrayOf("Path=$safePath; Domain=$domain")
+                arrayOf(
+                    "Path=$safePath",
+                    "Path=$safePath; Secure",
+                    "Path=$safePath; Partitioned",
+                    "Path=$safePath; Secure; Partitioned",
+                    "Path=$safePath; Domain=$domain",
+                    "Path=$safePath; Domain=$domain; Secure",
+                    "Path=$safePath; Domain=$domain; Partitioned",
+                    "Path=$safePath; Domain=$domain; Secure; Partitioned"
+                )
             }
             cookie.splitNotBlank(";").forEach {
                 val name = it.substringBefore("=")

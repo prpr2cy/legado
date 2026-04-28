@@ -1173,10 +1173,18 @@ interface JsExtensions : JsEncodeUtils {
      */
     fun log(msg: Any?): Any? {
         getSource()?.let {
-            Debug.log(it.getKey(), msg.toString())
-        } ?: Debug.log(msg.toString())
+            Debug.log(it.getKey(), "$msg")
+        } ?: Debug.log("$msg")
         AppLog.putDebug("源调试输出：$msg")
         return msg
+    }
+
+    fun log(msg: Any?, forceLog: Boolean): Any? {
+        if (forceLog) {
+            AppLog.put("源调试输出：$msg")
+            return msg
+        }
+        return log(msg)
     }
 
     /**
@@ -1187,6 +1195,14 @@ interface JsExtensions : JsEncodeUtils {
             log("null")
         } else {
             log(any.javaClass.name)
+        }
+    }
+
+    fun logType(any: Any?, forceLog: Boolean) {
+        if (any == null) {
+            log("null", forceLog)
+        } else {
+            log(any.javaClass.name, forceLog)
         }
     }
 
