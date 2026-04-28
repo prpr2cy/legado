@@ -165,6 +165,7 @@ fun Request.Builder.addHeaders(headers: MultiValueParams) {
 /**
  * 单值 Headers（向后兼容）
  */
+@JvmName("addHeadersWithSingleValue")
 fun Request.Builder.addHeaders(headers: Map<String, String>) {
     headers.forEach { (key, value) ->
         addHeader(key, value)
@@ -253,6 +254,7 @@ fun Request.Builder.get(url: String, queryMap: MultiValueParams, encoded: Boolea
 /**
  * GET 请求 - 单值参数版本（向后兼容）
  */
+@JvmName("getQueryWithSingleValue")
 fun Request.Builder.get(url: String, queryMap: Map<String, String>, encoded: Boolean = false) {
     get(url, queryMap.toMultiValue(), encoded)
 }
@@ -268,6 +270,7 @@ fun Request.Builder.head(url: String, queryMap: MultiValueParams, encoded: Boole
 /**
  * HEAD 请求 - 单值参数版本（向后兼容）
  */
+@JvmName("headQueryWithSingleValue")
 fun Request.Builder.head(url: String, queryMap: Map<String, String> = emptyMap(), encoded: Boolean = false) {
     head(url, queryMap.toMultiValue(), encoded)
 }
@@ -284,6 +287,7 @@ fun Request.Builder.postForm(form: MultiValueParams, encoded: Boolean = false) {
 /**
  * POST Form - 单值参数版本（向后兼容）
  */
+@JvmName("postFormWithSingleValue")
 fun Request.Builder.postForm(form: Map<String, String>, encoded: Boolean = false) {
     postForm(form.toMultiValue(), encoded)
 }
@@ -308,6 +312,7 @@ fun Request.Builder.putForm(form: MultiValueParams, encoded: Boolean = false) {
 /**
  * PUT Form - 单值参数版本（向后兼容）
  */
+@JvmName("putFormWithSingleValue")
 fun Request.Builder.putForm(form: Map<String, String>, encoded: Boolean = false) {
     putForm(form.toMultiValue(), encoded)
 }
@@ -332,6 +337,7 @@ fun Request.Builder.patchForm(form: MultiValueParams, encoded: Boolean = false) 
 /**
  * PATCH Form - 单值参数版本（向后兼容）
  */
+@JvmName("patchFormWithSingleValue")
 fun Request.Builder.patchForm(form: Map<String, String>, encoded: Boolean = false) {
     patchForm(form.toMultiValue(), encoded)
 }
@@ -357,6 +363,7 @@ fun Request.Builder.delete(url: String, queryMap: MultiValueParams, encoded: Boo
 /**
  * DELETE 带 URL 查询参数 - 单值版本（向后兼容）
  */
+@JvmName("deleteQueryWithSingleValue")
 fun Request.Builder.delete(url: String, queryMap: Map<String, String> = emptyMap(), encoded: Boolean = false) {
     delete(url, queryMap.toMultiValue(), encoded)
 }
@@ -371,6 +378,7 @@ fun Request.Builder.deleteForm(form: MultiValueParams, encoded: Boolean = false)
 /**
  * DELETE 带 Form Body - 单值版本（向后兼容）
  */
+@JvmName("deleteFormWithSingleValue")
 fun Request.Builder.deleteForm(form: Map<String, String>, encoded: Boolean = false) {
     deleteForm(form.toMultiValue(), encoded)
 }
