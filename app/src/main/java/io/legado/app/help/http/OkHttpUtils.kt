@@ -149,23 +149,6 @@ fun <T> ResponseBody.unCompress(
     return input.use(success)
 }
 
-// ==================== Headers 多值支持 ====================
-
-/**
- * 添加 Headers，支持多值（同 Key 多个 Value）
- */
-fun Request.Builder.addHeaders(headers: MultiValueParams) {
-    headers.forEach { (key, values) ->
-        values.forEach { value ->
-            addHeader(key, value)  // 使用 addHeader 而非 header，允许重复 Key
-        }
-    }
-}
-
-/**
- * 单值 Headers（向后兼容）
- */
-@JvmName("addHeadersWithSingleValue")
 fun Request.Builder.addHeaders(headers: Map<String, String>) {
     headers.forEach { (key, value) ->
         addHeader(key, value)
@@ -241,7 +224,7 @@ private fun buildUrlWithQuery(url: String, queryMap: MultiValueParams, encoded: 
     }.build()
 }
 
-// ==================== GET & HEAD ====================
+// ==================== GET ====================
 
 /**
  * GET 请求 - 多值参数版本
@@ -258,6 +241,8 @@ fun Request.Builder.get(url: String, queryMap: MultiValueParams, encoded: Boolea
 fun Request.Builder.get(url: String, queryMap: Map<String, String>, encoded: Boolean = false) {
     get(url, queryMap.toMultiValue(), encoded)
 }
+
+// ==================== HEAD ====================
 
 /**
  * HEAD 请求 - 多值参数版本
