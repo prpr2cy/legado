@@ -1172,30 +1172,26 @@ interface JsExtensions : JsEncodeUtils {
      * 输出调试日志
      */
     fun log(msg: Any?): Any? {
-        getSource()?.let {
-            Debug.log(it.getKey(), "$msg")
-        } ?: Debug.log("$msg")
-        AppLog.putDebug("源调试输出：$msg")
-        return msg
+        return log(msg, false)
     }
 
     fun log(msg: Any?, forceLog: Boolean): Any? {
+        getSource()?.let {
+            Debug.log(it.getKey(), "$msg")
+        } ?: Debug.log("$msg")
         if (forceLog) {
             AppLog.put("源调试输出：$msg")
-            return msg
+        } else {
+            AppLog.putDebug("源调试输出：$msg")
         }
-        return log(msg)
+        return msg
     }
 
     /**
      * 输出对象类型
      */
     fun logType(any: Any?) {
-        if (any == null) {
-            log("null")
-        } else {
-            log(any.javaClass.name)
-        }
+        logType(any, false)
     }
 
     fun logType(any: Any?, forceLog: Boolean) {
