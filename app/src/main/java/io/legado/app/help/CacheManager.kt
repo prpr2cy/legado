@@ -8,6 +8,7 @@ import io.legado.app.data.entities.Cache
 import io.legado.app.model.analyzeRule.QueryTTF
 import io.legado.app.utils.ACache
 import io.legado.app.utils.memorySize
+import io.legado.app.utils.toJsonString
 
 private val queryTTFMap = LruCache<String, QueryTTF>(4)
 
@@ -128,8 +129,21 @@ object WebCacheManager {
         memoryLruCache.put(key, value)
     }
     @JavascriptInterface
-    fun getFromMemory(key: String): String? {
-        return memoryLruCache[key]?.toString()
+    fun getFromMemory(key: String): Any? {
+        val value = memoryLruCache[key]
+        return when (value) {
+            null -> null
+            is Boolean, is Number, is String -> value
+            is CharSequence -> value.toString()
+            is Map<*, *> -> toJsonString(value)
+            is List<*> -> toJsonString(value)
+            is Array<*> -> toJsonString(value)
+            else -> try {
+                Gson.toJson(value)
+            } catch (e: Exception) {
+                value.toString()
+            }
+        }
     }
     @JavascriptInterface
     fun deleteMemory(key: String) {
