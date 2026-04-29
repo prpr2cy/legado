@@ -67,12 +67,11 @@ fun toJsonString(raw: Any?): String = when (raw) {
     is Array<*> -> Gson.toJson(toAnyValue(raw))
     is JsonElement -> Gson.toJson(raw)
     is Scriptable -> {
-        val context = RhinoContext.enter()
         try {
-            val javaRaw = context.jsToJava(raw, Any::class.java)
+            val javaRaw = RhinoContext.jsToJava(raw, Any::class.java)
             toJsonString(javaRaw)
-        } finally {
-            RhinoContext.exit()
+        } catch (e: Exception) {
+            raw.toString()
         }
     }
     else -> try {
