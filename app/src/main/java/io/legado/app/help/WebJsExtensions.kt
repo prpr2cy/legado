@@ -63,7 +63,7 @@ class WebJsExtensions(
     }
 
     @JavascriptInterface
-    fun put(key: String, value: String): String {
+    fun put(key: String, value: String?): String? {
         getSource()?.put(key, value)
         return value
     }
@@ -74,18 +74,23 @@ class WebJsExtensions(
     }
 
     @JavascriptInterface
-    fun toast(msg: String) {
+    fun toast(msg: String?) {
         appCtx.toastOnUi("${getSource()?.getTag()}: $msg")
     }
 
     @JavascriptInterface
-    fun longToast(msg: String) {
+    fun longToast(msg: String?) {
         appCtx.longToastOnUi("${getSource()?.getTag()}: $msg")
     }
 
+    @JvmOverloads
     @JavascriptInterface
-    fun log(msg: String): String {
-        AppLog.putDebug("${getSource()?.getTag()}: $msg")
+    fun log(msg: String?, forceLog: Boolean = false): String? {
+        if (forceLog) {
+            AppLog.put("${getSource()?.getTag()}: $msg")
+        } else {
+            AppLog.putDebug("${getSource()?.getTag()}: $msg")
+        }
         return msg
     }
 
@@ -183,12 +188,6 @@ class WebJsExtensions(
         } else {
             ""
         }
-    }
-
-    @JavascriptInterface
-    fun deleteFile(path: String): Boolean {
-        val file = getFile(path)
-        return FileUtils.delete(file, true)
     }
 
     @JavascriptInterface
@@ -490,6 +489,57 @@ class WebJsExtensions(
         val JSBridgeResult by lazy { getRandomLetter() + uuid[2] + uuid2[2] }
 
         val JS_INJECTION by lazy { """
+            const requestId = n => 'req_' + n + '_' + Date.now() + '_' + Math.random().toString(36).slice(-3);
+            const params = a => a.map(p => p != null && typeof p.toString === 'function' ? p.toString() : null);
+            const JSBridgeCallbacks = {};
+            const java = window.$nameJava;
+            delete window.$nameJava;
+            const cache = window.$nameCache;
+            delete window.$nameCache;
+            function runAwait(jsCode) {
+                return new Promise((resolve, reject) => {
+                    const id = requestId('runAwait');
+                    JSBridgeCallbacks[id] = { resolve, reject };
+                    java.request('runAwait', [String(jsCode)], id);
+                });
+            };
+            function ajaxAwait(url) {
+                return new Promise((resolve, reject) => {
+                    const id = requestId('ajaxAwait');
+                    JSBridgeCallbacks[id] = { resolve, reject };
+                    java.request('ajaxAwait', [url], id);
+                });
+            };
+            function connectAwait(url) {
+                return new Promise((resolve, reject) => {
+                    const id = requestId('connectAwait');
+                    JSBridgeCallbacks[id] = { resolve, reject };
+                    java.request('connectAwait', [url], id);
+                });
+            };
+            function fetchAwait(url, options) {
+                const optionStr = options ? typeof(options) == 'string' ? options : JSON.stringify(options) : '{}';
+                return new Promise((resolve, reject) => {
+                    const id = requestId('fetchAwait');
+                    JSBridgeCallbacks[id] = { resolve, reject };
+                    java.request('fetchAwait', [url, optionStr], id);
+                });
+            };
+            window.$JSBridgeResult = function(id, success) {
+                const callBack = JSBridgeCallbacks[id];
+                if (callBack) {
+                    const result = cache.getFromMemory(id);
+                    if (success) {
+                        callBack.resolve(result);
+                    } else {
+                        callBack.reject(result);
+                    }
+                    delete JSBridgeCallbacks[id];
+                }
+            };""".trimIndent()
+        }
+
+        val JS_INJECTION_2 by lazy { """
             const requestId = n => 'req_' + n + '_' + Date.now() + '_' + Math.random().toString(36).slice(-3);
             const params = a => a.map(p => p != null && typeof p.toString === 'function' ? p.toString() : null);
             const JSBridgeCallbacks = {};
