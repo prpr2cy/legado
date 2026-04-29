@@ -88,7 +88,6 @@ class WebJsExtensions(
         return getSource()?.getVariable() ?: ""
     }
 
-    @JvmOverloads
     @JavascriptInterface
     fun getHeader(hasLoginHeader: Boolean = false): String? {
         return getSource()?.getHeaderMap(hasLoginHeader)?.let {
