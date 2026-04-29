@@ -11,7 +11,7 @@ import com.jayway.jsonpath.ParseContext
 import com.jayway.jsonpath.ReadContext
 import io.legado.app.exception.NoStackTraceException
 import java.math.BigDecimal
-import org.mozilla.javascript.Context as RhinoContext 
+import org.mozilla.javascript.Context as RhinoContext
 import org.mozilla.javascript.Scriptable
 
 val jsonPath: ParseContext by lazy {
