@@ -11,6 +11,8 @@ import com.jayway.jsonpath.ParseContext
 import com.jayway.jsonpath.ReadContext
 import io.legado.app.exception.NoStackTraceException
 import java.math.BigDecimal
+import org.mozilla.javascript.Context
+import org.mozilla.javascript.Scriptable
 
 val jsonPath: ParseContext by lazy {
     JsonPath.using(
@@ -64,6 +66,15 @@ fun toJsonString(raw: Any?): String = when (raw) {
     is List<*> -> Gson.toJson(toAnyValue(raw))
     is Array<*> -> Gson.toJson(toAnyValue(raw))
     is JsonElement -> Gson.toJson(raw)
+    is Scriptable -> {
+        val context = Context.enter()
+        try {
+            val javaRaw = context.jsToJava(raw, Any::class.java)
+            toJsonString(javaRaw)
+        } finally {
+            Context.exit()
+        }
+    }
     else -> try {
         Gson.toJson(raw)
     } catch (e: Exception) {
