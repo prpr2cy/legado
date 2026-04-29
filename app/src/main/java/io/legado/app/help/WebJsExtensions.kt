@@ -63,14 +63,47 @@ class WebJsExtensions(
     }
 
     @JavascriptInterface
-    fun put(key: String, value: String?): String? {
+    fun put(key: String, value: String?): String {
         getSource()?.put(key, value)
-        return value
+        return value ?: ""
     }
 
     @JavascriptInterface
     fun get(key: String): String {
         return getSource()?.get(key) ?: ""
+    }
+
+    @JavascriptInterface
+    fun setVariable(variable: String?) {
+        getSource()?.setVariable(key, variable)
+    }
+
+    @JavascriptInterface
+    fun getVariable(): String {
+        return getSource()?.getVariable() ?: ""
+    }
+
+    @JvmOverloads
+    @JavascriptInterface
+    fun getHeader(hasLoginHeader: Boolean = false): String? {
+        return getSource()?.getHeaderMap(hasLoginHeader)?.let {
+            toJsonString(it)
+        }
+    }
+
+    @JavascriptInterface
+    fun putLoginHeader(header: String) {
+        getSource()?.putLoginHeader(header)
+    }
+
+    @JavascriptInterface
+    fun getLoginHeader(): String? {
+        getSource()?.getLoginHeader()
+    }
+
+    @JavascriptInterface
+    fun removeLoginHeader() {
+        getSource()?.removeLoginHeader()
     }
 
     @JavascriptInterface
@@ -384,7 +417,7 @@ class WebJsExtensions(
                     analyzeRule.evalJS(jsCode).let { result ->
                         when (result) {
                             null -> "null"
-                            is Boolean, is Number, is String -> value
+                            is Boolean, is Number, is String -> result
                             is ByteArray -> Base64.encode(result)
                             else -> toJsonString(result)
                         }

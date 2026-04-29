@@ -135,7 +135,7 @@ object WebCacheManager {
         return when (value) {
             null -> null
             is Boolean, is Number, is String -> value
-            is ByteArray -> Base64.encode(result)
+            is ByteArray -> Base64.encode(value)
             else -> toJsonString(value)
         }
     }
