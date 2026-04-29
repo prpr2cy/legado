@@ -3,6 +3,7 @@ package io.legado.app.help
 import android.webkit.JavascriptInterface
 import androidx.annotation.Keep
 import androidx.collection.LruCache
+import cn.hutool.core.codec.Base64
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.Cache
 import io.legado.app.model.analyzeRule.QueryTTF
@@ -134,15 +135,8 @@ object WebCacheManager {
         return when (value) {
             null -> null
             is Boolean, is Number, is String -> value
-            is CharSequence -> value.toString()
-            is Map<*, *> -> toJsonString(value)
-            is List<*> -> toJsonString(value)
-            is Array<*> -> toJsonString(value)
-            else -> try {
-                Gson.toJson(value)
-            } catch (e: Exception) {
-                value.toString()
-            }
+            is ByteArray -> Base64.encode(result)
+            else -> toJsonString(value)
         }
     }
     @JavascriptInterface

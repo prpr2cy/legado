@@ -383,6 +383,8 @@ class WebJsExtensions(
                     val jsCode = p0 ?: throw NoStackTraceException("error null")
                     analyzeRule.evalJS(jsCode).let { result ->
                         when (result) {
+                            null -> "null"
+                            is Boolean, is Number, is String -> value
                             is ByteArray -> Base64.encode(result)
                             else -> toJsonString(result)
                         }
