@@ -63,6 +63,11 @@ class WebJsExtensions(
     }
 
     @JavascriptInterface
+    fun getKey(): String {
+        return getSource()?.getKey() ?: ""
+    }
+
+    @JavascriptInterface
     fun put(key: String, value: String?): String {
         getSource()?.put(key, value)
         return value ?: ""
