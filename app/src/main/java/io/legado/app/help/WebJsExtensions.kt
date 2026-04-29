@@ -80,7 +80,7 @@ class WebJsExtensions(
 
     @JavascriptInterface
     fun setVariable(variable: String?) {
-        getSource()?.setVariable(key, variable)
+        getSource()?.setVariable(variable)
     }
 
     @JavascriptInterface
