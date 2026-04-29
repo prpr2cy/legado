@@ -11,8 +11,6 @@ import com.jayway.jsonpath.ParseContext
 import com.jayway.jsonpath.ReadContext
 import io.legado.app.exception.NoStackTraceException
 import java.math.BigDecimal
-import org.mozilla.javascript.Context as RhinoContext
-import org.mozilla.javascript.Scriptable
 
 val jsonPath: ParseContext by lazy {
     JsonPath.using(
@@ -66,14 +64,6 @@ fun toJsonString(raw: Any?): String = when (raw) {
     is List<*> -> Gson.toJson(toAnyValue(raw))
     is Array<*> -> Gson.toJson(toAnyValue(raw))
     is JsonElement -> Gson.toJson(raw)
-    is Scriptable -> {
-        try {
-            val javaRaw = RhinoContext.jsToJava(raw, Any::class.java)
-            toJsonString(javaRaw)
-        } catch (e: Exception) {
-            raw.toString()
-        }
-    }
     else -> try {
         Gson.toJson(raw)
     } catch (e: Exception) {

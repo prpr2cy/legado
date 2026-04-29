@@ -3,13 +3,11 @@ package io.legado.app.help
 import android.webkit.JavascriptInterface
 import androidx.annotation.Keep
 import androidx.collection.LruCache
-import cn.hutool.core.codec.Base64
 import io.legado.app.data.appDb
 import io.legado.app.data.entities.Cache
 import io.legado.app.model.analyzeRule.QueryTTF
 import io.legado.app.utils.ACache
 import io.legado.app.utils.memorySize
-import io.legado.app.utils.toJsonString
 
 private val queryTTFMap = LruCache<String, QueryTTF>(4)
 
@@ -130,14 +128,8 @@ object WebCacheManager {
         memoryLruCache.put(key, value)
     }
     @JavascriptInterface
-    fun getFromMemory(key: String): Any? {
-        val value = memoryLruCache[key]
-        return when (value) {
-            null -> null
-            is Boolean, is Number, is String -> value
-            is ByteArray -> Base64.encode(value)
-            else -> toJsonString(value)
-        }
+    fun getFromMemory(key: String): String? {
+        return memoryLruCache[key]?.toString()
     }
     @JavascriptInterface
     fun deleteMemory(key: String) {
