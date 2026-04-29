@@ -157,7 +157,11 @@ class WebJsExtensions(
                     "url" to response.url().toString(),
                     "body" to response.body(),
                     "headers" to response.headers().toMultimap(),
-                    "cookies" to response.headers().values("set-cookie")
+                    "cookies" to response.headers().values("set-cookie").associate {
+                        with(it.substringBefore(';').trim()) {
+                            substringBefore('=') to substringAfter('=', "")
+                        }
+                    }
                 ).let { toJsonString(it) }
             }.onFailure {
                 AppLog.put("connect($urlStr) error\n${it.localizedMessage}", it)

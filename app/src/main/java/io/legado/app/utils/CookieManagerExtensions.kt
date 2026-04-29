@@ -16,7 +16,7 @@ fun CookieManager.removeCookie(domain: String) {
         cookieGlob?.splitNotBlank(";")?.forEach {
             val cookieName = it.substringBefore("=")
             if (!cookieName.isNullOrBlank()) {
-                cm.setCookie(url, "$cookieName=; Max-Age=0; Expires=Wed, 31 Dec 2000 23:59:59 GMT")
+                cm.setCookie(url, "$cookieName=; Expires=Wed, 31 Dec 2000 23:59:59 GMT")
             }
         }
     }
