@@ -103,7 +103,7 @@ class WebJsExtensions(
 
     @JavascriptInterface
     fun getLoginHeader(): String? {
-        getSource()?.getLoginHeader()
+        return getSource()?.getLoginHeader()
     }
 
     @JavascriptInterface
