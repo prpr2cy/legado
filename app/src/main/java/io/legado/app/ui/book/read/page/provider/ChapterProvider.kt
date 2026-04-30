@@ -371,7 +371,8 @@ object ChapterProvider {
             }
 
             // 计算图片分页数量
-            val firstSegmentHeight = if (remainingHeight > (contentPaintTextHeight * lineSpacingExtra).toInt()) {
+            val spacingHeight = contentPaintTextHeight * (lineSpacingExtra + paragraphSpacing.toFloat() / 10f)
+            val firstSegmentHeight = if (remainingHeight > spacingHeight) {
                 min(remainingHeight, height)
             } else {
                 min(visibleHeight, height)
@@ -473,7 +474,7 @@ object ChapterProvider {
         var absStartX = x
         var durY = y
         if (beforeLineIsImage) {
-            durY += textHeight * paragraphSpacing.toFloat() / 5f
+            durY += textHeight * (lineSpacingExtra + paragraphSpacing.toFloat() / 10f)
             beforeLineIsImage = false
         }
         val widthsArray = FloatArray(text.length)
