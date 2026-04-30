@@ -334,7 +334,6 @@ object ChapterProvider {
         var absStartX = x
         var durY = y
         var doubleY = 0f
-        var ratio = 1f
         val size = ImageProvider.getImageSize(book, src, ReadBook.bookSource)
         val disPlayWidth = if (isScroll && viewWidth > viewHeight && !appCtx.isPad) {
             max(visibleWidth / 2, visibleHeight)
@@ -352,10 +351,6 @@ object ChapterProvider {
                     if (height > remainingHeight && height.toFloat() < remainingHeight.toFloat() * 1.2f) {
                         height = remainingHeight
                         width = height * size.width / size.height
-                    }
-                    if (height > remainingHeight && size.width < disPlayWidth) {
-                        // 原图宽度小于visibleWidth时，分页裁剪高度要按比例缩小
-                        ratio = size.width.toFloat() / disPlayWidth
                     }
                 }
 
@@ -379,6 +374,7 @@ object ChapterProvider {
                 Pair(0f, width.toFloat())
             }
 
+            // 计算图片分页数量
             val firstSegmentHeight = if (remainingHeight >= visibleHeight / 4) {
                 min(remainingHeight, height)
             } else {
@@ -391,7 +387,10 @@ object ChapterProvider {
                 1
             }
 
+            // 处理图片分页
             var currentY = 0
+            // 当图片被放大时，分页裁剪高度要按比例缩小，反之亦然
+            val ratio = size.width.toFloat() / width
             for (page in 0 until totalPages) {
                 // 计算当前分段的高度
                 val cropStartY = currentY
