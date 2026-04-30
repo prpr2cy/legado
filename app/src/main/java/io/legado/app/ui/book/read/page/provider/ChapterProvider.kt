@@ -46,7 +46,10 @@ object ChapterProvider {
     const val reviewChar = "▨"
 
     private val allowedStyles = setOf(
-        Book.imgStyleDefault, Book.imgStyleFull, Book.imgStyleText
+        Book.imgStyleDefault,
+        Book.imgStyleFull,
+        Book.imgStyleText,
+        Book.imgStyleSingle
     )
 
     private val isScroll: Boolean
@@ -382,7 +385,7 @@ object ChapterProvider {
             }
 
             // 计算图片分页数量
-            val firstSegmentHeight = if (remainingHeight > visibleHeight / 2 && height  >  visibleHeight * 3 / 4) {
+            val firstSegmentHeight = if (remainingHeight > visibleHeight / 2) {
                 min(remainingHeight, height)
             } else {
                 min(visibleHeight, height)

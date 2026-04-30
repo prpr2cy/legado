@@ -455,8 +455,12 @@ class ReadBookActivity : BaseReadBookActivity(),
 
             R.id.menu_set_charset -> showCharsetConfig()
             R.id.menu_image_style -> {
-                val imgStyles =
-                    arrayListOf(Book.imgStyleDefault, Book.imgStyleFull, Book.imgStyleText)
+                val imgStyles = arrayListOf(
+                    Book.imgStyleDefault,
+                    Book.imgStyleFull,
+                    Book.imgStyleText,
+                    Book.imgStyleSingle
+                )
                 selector(
                     R.string.image_style,
                     imgStyles
