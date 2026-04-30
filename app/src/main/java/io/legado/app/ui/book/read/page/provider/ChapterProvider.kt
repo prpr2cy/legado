@@ -371,7 +371,7 @@ object ChapterProvider {
             }
 
             // 计算图片分页数量
-            val firstSegmentHeight = if (remainingHeight > visibleHeight / 5) {
+            val firstSegmentHeight = if (remainingHeight > visibleHeight / 10 && height > visibleHeight / 2) {
                 min(remainingHeight, height)
             } else {
                 min(visibleHeight, height)
