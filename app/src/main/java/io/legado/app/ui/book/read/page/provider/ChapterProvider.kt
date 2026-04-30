@@ -350,6 +350,13 @@ object ChapterProvider {
                     height = width * size.height / size.width
                 }
 
+                Book.imgStyleDefault -> {
+                    if (size.width > disPlayWidth) {
+                        width = disPlayWidth
+                        height = width * size.height / size.width
+                    }
+                }
+
                 else -> {
                     if (size.width > disPlayWidth) {
                         width = disPlayWidth
@@ -357,6 +364,9 @@ object ChapterProvider {
                     }
                     if (height > remainingHeight && height.toFloat() < remainingHeight.toFloat() * 1.2f) {
                         height = remainingHeight
+                        width = height * size.width / size.height
+                    } else if (height > visibleHeight) {
+                        height = visibleHeight
                         width = height * size.width / size.height
                     }
                 }
@@ -371,7 +381,7 @@ object ChapterProvider {
             }
 
             // 计算图片分页数量
-            val firstSegmentHeight = if (remainingHeight > visibleHeight / 10 && height > visibleHeight / 2) {
+            val firstSegmentHeight = if (remainingHeight > visibleHeight / 5 && height > visibleHeight / 2) {
                 min(remainingHeight, height)
             } else {
                 min(visibleHeight, height)
