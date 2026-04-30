@@ -22,6 +22,7 @@ import io.legado.app.help.http.CookieManager.mergeCookies
 import io.legado.app.utils.*
 import kotlinx.coroutines.runBlocking
 import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import java.io.ByteArrayInputStream
