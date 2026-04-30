@@ -229,8 +229,9 @@ class WebJsExtensions(
         }
     }
 
+    @JvmOverloads
     @JavascriptInterface
-    fun readTxtFile(path: String, charsetName: String): String {
+    fun readTxtFile(path: String, charsetName: String = "UTF-8"): String {
         val file = getFile(path)
         return if (file.exists()) {
             file.readText(Charset.forName(charsetName))
