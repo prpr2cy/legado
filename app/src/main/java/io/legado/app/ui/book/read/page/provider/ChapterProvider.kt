@@ -343,15 +343,17 @@ object ChapterProvider {
         if (size.width > 0 && size.height > 0) {
             var height = size.height
             var width = size.width
+            val remainingHeight = (visibleHeight - durY).toInt()
+
             when (imgStyle?.toUpperCase(Locale.ROOT)) {
                 Book.imgStyleFull -> {
                     width = disPlayWidth
                     height = width * size.height / size.width
-                    if (height > visibleHeight && height.toFloat() < visibleHeight.toFloat() * 1.2f) {
-                        height = visibleHeight
+                    if (height > remainingHeight && height.toFloat() < remainingHeight.toFloat() * 1.2f) {
+                        height = remainingHeight
                         width = height * size.width / size.height
                     }
-                    if (height > visibleHeight && size.width < disPlayWidth) {
+                    if (height > remainingHeight && size.width < disPlayWidth) {
                         // 原图宽度小于visibleWidth时，分页裁剪高度要按比例缩小
                         ratio = size.width.toFloat() / disPlayWidth
                     }
@@ -362,8 +364,8 @@ object ChapterProvider {
                         width = disPlayWidth
                         height = width * size.height / size.width
                     }
-                    if (height > visibleHeight && height.toFloat() < visibleHeight.toFloat() * 1.2f) {
-                        height = visibleHeight
+                    if (height > remainingHeight && height.toFloat() < remainingHeight.toFloat() * 1.2f) {
+                        height = remainingHeight
                         width = height * size.width / size.height
                     }
                 }
@@ -377,13 +379,29 @@ object ChapterProvider {
                 Pair(0f, width.toFloat())
             }
 
-            val totalPages = ceil(height.toFloat() / visibleHeight).toInt()
+            val firstSegmentHeight = if (remainingHeight >= visibleHeight / 4) {
+                min(remainingHeight, height)
+            } else {
+                min(visibleHeight, height)
+            }
+            val remainingImageHeight = height - firstSegmentHeight
+            val totalPages = if (remainingImageHeight > 0) {
+                1 + ceil(remainingImageHeight.toFloat() / visibleHeight).toInt()
+            } else {
+                1
+            }
 
+            var currentY = 0
             for (page in 0 until totalPages) {
                 // 计算当前分段的高度
-                val cropStartY = page * visibleHeight
-                val cropEndY = min(cropStartY + visibleHeight, height)
-                val segmentHeight = cropEndY - cropStartY
+                val cropStartY = currentY
+                val segmentHeight = if (page == 0) {
+                    firstSegmentHeight
+                } else {
+                    min(visibleHeight, height - currentY)
+                }
+                val cropEndY = cropStartY + segmentHeight
+                currentY += segmentHeight
 
                 // 检查当前页是否有足够空间
                 if (durY + segmentHeight > visibleHeight) {

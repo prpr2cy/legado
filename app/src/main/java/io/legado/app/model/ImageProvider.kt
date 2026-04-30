@@ -38,7 +38,7 @@ object ImageProvider {
     }
 
     // 解码失败的记录
-    private val decodeFailedCache = Collections.synchronizedSet(mutableSetOf<String>())
+    private val decodeFailedCache = LruCache<String, Boolean>(100)
 
     /**
      * 缓存bitmap LruCache实现
@@ -213,7 +213,7 @@ object ImageProvider {
         //bitmapLruCache的key同一改成缓存文件的路径
 
         // 检查解码失败记录
-        if (decodeFailedCache.contains(vFile.absolutePath)) return errorBitmap
+        if (decodeFailedCache.get(vFile.absolutePath) != null) return errorBitmap
 
         val cacheBitmap = getNotRecycled(vFile.absolutePath)
         if (cacheBitmap != null) return cacheBitmap
@@ -228,7 +228,7 @@ object ImageProvider {
                 }
             }.onError {
                 // 记录解码失败
-                decodeFailedCache.add(vFile.absolutePath)
+                decodeFailedCache.put(vFile.absolutePath, true)
             }.onFinally {
                 block?.invoke()
             }
@@ -243,7 +243,7 @@ object ImageProvider {
             bitmap
         }.onFailure {
             // 记录解码失败
-            decodeFailedCache.add(vFile.absolutePath)
+            decodeFailedCache.put(vFile.absolutePath, true)
         }.getOrDefault(errorBitmap)
     }
 

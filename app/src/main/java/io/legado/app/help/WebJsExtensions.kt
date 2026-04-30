@@ -157,9 +157,17 @@ class WebJsExtensions(
                     "url" to response.url().toString(),
                     "body" to response.body(),
                     "headers" to response.headers().toMultimap(),
-                    "cookies" to response.headers().values("set-cookie").associate {
-                        with(it.substringBefore(';').trim()) {
-                            substringBefore('=') to substringAfter('=', "")
+                    "cookies" to buildMap {
+                        response.headers().values("set-cookie").forEach {
+                            it.substringBefore(';').let { pair ->
+                                val idx = pair.indexOf('=')
+                                if (idx != -1) {
+                                    put(
+                                        pair.substring(0, idx).trim(),
+                                        pair.substring(idx + 1).trim()
+                                    )
+                                }
+                            }
                         }
                     }
                 ).let { toJsonString(it) }

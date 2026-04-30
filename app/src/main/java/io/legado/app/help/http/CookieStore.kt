@@ -168,23 +168,21 @@ object CookieStore : CookieManagerInterface {
     }
 
     override fun cookieToMap(cookie: String?): MutableMap<String, String> {
-        val cookieMap = mutableMapOf<String, String>()
         if (cookie.isNullOrBlank()) {
-            return cookieMap
+            return mutableMapOf()
         }
-        val pairArray = cookie.split(semicolonRegex).dropLastWhile { it.isEmpty() }.toTypedArray()
-        for (pair in pairArray) {
-            val pairs = pair.split(equalsRegex, 2).dropLastWhile { it.isEmpty() }.toTypedArray()
-            if (pairs.size <= 1) {
-                continue
+        return buildMap {
+            cookie.splitToSequence(';').forEach {
+                val idx = it.indexOf('=')
+                if (idx != -1) {
+                    val key = it.substring(0, idx).trim { it <= ' ' }
+                    val value = it.substring(idx + 1)
+                    if (value.isNotBlank() || value.trim { it <= ' ' } == "null") {
+                        put(key, value.trim { it <= ' ' })
+                    }
+                }
             }
-            val key = pairs[0].trim { it <= ' ' }
-            val value = pairs[1]
-            if (value.isNotBlank() || value.trim { it <= ' ' } == "null") {
-                cookieMap[key] = value.trim { it <= ' ' }
-            }
-        }
-        return cookieMap
+        }.toMutableMap()
     }
 
     override fun mapToCookie(cookieMap: Map<String, String>?): String? {

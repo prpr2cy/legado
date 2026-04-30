@@ -286,18 +286,92 @@ class AnalyzeUrl(
             // 编码处理
             val encodedValue = when {
                 charset.isNullOrEmpty() -> {
-                    if (NetworkUtils.hasUrlEncoded(value)) value 
+                    if (NetworkUtils.hasUrlEncoded(value)) value
                     else URLEncoder.encode(value, "UTF-8")
                 }
                 charset == "escape" -> EncoderUtils.escape(value)
                 else -> URLEncoder.encode(value, charset)
             }
-        
+
             // 支持多值：如果key已存在，添加到列表
             fieldMap.getOrPut(key) { mutableListOf() }.add(encodedValue)
         }
     }
 
+    /**
+     * 配置 HTTP 方法
+     */
+    private fun Request.Builder.setHttpMethod() {
+        when (method) {
+            RequestMethod.POST -> {
+                url(urlNoQuery)
+                val contentType = headerMap["Content-Type"]
+                val body = body
+                if (fieldMap.isNotEmpty() || body.isNullOrBlank()) {
+                    postForm(fieldMap, true)
+                } else if (!contentType.isNullOrBlank()) {
+                    val requestBody = body!!.toRequestBody(contentType.toMediaType())
+                    post(requestBody)
+                } else {
+                    postJson(body!!)
+                }
+            }
+
+            RequestMethod.PUT -> {
+                url(urlNoQuery)
+                val contentType = headerMap["Content-Type"]
+                val body = body
+                if (fieldMap.isNotEmpty() || body.isNullOrBlank()) {
+                    putForm(fieldMap, true)
+                } else if (!contentType.isNullOrBlank()) {
+                    val requestBody = body!!.toRequestBody(contentType.toMediaType())
+                    put(requestBody)
+                } else {
+                    putJson(body!!)
+                }
+            }
+
+            RequestMethod.PATCH -> {
+                url(urlNoQuery)
+                val contentType = headerMap["Content-Type"]
+                val body = body
+                if (fieldMap.isNotEmpty() || body.isNullOrBlank()) {
+                    patchForm(fieldMap, true)
+                } else if (!contentType.isNullOrBlank()) {
+                    val requestBody = body!!.toRequestBody(contentType.toMediaType())
+                    patch(requestBody)
+                } else {
+                    patchJson(body!!)
+                }
+            }
+
+            RequestMethod.DELETE -> {
+                val contentType = headerMap["Content-Type"]
+                val body = body
+                if (body == null && fieldMap.isEmpty()) {
+                    delete(urlNoQuery)
+                } else if (body == null && fieldMap.isNotEmpty()) {
+                    delete(urlNoQuery, fieldMap, true)
+                } else if (fieldMap.isNotEmpty() || body.isNullOrBlank()) {
+                    url(urlNoQuery)
+                    deleteForm(fieldMap, true)
+                } else if (!contentType.isNullOrBlank()) {
+                    url(urlNoQuery)
+                    val requestBody = body!!.toRequestBody(contentType.toMediaType())
+                    delete(requestBody)
+                } else {
+                    url(urlNoQuery)
+                    deleteJson(body!!)
+                }
+            }
+
+            RequestMethod.HEAD -> {
+                head(urlNoQuery, fieldMap, true)
+            }
+
+            else -> get(urlNoQuery, fieldMap, true)
+        }
+    }
 
     /**
      * 执行JS
@@ -374,7 +448,9 @@ class AnalyzeUrl(
         }
         val strResponse: StrResponse
         try {
-            if (this.useWebView && useWebView && (method == RequestMethod.GET || method == RequestMethod.POST)) {
+            if (this.useWebView && useWebView
+                && (method == RequestMethod.GET || method == RequestMethod.POST)) {
+
                 strResponse = when (method) {
                     RequestMethod.POST -> {
                         val res = getProxyClient(proxy).newCallStrResponse(retry) {
@@ -407,75 +483,7 @@ class AnalyzeUrl(
             } else {
                 strResponse = getProxyClient(proxy).newCallStrResponse(retry) {
                     addHeaders(headerMap)
-                    when (method) {
-                        RequestMethod.POST -> {
-                            url(urlNoQuery)
-                            val contentType = headerMap["Content-Type"]
-                            val body = body
-                            if (fieldMap.isNotEmpty() || body.isNullOrBlank()) {
-                                postForm(fieldMap, true)
-                            } else if (!contentType.isNullOrBlank()) {
-                                val requestBody = body.toRequestBody(contentType.toMediaType())
-                                post(requestBody)
-                            } else {
-                                postJson(body)
-                            }
-                        }
-
-                        RequestMethod.PUT -> {
-                            url(urlNoQuery)
-                            val contentType = headerMap["Content-Type"]
-                            val body = body
-                            if (fieldMap.isNotEmpty() || body.isNullOrBlank()) {
-                                putForm(fieldMap, true)
-                            } else if (!contentType.isNullOrBlank()) {
-                                val requestBody = body.toRequestBody(contentType.toMediaType())
-                                put(requestBody)
-                            } else {
-                                putJson(body)
-                            }
-                        }
-
-                        RequestMethod.PATCH -> {
-                            url(urlNoQuery)
-                            val contentType = headerMap["Content-Type"]
-                            val body = body
-                            if (fieldMap.isNotEmpty() || body.isNullOrBlank()) {
-                                patchForm(fieldMap, true)
-                            } else if (!contentType.isNullOrBlank()) {
-                                val requestBody = body.toRequestBody(contentType.toMediaType())
-                                patch(requestBody)
-                            } else {
-                                patchJson(body)
-                            }
-                        }
-
-                        RequestMethod.DELETE -> {
-                            val contentType = headerMap["Content-Type"]
-                            val body = body
-                            if (body == null && fieldMap.isEmpty()) {
-                                delete(urlNoQuery)
-                            } else if (body == null && fieldMap.isNotEmpty()) {
-                                delete(urlNoQuery, fieldMap, true)
-                            } else if (fieldMap.isNotEmpty() || body.isNullOrBlank()) {
-                                url(urlNoQuery)
-                                deleteForm(fieldMap, true)
-                            } else if (!contentType.isNullOrBlank()) {
-                                url(urlNoQuery)
-                                val requestBody = body.toRequestBody(contentType.toMediaType())
-                                delete(requestBody)
-                            } else {
-                                url(urlNoQuery)
-                                deleteJson(body)
-                            }
-                        }
-
-                        RequestMethod.HEAD -> {
-                            head(urlNoQuery, fieldMap, true)
-                        }
-
-                        else -> get(urlNoQuery, fieldMap, true)
-                    }
+                    setHttpMethod()
                 }.let {
                     val isXml = it.raw.body?.contentType()?.toString()
                         ?.matches(AppPattern.xmlContentTypeRegex) == true
@@ -511,75 +519,7 @@ class AnalyzeUrl(
             }
             val response = getProxyClient(proxy).newCallResponse(retry) {
                 addHeaders(headerMap)
-                when (method) {
-                    RequestMethod.POST -> {
-                        url(urlNoQuery)
-                        val contentType = headerMap["Content-Type"]
-                        val body = body
-                        if (fieldMap.isNotEmpty() || body.isNullOrBlank()) {
-                            postForm(fieldMap, true)
-                        } else if (!contentType.isNullOrBlank()) {
-                            val requestBody = body.toRequestBody(contentType.toMediaType())
-                            post(requestBody)
-                        } else {
-                            postJson(body)
-                        }
-                    }
-
-                    RequestMethod.PUT -> {
-                        url(urlNoQuery)
-                        val contentType = headerMap["Content-Type"]
-                        val body = body
-                        if (fieldMap.isNotEmpty() || body.isNullOrBlank()) {
-                            putForm(fieldMap, true)
-                        } else if (!contentType.isNullOrBlank()) {
-                            val requestBody = body.toRequestBody(contentType.toMediaType())
-                            put(requestBody)
-                        } else {
-                            putJson(body)
-                        }
-                    }
-
-                    RequestMethod.PATCH -> {
-                        url(urlNoQuery)
-                        val contentType = headerMap["Content-Type"]
-                        val body = body
-                        if (fieldMap.isNotEmpty() || body.isNullOrBlank()) {
-                            patchForm(fieldMap, true)
-                        } else if (!contentType.isNullOrBlank()) {
-                            val requestBody = body.toRequestBody(contentType.toMediaType())
-                            patch(requestBody)
-                        } else {
-                            patchJson(body)
-                        }
-                    }
-
-                    RequestMethod.DELETE -> {
-                        val contentType = headerMap["Content-Type"]
-                        val body = body
-                        if (body == null && fieldMap.isEmpty()) {
-                            delete(urlNoQuery)
-                        } else if (body == null && fieldMap.isNotEmpty()) {
-                            delete(urlNoQuery, fieldMap, true)
-                        } else if (fieldMap.isNotEmpty() || body.isNullOrBlank()) {
-                            url(urlNoQuery)
-                            deleteForm(fieldMap, true)
-                        } else if (!contentType.isNullOrBlank()) {
-                            url(urlNoQuery)
-                            val requestBody = body.toRequestBody(contentType.toMediaType())
-                            delete(requestBody)
-                        } else {
-                            url(urlNoQuery)
-                            deleteJson(body)
-                        }
-                    }
-
-                    RequestMethod.HEAD -> {
-                        head(urlNoQuery, fieldMap, true)
-                    }
-
-                    else -> get(urlNoQuery, fieldMap, true)
-                }
+                setHttpMethod()
             }
             return response
         }

@@ -180,11 +180,9 @@ class MapDeserializerDoubleAsIntFix :
                 return list
             }
             json.isJsonObject -> {
-                val map: MutableMap<String, Any?> =
-                    LinkedTreeMap()
+                val map: MutableMap<String, Any?> = LinkedTreeMap()
                 val obj = json.asJsonObject
-                val entitySet =
-                    obj.entrySet()
+                val entitySet = obj.entrySet()
                 for ((key, value) in entitySet) {
                     map[key] = read(value)
                 }
