@@ -348,10 +348,6 @@ object ChapterProvider {
                 Book.imgStyleFull -> {
                     width = disPlayWidth
                     height = width * size.height / size.width
-                    if (height > remainingHeight && height.toFloat() < remainingHeight.toFloat() * 1.2f) {
-                        height = remainingHeight
-                        width = height * size.width / size.height
-                    }
                 }
 
                 else -> {
@@ -375,7 +371,7 @@ object ChapterProvider {
             }
 
             // 计算图片分页数量
-            val firstSegmentHeight = if (remainingHeight >= visibleHeight / 4) {
+            val firstSegmentHeight = if (remainingHeight > textHeight * lineSpacingExtra) {
                 min(remainingHeight, height)
             } else {
                 min(visibleHeight, height)
@@ -389,7 +385,7 @@ object ChapterProvider {
 
             // 处理图片分页
             var currentY = 0
-            // 当图片被放大时，分页裁剪高度要按比例缩小，反之亦然
+            // 当原始图片被放大时，分页裁剪高度要按比例缩小，反之亦然
             val ratio = size.width.toFloat() / width
             for (page in 0 until totalPages) {
                 // 计算当前分段的高度
