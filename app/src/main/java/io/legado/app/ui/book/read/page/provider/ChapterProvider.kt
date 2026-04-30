@@ -371,7 +371,7 @@ object ChapterProvider {
             }
 
             // 计算图片分页数量
-            val firstSegmentHeight = if (remainingHeight > textHeight * lineSpacingExtra) {
+            val firstSegmentHeight = if (remainingHeight > (contentPaintTextHeight * lineSpacingExtra).toInt()) {
                 min(remainingHeight, height)
             } else {
                 min(visibleHeight, height)
