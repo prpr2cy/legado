@@ -1,4 +1,4 @@
-package io.legado.app.ui.login
+{}package io.legado.app.ui.login
 
 import android.content.DialogInterface
 import android.os.Bundle
@@ -84,22 +84,6 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
             }.onFailure { e ->
                 AppLog.put("reLoginView Error: ${e.localizedMessage}", e)
             }
-        }
-    }
-
-    override fun saveLoginInfo(infoMap: Map<String, String>?): Boolean {
-        val source = viewModel.source ?: return false
-        if (oKToClose) return true
-        val loginInfo = infoMap?.let {
-            (source.getLoginInfoMap()?.toMutableMap() ?: mutableMapOf()).apply {
-                putAll(it)
-            }
-        } ?: viewModel.loginInfo
-        return if (loginInfo.isEmpty()) {
-            source.removeLoginInfo()
-            true
-        } else {
-            source.putLoginInfo(GSON.toJson(loginInfo))
         }
     }
 
