@@ -358,7 +358,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
                     val loginJS = loginUrl ?: return@launch
                     val buttonFunctionJS = "if (typeof login === 'function') { login.apply(this); } " +
                         "else { throw('Function login not implemented!') }"
-                    source.evalJS("$loginJS\n$buttonFunctionJS") {
+                    source.evalJS("const oKToClose = true;\n$loginJS\n$buttonFunctionJS") {
                         put("java", sourceLoginJsExtensions)
                         put("result", loginInfo)
                         put("book", viewModel.book)
