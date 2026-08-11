@@ -56,7 +56,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
     private var rowUis: List<RowUi>? = null
     private var rowUiName = arrayListOf<String>()
     private var hasChange: Boolean = false
-    private var oKToClose: Boolean = false
+    private var okToClose: Boolean = false
     private var prepareJob: Job? = null
 
     private val sourceLoginJsExtensions by lazy {
@@ -274,7 +274,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
         binding.toolBar.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 R.id.menu_ok -> {
-                    oKToClose = true
+                    okToClose = true
                     login(source, getLoginInfo())
                 }
                 R.id.menu_show_login_header -> alert {
@@ -358,7 +358,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
                     val loginJS = loginUrl ?: return@launch
                     val buttonFunctionJS = "if (typeof login === 'function') { login.apply(this); } " +
                         "else { throw('Function login not implemented!') }"
-                    source.evalJS("const oKToClose = true;\n$loginJS\n$buttonFunctionJS") {
+                    source.evalJS("var okToClose = true;\n$loginJS\n$buttonFunctionJS") {
                         put("java", sourceLoginJsExtensions)
                         put("result", loginInfo)
                         put("book", viewModel.book)
@@ -378,7 +378,7 @@ class SourceLoginDialog : BaseDialogFragment(R.layout.dialog_login, true),
     }
 
     override fun onDismiss(dialog: DialogInterface) {
-        if (!oKToClose && hasChange) {
+        if (!okToClose && hasChange) {
             val loginInfo = viewModel.loginInfo
             if (loginInfo.isEmpty()) {
                 viewModel.source?.removeLoginInfo()
