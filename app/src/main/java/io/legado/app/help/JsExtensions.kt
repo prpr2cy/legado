@@ -490,7 +490,7 @@ interface JsExtensions : JsEncodeUtils {
         return response
     }
 
-    fun toJson(obj: Any?): String {
+    fun convertToJson(obj: Any?): String {
         return toJsonString(obj)
     }
 
@@ -498,8 +498,8 @@ interface JsExtensions : JsEncodeUtils {
         return parseToMap(obj).toMutableMap()
     }
 
-    fun convertToMap(obj: Any?, flag: Boolean): MutableMap<String, Any?> {
-        return if (flag) {
+    fun convertToMap(obj: Any?, isAnyValue: Boolean): MutableMap<String, Any?> {
+        return if (isAnyValue) {
             parseToMapAny(obj).toMutableMap()
         } else {
             parseToMap(obj).toMutableMap()

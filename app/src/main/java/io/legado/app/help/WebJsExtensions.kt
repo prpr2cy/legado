@@ -385,11 +385,6 @@ class WebJsExtensions(
     }
 
     @JavascriptInterface
-    fun getKey(url: String, key: String): String {
-        return CookieStore.getKey(url, key)
-    }
-
-    @JavascriptInterface
     fun setCookie(url: String, cookie: String) {
         CookieStore.setCookie(url, cookie)
     }
