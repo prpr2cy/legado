@@ -490,7 +490,7 @@ interface JsExtensions : JsEncodeUtils {
         return response
     }
 
-    fun convertToJson(obj: Any?): String {
+    fun toJson(obj: Any?): String {
         return toJsonString(obj)
     }
 
