@@ -130,7 +130,7 @@ object NetworkUtils {
      * 获取绝对地址
      */
     fun getAbsoluteURL(baseURL: URL?, relativePath: String): String {
-        AppLog.put('baseURL: ${baseURL}, relativePath: ${relativePath}')
+        AppLog.put("baseURL: ${baseURL}, relativePath: ${relativePath}")
         val relativePathTrim = relativePath.trim()
         if (baseURL == null) return relativePathTrim
         if (relativePathTrim.isAbsUrl()) return relativePathTrim

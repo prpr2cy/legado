@@ -33,13 +33,50 @@ import kotlin.collections.set
 
 class BookshelfViewModel(application: Application) : BaseViewModel(application) {
 
+    fun splitUrls(bookUrls: String): List<String> {
+        val result = mutableListOf<String>()
+        val sb = StringBuilder()
+        var braceDepth = 0
+        for (char in bookUrls) {
+            when (char) {
+                '{' -> {
+                    braceDepth++
+                    sb.append(char)
+                }
+                '}' -> {
+                    braceDepth--
+                    sb.append(char)
+                }
+                '\n' -> {
+                    if (braceDepth > 0) {
+                        sb.append(char)
+                    } else {
+                        val block = sb.toString().trim()
+                        if (block.isNotEmpty()) {
+                            result.add(block)
+                        }
+                        sb.clear()
+                    }
+                }
+                else -> {
+                    sb.append(char)
+                }
+            }
+        }
+        val lastBlock = sb.toString().trim()
+        if (lastBlock.isNotEmpty()) {
+            result.add(lastBlock)
+        }
+        return result
+    }
+
     fun addBookByUrl(bookUrls: String) {
         var successCount = 0
         execute {
             val hasBookUrlPattern: List<BookSource> by lazy {
                 appDb.bookSourceDao.hasBookUrlPattern
             }
-            val urls = bookUrls.split("\n")
+            val urls = splitUrls(bookUrls)
             for (url in urls) {
                 val bookUrl = url.trim()
                 if (bookUrl.isEmpty()) continue
