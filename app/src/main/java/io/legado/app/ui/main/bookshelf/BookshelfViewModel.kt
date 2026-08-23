@@ -87,7 +87,7 @@ class BookshelfViewModel(application: Application) : BaseViewModel(application) 
                 }
                 if (source == null) {
                     hasBookUrlPattern.forEach { bookSource ->
-                        if (bookUrl.matches(bookSource.bookUrlPattern!!.toRegex())) {
+                        if (bookUrl.contains(bookSource.bookUrlPattern!!.toRegex())) {
                             source = bookSource
                             return@forEach
                         }
