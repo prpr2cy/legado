@@ -15,7 +15,7 @@ object AppPattern {
     val imgStyRegex = Regex("style[\"'\\s]*:\\s*[\"']([^\"']*)[\"']")
 
     //dataURL图片类型
-    val dataUriRegex = Regex("data:[^;]*;base64,(.*)")
+    val dataUriRegex = Regex("data:[^;]*;base64,(.*)", RegexOption.DOT_MATCHES_ALL)
 
     val nameRegex = Regex("\\s+作\\s*者.*|\\s+\\S+\\s+著")
     val authorRegex = Regex("^\\s*作\\s*者[:：\\s]+|\\s+著")
