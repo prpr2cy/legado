@@ -30,6 +30,7 @@ object BookList {
         ruleData: RuleData,
         analyzeUrl: AnalyzeUrl,
         baseUrl: String,
+        redirectUrl: String,
         body: String?,
         isSearch: Boolean = true,
     ): ArrayList<SearchBook> {
@@ -44,10 +45,10 @@ object BookList {
         Debug.log(bookSource.bookSourceUrl, body, state = 10)
         val analyzeRule = AnalyzeRule(ruleData, bookSource)
         analyzeRule.setContent(body).setBaseUrl(baseUrl)
-        analyzeRule.setRedirectUrl(baseUrl)
+        analyzeRule.setRedirectUrl(redirectUrl)
         if (isSearch) bookSource.bookUrlPattern?.let {
             coroutineContext.ensureActive()
-            if (baseUrl.matches(it.toRegex())) {
+            if (baseUrl.contains(it.toRegex())) {
                 Debug.log(bookSource.bookSourceUrl, "≡链接为详情页")
                 getInfoItem(
                     bookSource,
@@ -55,6 +56,7 @@ object BookList {
                     analyzeUrl,
                     body,
                     baseUrl,
+                    redirectUrl,
                     ruleData.getVariable()
                 )?.let { searchBook ->
                     searchBook.infoHtml = body
@@ -84,7 +86,13 @@ object BookList {
         if (collections.isEmpty() && bookSource.bookUrlPattern.isNullOrEmpty()) {
             Debug.log(bookSource.bookSourceUrl, "└列表为空,按详情页解析")
             getInfoItem(
-                bookSource, analyzeRule, analyzeUrl, body, baseUrl, ruleData.getVariable()
+                bookSource,
+                analyzeRule,
+                analyzeUrl,
+                body,
+                baseUrl,
+                redirectUrl,
+                ruleData.getVariable()
             )?.let { searchBook ->
                 searchBook.infoHtml = body
                 bookList.add(searchBook)
@@ -101,7 +109,12 @@ object BookList {
             Debug.log(bookSource.bookSourceUrl, "└列表大小:${collections.size}")
             for ((index, item) in collections.withIndex()) {
                 getSearchItem(
-                    bookSource, analyzeRule, item, baseUrl, ruleData.getVariable(),
+                    bookSource,
+                    analyzeRule,
+                    item,
+                    baseUrl,
+                    redirectUrl,
+                    ruleData.getVariable(),
                     index == 0,
                     ruleName = ruleName,
                     ruleBookUrl = ruleBookUrl,
@@ -135,6 +148,7 @@ object BookList {
         analyzeUrl: AnalyzeUrl,
         body: String,
         baseUrl: String,
+        redirectUrl: String,
         variable: String?
     ): SearchBook? {
         val book = Book(variable = variable)
@@ -150,7 +164,7 @@ object BookList {
             analyzeRule,
             bookSource,
             baseUrl,
-            baseUrl,
+            redirectUrl,
             false
         )
         if (book.name.isNotBlank()) {
@@ -165,6 +179,7 @@ object BookList {
         analyzeRule: AnalyzeRule,
         item: Any,
         baseUrl: String,
+        redirectUrl: String,
         variable: String?,
         log: Boolean,
         ruleName: List<AnalyzeRule.SourceRule>,
@@ -229,7 +244,7 @@ object BookList {
             try {
                 analyzeRule.getString(ruleCoverUrl).let {
                     if (it.isNotEmpty()) {
-                        searchBook.coverUrl = NetworkUtils.getAbsoluteURL(baseUrl, it)
+                        searchBook.coverUrl = NetworkUtils.getAbsoluteURL(redirectUrl, it)
                     }
                 }
                 Debug.log(bookSource.bookSourceUrl, "└${searchBook.coverUrl}", log)

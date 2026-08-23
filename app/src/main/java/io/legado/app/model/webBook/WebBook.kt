@@ -67,7 +67,8 @@ object WebBook {
             bookSource = bookSource,
             ruleData = ruleData,
             analyzeUrl = analyzeUrl,
-            baseUrl = res.url,
+            baseUrl = analyzeUrl.ruleUrl,
+            redirectUrl = res.url,
             body = res.body,
             isSearch = true
         )
@@ -113,7 +114,8 @@ object WebBook {
             bookSource = bookSource,
             ruleData = ruleData,
             analyzeUrl = analyzeUrl,
-            baseUrl = res.url,
+            baseUrl = analyzeUrl.ruleUrl,
+            redirectUrl = res.url,
             body = res.body,
             isSearch = false
         )
