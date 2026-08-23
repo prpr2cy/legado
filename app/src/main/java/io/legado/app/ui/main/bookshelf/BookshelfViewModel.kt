@@ -87,10 +87,7 @@ class BookshelfViewModel(application: Application) : BaseViewModel(application) 
                 }
                 if (source == null) {
                     hasBookUrlPattern.forEach { bookSource ->
-                        val regex = bookSource.bookUrlPattern!!.toRegex(
-                            RegexOption.DOT_MATCHES_ALL
-                        )
-                        if (bookUrl.matches(regex)) {
+                        if (bookUrl.contains(bookSource.bookUrlPattern!!.toRegex())) {
                             source = bookSource
                             return@forEach
                         }
