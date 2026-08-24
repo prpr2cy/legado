@@ -1,9 +1,7 @@
 package io.legado.app.utils
 
 import com.google.gson.GsonBuilder
-import com.google.gson.JsonArray
 import com.google.gson.JsonElement
-import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import com.google.gson.ToNumberPolicy
 import com.jayway.jsonpath.Configuration
@@ -11,8 +9,7 @@ import com.jayway.jsonpath.JsonPath
 import com.jayway.jsonpath.Option
 import com.jayway.jsonpath.ParseContext
 import com.jayway.jsonpath.ReadContext
-import org.mozilla.javascript.NativeArray
-import org.mozilla.javascript.NativeObject
+import io.legado.app.exception.NoStackTraceException
 import java.math.BigDecimal
 
 val jsonPath: ParseContext by lazy {
@@ -63,9 +60,9 @@ fun toJsonString(raw: Any?): String = when (raw) {
     is Number -> raw.toJsonString()
     is String -> raw
     is CharSequence -> raw.toString()
-    is Map<*, *> -> Gson.toJson(toAnyValue(raw))
-    is List<*> -> Gson.toJson(toAnyValue(raw))
-    is Array<*> -> Gson.toJson(toAnyValue(raw))
+    is Map<*, *> -> Gson.toJson(toAnyWrapper(raw))
+    is List<*> -> Gson.toJson(toAnyWrapper(raw))
+    is Array<*> -> Gson.toJson(toAnyWrapper(raw))
     is JsonElement -> Gson.toJson(raw)
     else -> try {
         Gson.toJson(raw)
@@ -74,26 +71,21 @@ fun toJsonString(raw: Any?): String = when (raw) {
     }
 }
 
-/**
- * 递归转换任意对象为 Kotlin 友好的纯数据类型。
- * - 容器类型递归处理内部元素
- * - Double 的整数值会被优化为 Long
- */
-fun toAnyValue(raw: Any?): Any? = when (raw) {
+fun toAnyWrapper(raw: Any?): Any? = when (raw) {
     null -> null
     is Boolean -> raw
     is Number -> if (raw is Double && raw % 1.0 == 0.0) raw.toLong() else raw
     is String -> raw
     is CharSequence -> raw.toString()
-    is Map<*, *> -> raw.entries.associate { it.key.toString() to toAnyValue(it.value) }
-    is List<*> -> raw.map { toAnyValue(it) }
-    is Array<*> -> raw.map { toAnyValue(it) }
+    is Map<*, *> -> raw.entries.associate { it.key.toString() to toAnyWrapper(it.value) }
+    is List<*> -> raw.map { toAnyWrapper(it) }
+    is Array<*> -> raw.map { toAnyWrapper(it) }
     is JsonElement -> when {
         raw.isJsonNull -> null
         raw.isJsonObject -> raw.asJsonObject.entrySet().associate {
-            it.key to toAnyValue(it.value)
+            it.key to toAnyWrapper(it.value)
         }
-        raw.isJsonArray -> raw.asJsonArray.map { toAnyValue(it) }
+        raw.isJsonArray -> raw.asJsonArray.map { toAnyWrapper(it) }
         raw.isJsonPrimitive -> with(raw.asJsonPrimitive) {
             when {
                 isBoolean -> asBoolean
@@ -109,77 +101,60 @@ fun toAnyValue(raw: Any?): Any? = when (raw) {
     else -> raw
 }
 
-/**
- * 将外部输入（JS 侧或 JSON）统一包装为 Kotlin 的 Map / List / null。
- * - Map / Object → Map<String, Any?>
- * - List / Array → List<Any?>
- * - JSON 字符串 → 解析为 Map 或 List（纯 primitive 返回 null）
- * - 其他无法转换的 → null
- */
-fun toJsonWrapper(raw: Any?): Any? {
-    return when (raw) {
-        null -> null
-        is Map<*, *> -> toAnyValue(raw)
-        is List<*> -> toAnyValue(raw)
-        is Array<*> -> toAnyValue(raw)
-        is CharSequence -> {
-            try {
-                val trimmed = raw.toString().trim()
-                if (trimmed.isEmpty()) return null
-                val json = JsonParser.parseString(trimmed)
+inline fun <T> parseToMapImpl(
+    raw: Any?,
+    valueMapper: (Any?) -> T
+): Map<String, T> {
+    if (raw.isNullOrEmpty()) return emptyMap()
+
+    return try {
+        when {
+            raw is Map<*, *> -> raw.entries.associate {
+                it.key.toString() to valueMapper(it.value)
+            }
+            raw is JsonElement && raw.isJsonObject -> raw.asJsonObject.entrySet().associate {
+                it.key to valueMapper(it.value)
+            }
+            raw is CharSequence -> {
+                val json = JsonParser.parseString(raw.toString())
                 when {
-                    json.isJsonObject -> toAnyValue(json)
-                    json.isJsonArray -> toAnyValue(json)
-                    else -> null
+                    json.isJsonObject -> json.asJsonObject.entrySet()
+                        .associate { it.key to valueMapper(it.value) }
+                    else -> emptyMap()
                 }
-            } catch (e: Exception) {
-                null
+            }
+            else -> {
+                throw NoStackTraceException("parseToMap不支持的类型: ${raw?.javaClass?.name.orEmpty()}")
             }
         }
-        else -> null
+    } catch (e: Exception) {
+        throw NoStackTraceException("parseToMap转换失败: ${raw?.javaClass?.name.orEmpty()}\n${e.message}")
     }
 }
 
-/**
- * 将 Kotlin/Java 容器递归转换为 Rhino JS 的 NativeArray / NativeObject，
- * 方便直接作为返回值传给 JS 引擎。
- * - List / Array → NativeArray
- * - Map → NativeObject
- * - Gson 的 JsonArray / JsonObject → NativeArray / NativeObject
- * - Gson 的 JsonPrimitive → Boolean / Number / String
- * - null → null
- * - 其他（String、Number、Boolean 等）→ 原样返回
- */
-fun wrapperToJS(raw: Any?): Any? = when (raw) {
-    null -> null
-    is NativeArray -> raw
-    is NativeObject -> raw
-    is Map<*, *> -> NativeObject().apply {
-        raw.forEach { (k, v) ->
-            put(k.toString(), this, wrapToJS(v))
-        }
-    }
-    is List<*> -> NativeArray(raw.map { wrapToJS(it) }.toTypedArray())
-    is Array<*> -> NativeArray(raw.map { wrapToJS(it) }.toTypedArray())
-    is JsonElement -> when {
-        raw.isJsonNull -> null
-        raw.isJsonObject -> NativeObject().apply {
-            raw.asJsonObject.entrySet().forEach { (k, v) ->
-                put(k, this, wrapToJS(v))
-            }
-        }
-        raw.isJsonArray -> NativeArray(raw.asJsonArray.map { wrapToJS(it) }.toTypedArray())
-        raw.isJsonPrimitive -> raw.asJsonPrimitive.let {
-            when {
-                it.isBoolean -> it.asBoolean
-                it.isNumber -> it.asNumber.let { n ->
-                    if (n is Double && n % 1.0 == 0.0) n.toLong() else n
+inline fun <T> parseToListImpl(
+    raw: Any?,
+    valueMapper: (Any?) -> T
+): List<T> {
+    if (raw.isNullOrEmpty()) return emptyList()
+
+    return try {
+        when {
+            raw is List<*> -> raw.map { valueMapper(it) }
+            raw is Array<*> -> raw.map { valueMapper(it) }
+            raw is JsonElement && raw.isJsonArray -> raw.asJsonArray.map { valueMapper(it) }
+            raw is CharSequence -> {
+                val json = JsonParser.parseString(raw.toString())
+                when {
+                    json.isJsonArray -> json.asJsonArray.map { valueMapper(it) }
+                    else -> emptyList()
                 }
-                it.isString -> it.asString
-                else -> raw
+            }
+            else -> {
+                throw NoStackTraceException("parseToList不支持的类型: ${raw?.javaClass?.name.orEmpty()}")
             }
         }
-        else -> raw
+    } catch (e: Exception) {
+        throw NoStackTraceException("parseToList转换失败: ${raw?.javaClass?.name.orEmpty()}\n${e.message}")
     }
-    else -> raw
 }

@@ -476,7 +476,7 @@ interface JsExtensions : JsEncodeUtils {
         timeout: Int?,
         skipRateLimit: Boolean
     ): Connection.Response {
-        val headersMap = toJsonWrapper(headers)
+        val headersMap = parseToMapImpl(headers) { toJsonString(it) }
         val requestHeaders = if (getSource()?.enabledCookieJar == true) {
             headersMap.toMutableMap().apply { put(cookieJarHeader, "1") }
         } else headersMap
@@ -502,16 +502,16 @@ interface JsExtensions : JsEncodeUtils {
         }
     }
 
-    fun toJson(obj: Any?): String {
+    fun toJsonStr(obj: Any?): String {
         return toJsonString(obj)
     }
 
-    fun wrapFromJS(obj: Any?): Any? {
-        return toJsonWrapper(obj)
+    fun parseToMap(obj: Any?): Any? {
+        return parseToMapImpl(obj) { toAnyWrapper(it) }
     }
 
-    fun wrapToJS(obj: Any?): Any? {
-        return wrapperToJS(obj)
+    fun parseToList(obj: Any?): Any? {
+        return parseToListImpl(obj) { toAnyWrapper(it) }
     }
 
     /* Str转ByteArray */
