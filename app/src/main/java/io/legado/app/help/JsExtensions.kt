@@ -510,7 +510,7 @@ interface JsExtensions : JsEncodeUtils {
         }
     }
 
-    fun toJsonStr(obj: Any?): String {
+    fun toJson(obj: Any?): String {
         return toJsonString(obj)
     }
 

@@ -67,7 +67,7 @@ fun toAnyWrapper(raw: Any?): Any? = when (raw) {
     is Number -> if (raw is Double && raw % 1.0 == 0.0) raw.toLong() else raw
     is String -> raw
     is CharSequence -> raw.toString()
-    is Map<*, *> -> raw.entries.associate { it.key.toString() to toAnyWrapper(it.value) }
+    is Map<*, *> -> raw.entries.associate {it.key.toString() to toAnyWrapper(it.value) }
     is List<*> -> raw.map { toAnyWrapper(it) }
     is Array<*> -> raw.map { toAnyWrapper(it) }
     is JsonElement -> when {
@@ -100,12 +100,10 @@ inline fun <T> parseToMapImpl(
             raw == null -> emptyMap()
             raw is Map<*, *> -> {
                 if (raw.isEmpty()) return emptyMap()
-                raw.entries.associate {
-                    it.key.toString() to valueMapper(it.value)
-                }
+                raw.entries.associate { it.key.toString() to valueMapper(it.value) }
             }
-            raw is JsonElement && raw.isJsonObject -> raw.asJsonObject.entrySet().associate {
-                it.key to valueMapper(it.value)
+            raw is JsonElement && raw.isJsonObject -> {
+                raw.asJsonObject.entrySet().associate { it.key to valueMapper(it.value) }
             }
             raw is CharSequence -> {
                 if (raw.isBlank()) return emptyMap()
@@ -116,10 +114,10 @@ inline fun <T> parseToMapImpl(
                     else -> emptyMap()
                 }
             }
-            else -> throw NoStackTraceException("parseToMap不支持的类型: ${raw?.javaClass?.name.orEmpty()}")
+            else -> throw NoStackTraceException("不支持的类型: ${raw?.javaClass?.name.orEmpty()}")
         }
     } catch (e: Exception) {
-        throw NoStackTraceException("parseToMap转换失败: ${raw?.javaClass?.name.orEmpty()}\n${e.message}")
+        throw NoStackTraceException("parseToMap转换失败，${e.message}")
     }
 }
 
@@ -147,9 +145,9 @@ inline fun <T> parseToListImpl(
                     else -> emptyList()
                 }
             }
-            else -> throw NoStackTraceException("parseToList不支持的类型: ${raw?.javaClass?.name.orEmpty()}")
+            else -> throw NoStackTraceException("不支持的类型: ${raw?.javaClass?.name.orEmpty()}")
         }
     } catch (e: Exception) {
-        throw NoStackTraceException("parseToList转换失败: ${raw?.javaClass?.name.orEmpty()}\n${e.message}")
+        throw NoStackTraceException("parseToList转换失败，${e.message}")
     }
 }
