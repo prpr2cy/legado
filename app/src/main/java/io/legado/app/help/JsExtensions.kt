@@ -66,6 +66,10 @@ interface JsExtensions : JsEncodeUtils {
      * 访问网络,返回String
      */
     fun ajax(url: Any): String? {
+        return ajax(url, false)
+    }
+
+    fun ajax(url: Any, skipRateLimit: Boolean): String? {
         val urlStr = if (url is List<*>) {
             url.firstOrNull().toString()
         } else {
@@ -74,7 +78,7 @@ interface JsExtensions : JsEncodeUtils {
         return runBlocking {
             val analyzeUrl = AnalyzeUrl(urlStr, source = getSource())
             kotlin.runCatching {
-                analyzeUrl.getStrResponseAwait().body
+                analyzeUrl.getStrResponseAwait(skipRateLimit = skipRateLimit).body
             }.onFailure {
                 AppLog.put("ajax(${urlStr}) error\n${it.localizedMessage}", it)
             }.getOrElse {
@@ -217,7 +221,7 @@ interface JsExtensions : JsEncodeUtils {
      * @param html 要打开的本地网页
      */
     fun startBrowserAwait(url: String, title: String): StrResponse {
-        return startBrowserAwait(url, title, true)
+        return startBrowserAwait(url, title, true, null)
     }
 
     fun startBrowserAwait(url: String, title: String, refetchAfterSuccess: Boolean): StrResponse {
@@ -398,32 +402,24 @@ interface JsExtensions : JsEncodeUtils {
     /**
      * js实现重定向拦截,网络访问get
      */
-    @Suppress("UnnecessaryVariable")
+@Suppress("UnnecessaryVariable")
     fun get(url: Any, headers: Any): Connection.Response {
-        return get(url, headers, null)
+        return get(url, headers, null, false)
     }
 
     @Suppress("UnnecessaryVariable")
     fun get(url: Any, headers: Any, timeout: Int? = null): Connection.Response {
-        val urlStr = url.toString()
-        val headersMap = parseToMap(headers)
-        val requestHeaders = if (getSource()?.enabledCookieJar == true) {
-            headersMap.toMutableMap().apply { put(cookieJarHeader, "1") }
-        } else headersMap
-        val rateLimiter = ConcurrentRateLimiter(getSource())
-        val response = rateLimiter.withLimitBlocking {
-            Jsoup.connect(urlStr)
-                .sslSocketFactory(SSLHelper.unsafeSSLSocketFactory)
-                .ignoreContentType(true)
-                .ignoreHttpErrors(true)
-                .followRedirects(false)
-                .maxBodySize(0)
-                .timeout(timeout ?: 30000)
-                .headers(requestHeaders)
-                .method(Connection.Method.GET)
-                .execute()
-        }
-        return response
+        return get(url, headers, timeout, false)
+    }
+
+    @Suppress("UnnecessaryVariable")
+    fun get(url: Any, headers: Any, skipRateLimit: Boolean): Connection.Response {
+        return get(url, headers, null, skipRateLimit)
+    }
+
+    @Suppress("UnnecessaryVariable")
+    fun get(url: Any, headers: Any, timeout: Int? = null, skipRateLimit: Boolean): Connection.Response {
+        return jsoupConnect(Connection.Method.GET, url.toString(), null, headers, timeout, skipRateLimit)
     }
 
     /**
@@ -431,30 +427,22 @@ interface JsExtensions : JsEncodeUtils {
      */
     @Suppress("UnnecessaryVariable")
     fun head(url: Any, headers: Any): Connection.Response {
-        return head(url, headers, null)
+        return head(url, headers, null, false)
     }
 
     @Suppress("UnnecessaryVariable")
     fun head(url: Any, headers: Any, timeout: Int? = null): Connection.Response {
-        val urlStr = url.toString()
-        val headersMap = parseToMap(headers)
-        val requestHeaders = if (getSource()?.enabledCookieJar == true) {
-            headersMap.toMutableMap().apply { put(cookieJarHeader, "1") }
-        } else headersMap
-        val rateLimiter = ConcurrentRateLimiter(getSource())
-        val response = rateLimiter.withLimitBlocking {
-            Jsoup.connect(urlStr)
-                .sslSocketFactory(SSLHelper.unsafeSSLSocketFactory)
-                .ignoreContentType(true)
-                .ignoreHttpErrors(true)
-                .followRedirects(false)
-                .maxBodySize(0)
-                .timeout(timeout ?: 30000)
-                .headers(requestHeaders)
-                .method(Connection.Method.HEAD)
-                .execute()
-        }
-        return response
+        return head(url, headers, timeout, false)
+    }
+
+    @Suppress("UnnecessaryVariable")
+    fun head(url: Any, headers: Any, skipRateLimit: Boolean): Connection.Response {
+        return head(url, headers, null, skipRateLimit)
+    }
+
+    @Suppress("UnnecessaryVariable")
+    fun head(url: Any, headers: Any, timeout: Int? = null, skipRateLimit: Boolean): Connection.Response {
+        return jsoupConnect(Connection.Method.HEAD, url.toString(), null, headers, timeout, skipRateLimit)
     }
 
     /**
@@ -462,48 +450,68 @@ interface JsExtensions : JsEncodeUtils {
      */
     @Suppress("UnnecessaryVariable")
     fun post(url: Any, body: Any, headers: Any): Connection.Response {
-        return post(url, body, headers, null)
+        return post(url, body, headers, null, false)
     }
 
     @Suppress("UnnecessaryVariable")
     fun post(url: Any, body: Any, headers: Any, timeout: Int? = null): Connection.Response {
-        val urlStr = url.toString()
-        val bodyStr = body.toString()
-        val headersMap = parseToMap(headers)
+        return post(url, body, headers, timeout, false)
+    }
+
+    @Suppress("UnnecessaryVariable")
+    fun post(url: Any, body: Any, headers: Any, skipRateLimit: Boolean): Connection.Response {
+        return post(url, body, headers, null, skipRateLimit)
+    }
+
+    @Suppress("UnnecessaryVariable")
+    fun post(url: Any, body: Any, headers: Any, timeout: Int? = null, skipRateLimit: Boolean): Connection.Response {
+        return jsoupConnect(Connection.Method.POST, url.toString(), body.toString(), headers, timeout, skipRateLimit)
+    }
+
+    private fun jsoupConnect(
+        method: Connection.Method,
+        url: String,
+        body: String?,
+        headers: Any,
+        timeout: Int?,
+        skipRateLimit: Boolean
+    ): Connection.Response {
+        val headersMap = toJsonWrapper(headers)
         val requestHeaders = if (getSource()?.enabledCookieJar == true) {
             headersMap.toMutableMap().apply { put(cookieJarHeader, "1") }
         } else headersMap
-        val rateLimiter = ConcurrentRateLimiter(getSource())
-        val response = rateLimiter.withLimitBlocking {
-            Jsoup.connect(urlStr)
-                .sslSocketFactory(SSLHelper.unsafeSSLSocketFactory)
-                .ignoreContentType(true)
-                .ignoreHttpErrors(true)
-                .followRedirects(false)
-                .maxBodySize(0)
-                .timeout(timeout ?: 30000)
-                .requestBody(bodyStr)
-                .headers(requestHeaders)
-                .method(Connection.Method.POST)
-                .execute()
+
+        val connection = Jsoup.connect(url)
+            .sslSocketFactory(SSLHelper.unsafeSSLSocketFactory)
+            .ignoreContentType(true)
+            .ignoreHttpErrors(true)
+            .followRedirects(false)
+            .maxBodySize(0)
+            .timeout(timeout ?: 30000)
+            .headers(requestHeaders)
+            .method(method)
+            .apply {
+                if (body != null) requestBody(body)
+            }
+
+        return if (skipRateLimit) {
+            connection.execute()
+        } else {
+            val rateLimiter = ConcurrentRateLimiter(getSource())
+            rateLimiter.withLimitBlocking { connection.execute() }
         }
-        return response
     }
 
     fun toJson(obj: Any?): String {
         return toJsonString(obj)
     }
 
-    fun convertToMap(obj: Any?): MutableMap<String, String> {
-        return parseToMap(obj).toMutableMap()
+    fun wrapFromJS(obj: Any?): Any? {
+        return toJsonWrapper(obj)
     }
 
-    fun convertToMap(obj: Any?, isAnyValue: Boolean): MutableMap<String, Any?> {
-        return if (isAnyValue) {
-            parseToMapAny(obj).toMutableMap()
-        } else {
-            parseToMap(obj).toMutableMap()
-        }
+    fun wrapToJS(obj: Any?): Any? {
+        return wrapperToJS(obj)
     }
 
     /* Str转ByteArray */
