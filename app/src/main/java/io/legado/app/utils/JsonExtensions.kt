@@ -35,16 +35,6 @@ private val Gson by lazy {
         .create()
 }
 
-private fun Any?.isNullOrEmpty(): Boolean = when (this) {
-    null -> true
-    is String -> isBlank()
-    is CharSequence -> isBlank()
-    is Map<*, *> -> isEmpty()
-    is List<*> -> isEmpty()
-    is Array<*> -> isEmpty()
-    else -> false
-}
-
 private fun Number.toJsonString(): String = when(this) {
     is Long, is Int, is Short, is Byte -> toString()
     is Double -> {
@@ -105,17 +95,20 @@ inline fun <T> parseToMapImpl(
     raw: Any?,
     valueMapper: (Any?) -> T
 ): Map<String, T> {
-    if (raw.isNullOrEmpty()) return emptyMap()
-
     return try {
         when {
-            raw is Map<*, *> -> raw.entries.associate {
-                it.key.toString() to valueMapper(it.value)
+            raw == null -> emptyMap()
+            raw is Map<*, *> -> {
+                if (raw.isEmpty()) return emptyMap()
+                raw.entries.associate {
+                    it.key.toString() to valueMapper(it.value)
+                }
             }
             raw is JsonElement && raw.isJsonObject -> raw.asJsonObject.entrySet().associate {
                 it.key to valueMapper(it.value)
             }
             raw is CharSequence -> {
+                if (raw.isBlank()) return emptyMap()
                 val json = JsonParser.parseString(raw.toString())
                 when {
                     json.isJsonObject -> json.asJsonObject.entrySet()
@@ -123,9 +116,7 @@ inline fun <T> parseToMapImpl(
                     else -> emptyMap()
                 }
             }
-            else -> {
-                throw NoStackTraceException("parseToMap不支持的类型: ${raw?.javaClass?.name.orEmpty()}")
-            }
+            else -> throw NoStackTraceException("parseToMap不支持的类型: ${raw?.javaClass?.name.orEmpty()}")
         }
     } catch (e: Exception) {
         throw NoStackTraceException("parseToMap转换失败: ${raw?.javaClass?.name.orEmpty()}\n${e.message}")
@@ -136,23 +127,27 @@ inline fun <T> parseToListImpl(
     raw: Any?,
     valueMapper: (Any?) -> T
 ): List<T> {
-    if (raw.isNullOrEmpty()) return emptyList()
-
     return try {
         when {
-            raw is List<*> -> raw.map { valueMapper(it) }
-            raw is Array<*> -> raw.map { valueMapper(it) }
+            raw == null -> emptyList()
+            raw is List<*> -> {
+                if (raw.isEmpty()) return emptyList()
+                raw.map { valueMapper(it) }
+            }
+            raw is Array<*> -> {
+                if (raw.isEmpty()) return emptyList()
+                raw.map { valueMapper(it) }
+            }
             raw is JsonElement && raw.isJsonArray -> raw.asJsonArray.map { valueMapper(it) }
             raw is CharSequence -> {
+                if (raw.isBlank()) return emptyList()
                 val json = JsonParser.parseString(raw.toString())
                 when {
                     json.isJsonArray -> json.asJsonArray.map { valueMapper(it) }
                     else -> emptyList()
                 }
             }
-            else -> {
-                throw NoStackTraceException("parseToList不支持的类型: ${raw?.javaClass?.name.orEmpty()}")
-            }
+            else -> throw NoStackTraceException("parseToList不支持的类型: ${raw?.javaClass?.name.orEmpty()}")
         }
     } catch (e: Exception) {
         throw NoStackTraceException("parseToList转换失败: ${raw?.javaClass?.name.orEmpty()}\n${e.message}")

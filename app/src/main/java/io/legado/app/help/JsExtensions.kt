@@ -113,10 +113,14 @@ interface JsExtensions : JsEncodeUtils {
      * 访问网络,返回Response<String>
      */
     fun connect(urlStr: String): StrResponse {
+        return connect(urlStr, false)
+    }
+
+    fun connect(urlStr: String, skipRateLimit: Boolean): StrResponse {
         return runBlocking {
             val analyzeUrl = AnalyzeUrl(urlStr, source = getSource())
             kotlin.runCatching {
-                analyzeUrl.getStrResponseAwait()
+                analyzeUrl.getStrResponseAwait(skipRateLimit = skipRateLimit)
             }.onFailure {
                 AppLog.put("connect(${urlStr}) error\n${it.localizedMessage}", it)
             }.getOrElse {
@@ -126,6 +130,10 @@ interface JsExtensions : JsEncodeUtils {
     }
 
     fun connect(urlStr: String, header: String?): StrResponse {
+        return connect(urlStr, header, false)
+    }
+
+    fun connect(urlStr: String, header: String?, skipRateLimit: Boolean): StrResponse {
         return runBlocking {
             val headerMap = GSON.fromJsonObject<Map<String, String>>(header).getOrNull()
             val analyzeUrl = AnalyzeUrl(
@@ -134,7 +142,7 @@ interface JsExtensions : JsEncodeUtils {
                 source = getSource()
             )
             kotlin.runCatching {
-                analyzeUrl.getStrResponseAwait()
+                analyzeUrl.getStrResponseAwait(skipRateLimit = skipRateLimit)
             }.onFailure {
                 AppLog.put("connect($urlStr,$header) error\n${it.localizedMessage}", it)
             }.getOrElse {
