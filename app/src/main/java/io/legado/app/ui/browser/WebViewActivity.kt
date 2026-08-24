@@ -120,7 +120,7 @@ class WebViewActivity : VMBaseActivity<ActivityWebViewBinding, WebViewModel>() {
                     if (itemUrl != currentUrl || currentTitle != item.title) {
                         break
                     }
-                    if (Uri.parse(currentUrl).scheme == "data") {
+                    if (currentUrl == "data:text/html;charset=utf-8;base64,") {
                         break
                     }
                     steps++
