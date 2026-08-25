@@ -64,8 +64,9 @@ object WebBook {
         }
         checkRedirect(bookSource, res)
         val redirectUrl = res.url
-        val baseUrl = if (redirectUrl.endsWith(analyzeUrl.urlNoOption)) {
-            redirectUrl.substringBefore(analyzeUrl.urlNoOption) + analyzeUrl.ruleUrl
+        val idx = redirectUrl.indexOf(analyzeUrl.urlNoOption)
+        val baseUrl = if (idx != -1) {
+            redirectUrl.substring(0, idx) + analyzeUrl.ruleUrl
         } else analyzeUrl.ruleUrl
         return BookList.analyzeBookList(
             bookSource = bookSource,
@@ -114,12 +115,17 @@ object WebBook {
             }
         }
         checkRedirect(bookSource, res)
+        val redirectUrl = res.url
+        val idx = redirectUrl.indexOf(analyzeUrl.urlNoOption)
+        val baseUrl = if (idx != -1) {
+            redirectUrl.substring(0, idx) + analyzeUrl.ruleUrl
+        } else analyzeUrl.ruleUrl
         return BookList.analyzeBookList(
             bookSource = bookSource,
             ruleData = ruleData,
             analyzeUrl = analyzeUrl,
-            baseUrl = analyzeUrl.ruleUrl,
-            redirectUrl = res.url,
+            baseUrl = baseUrl,
+            redirectUrl = redirectUrl,
             body = res.body,
             isSearch = false
         )
