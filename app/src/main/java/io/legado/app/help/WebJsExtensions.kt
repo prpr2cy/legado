@@ -187,7 +187,7 @@ class WebJsExtensions(
             val method = options["method"]?.toString()?.uppercase()
                 ?: if (body != null) "POST" else "GET"
             val headers = (options["headers"] as? Map<String, Any>)
-                ?.mapValues { it.value?.toString() ?: "" }
+                ?.mapValues { toStringValue(it.value) }
                 ?: emptyMap<String, String>()
             val timeout = (options["timeout"] as? Number)?.toInt() ?: 30000
             val connect = Jsoup.connect(url)

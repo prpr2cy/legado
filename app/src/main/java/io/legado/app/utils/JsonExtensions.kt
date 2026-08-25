@@ -45,7 +45,7 @@ private fun Number.toStringValue(): String = when(this) {
 }
 
 fun toStringValue(raw: Any?): String = when (raw) {
-    null -> ""
+    null -> "null"
     is Boolean -> raw.toString()
     is Number -> raw.toStringValue()
     is String -> raw
