@@ -410,7 +410,7 @@ interface JsExtensions : JsEncodeUtils {
     /**
      * js实现重定向拦截,网络访问get
      */
-@Suppress("UnnecessaryVariable")
+    @Suppress("UnnecessaryVariable")
     fun get(url: Any, headers: Any): Connection.Response {
         return get(url, headers, null, false)
     }
@@ -476,6 +476,7 @@ interface JsExtensions : JsEncodeUtils {
         return jsoupConnect(Connection.Method.POST, url.toString(), body.toString(), headers, timeout, skipRateLimit)
     }
 
+    @Suppress("UnnecessaryVariable")
     private fun jsoupConnect(
         method: Connection.Method,
         url: String,
@@ -484,7 +485,7 @@ interface JsExtensions : JsEncodeUtils {
         timeout: Int?,
         skipRateLimit: Boolean
     ): Connection.Response {
-        val headersMap = parseToMapImpl(headers) { toJsonString(it) }
+        val headersMap = parseToMapImpl(headers) { toStringValue(it) }
         val requestHeaders = if (getSource()?.enabledCookieJar == true) {
             headersMap.toMutableMap().apply { put(cookieJarHeader, "1") }
         } else headersMap
@@ -511,15 +512,15 @@ interface JsExtensions : JsEncodeUtils {
     }
 
     fun toJson(obj: Any?): String {
-        return toJsonString(obj)
+        return toStringValue(obj)
     }
 
     fun parseToMap(obj: Any?): Any? {
-        return parseToMapImpl(obj) { toAnyWrapper(it) }
+        return parseToMapImpl(obj) { toAnyValue(it) }
     }
 
     fun parseToList(obj: Any?): Any? {
-        return parseToListImpl(obj) { toAnyWrapper(it) }
+        return parseToListImpl(obj) { toAnyValue(it) }
     }
 
     /* Str转ByteArray */

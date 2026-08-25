@@ -202,8 +202,9 @@ class MapDeserializerDoubleAsIntFix :
                         // here you can handle double int/long values
                         // and return any type you want
                         // this solution will transform 3.0 float to long values
-                        return if (num is Double
-                            && num % 1.0 == 0.0) num.toLong() else num
+                        return if (num is Double && num % 1.0 == 0.0) {
+                             num.toLong()
+                        } else num
                     }
                 }
             }

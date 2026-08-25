@@ -27,11 +27,11 @@ import io.legado.app.model.AudioPlay
 import io.legado.app.model.ReadBook
 import io.legado.app.utils.externalCache
 import io.legado.app.utils.FileUtils
-import io.legado.app.utils.fromJsonObject
-import io.legado.app.utils.INITIAL_GSON
 import io.legado.app.utils.longToastOnUi
+import io.legado.app.utils.parseToMapImpl
+import io.legado.app.utils.toAnyValue
 import io.legado.app.utils.toastOnUi
-import io.legado.app.utils.toJsonString
+import io.legado.app.utils.toStringValue
 import io.legado.app.utils.UrlUtil
 import java.lang.ref.WeakReference
 import java.io.File
@@ -89,9 +89,9 @@ class WebJsExtensions(
     }
 
     @JavascriptInterface
-    fun getHeader(hasLoginHeader: Boolean = false): String? {
+    fun getSourceHeader(hasLoginHeader: Boolean = false): String? {
         return getSource()?.getHeaderMap(hasLoginHeader)?.let {
-            toJsonString(it)
+            toStringValue(it)
         }
     }
 
@@ -170,7 +170,7 @@ class WebJsExtensions(
                             }
                         }
                     }
-                ).let { toJsonString(it) }
+                ).let { toStringValue(it) }
             }.onFailure {
                 AppLog.put("connect($urlStr) error\n${it.localizedMessage}", it)
             }.getOrElse {
@@ -182,14 +182,12 @@ class WebJsExtensions(
     @JavascriptInterface
     fun fetch(url: String, option: String): String {
         return kotlin.runCatching {
-            val options = INITIAL_GSON.fromJsonObject<Map<String, Any>>(option).getOrNull()
-                ?: emptyMap<String, Any>()
-            val body = options["body"]?.let { toJsonString(it) }
+            val options = parseToMapImpl(option) { toAnyValue(it) }
+            val body = options["body"]?.let { toStringValue(it) }
             val method = options["method"]?.toString()?.uppercase()
                 ?: if (body != null) "POST" else "GET"
-            val headers = (options["headers"] as? Map<*, *>)
-                ?.mapKeys { entry -> entry.key.toString() }
-                ?.mapValues { entry -> entry.value?.toString() ?: "" }
+            val headers = (options["headers"] as? Map<String, Any>)
+                ?.mapValues { toStringValue(it.value) }
                 ?: emptyMap<String, String>()
             val timeout = (options["timeout"] as? Number)?.toInt() ?: 30000
             val connect = Jsoup.connect(url)
@@ -212,7 +210,7 @@ class WebJsExtensions(
                 "body" to response.body(),
                 "headers" to response.headers(),
                 "cookies" to response.cookies()
-            ).let { toJsonString(it) }
+            ).let { toStringValue(it) }
         }.onFailure {
             AppLog.put("fetch(${url}) error\n${it.localizedMessage}", it)
         }.getOrElse {
@@ -431,7 +429,7 @@ class WebJsExtensions(
                             null -> "null"
                             is Boolean, is Number, is String -> result
                             is ByteArray -> Base64.encode(result)
-                            else -> toJsonString(result)
+                            else -> toStringValue(result)
                         }
                     }
                 }

@@ -35,7 +35,7 @@ private val Gson by lazy {
         .create()
 }
 
-private fun Number.toJsonString(): String = when(this) {
+private fun Number.toStringValue(): String = when(this) {
     is Long, is Int, is Short, is Byte -> toString()
     is Double -> {
         if (this % 1.0 == 0.0) toLong().toString()
@@ -44,15 +44,15 @@ private fun Number.toJsonString(): String = when(this) {
     else -> BigDecimal.valueOf(toDouble()).stripTrailingZeros().toPlainString()
 }
 
-fun toJsonString(raw: Any?): String = when (raw) {
-    null -> "null"
+fun toStringValue(raw: Any?): String = when (raw) {
+    null -> ""
     is Boolean -> raw.toString()
-    is Number -> raw.toJsonString()
+    is Number -> raw.toStringValue()
     is String -> raw
     is CharSequence -> raw.toString()
-    is Map<*, *> -> Gson.toJson(toAnyWrapper(raw))
-    is List<*> -> Gson.toJson(toAnyWrapper(raw))
-    is Array<*> -> Gson.toJson(toAnyWrapper(raw))
+    is Map<*, *> -> Gson.toJson(toAnyValue(raw))
+    is List<*> -> Gson.toJson(toAnyValue(raw))
+    is Array<*> -> Gson.toJson(toAnyValue(raw))
     is JsonElement -> Gson.toJson(raw)
     else -> try {
         Gson.toJson(raw)
@@ -61,21 +61,21 @@ fun toJsonString(raw: Any?): String = when (raw) {
     }
 }
 
-fun toAnyWrapper(raw: Any?): Any? = when (raw) {
+fun toAnyValue(raw: Any?): Any? = when (raw) {
     null -> null
     is Boolean -> raw
     is Number -> if (raw is Double && raw % 1.0 == 0.0) raw.toLong() else raw
     is String -> raw
     is CharSequence -> raw.toString()
-    is Map<*, *> -> raw.entries.associate {it.key.toString() to toAnyWrapper(it.value) }
-    is List<*> -> raw.map { toAnyWrapper(it) }
-    is Array<*> -> raw.map { toAnyWrapper(it) }
+    is Map<*, *> -> raw.entries.associate { it.key.toString() to toAnyValue(it.value) }
+    is List<*> -> raw.map { toAnyValue(it) }
+    is Array<*> -> raw.map { toAnyValue(it) }
     is JsonElement -> when {
         raw.isJsonNull -> null
         raw.isJsonObject -> raw.asJsonObject.entrySet().associate {
-            it.key to toAnyWrapper(it.value)
+            it.key to toAnyValue(it.value)
         }
-        raw.isJsonArray -> raw.asJsonArray.map { toAnyWrapper(it) }
+        raw.isJsonArray -> raw.asJsonArray.map { toAnyValue(it) }
         raw.isJsonPrimitive -> with(raw.asJsonPrimitive) {
             when {
                 isBoolean -> asBoolean
@@ -117,7 +117,7 @@ inline fun <T> parseToMapImpl(
             else -> throw NoStackTraceException("不支持的类型: ${raw?.javaClass?.name.orEmpty()}")
         }
     } catch (e: Exception) {
-        throw NoStackTraceException("parseToMap转换失败，${e.message}")
+        throw NoStackTraceException("parseToMap转换失败: ${e.message}")
     }
 }
 
@@ -148,6 +148,6 @@ inline fun <T> parseToListImpl(
             else -> throw NoStackTraceException("不支持的类型: ${raw?.javaClass?.name.orEmpty()}")
         }
     } catch (e: Exception) {
-        throw NoStackTraceException("parseToList转换失败，${e.message}")
+        throw NoStackTraceException("parseToList转换失败: ${e.message}")
     }
 }
