@@ -187,7 +187,7 @@ class WebJsExtensions(
             val method = options["method"]?.toString()?.uppercase()
                 ?: if (body != null) "POST" else "GET"
             val headers = (options["headers"] as? Map<String, Any>)
-                ?.mapValues { toStringValue(it.value) }
+                ?.mapValues { it.value?.toString() ?: "" }
                 ?: emptyMap<String, String>()
             val timeout = (options["timeout"] as? Number)?.toInt() ?: 30000
             val connect = Jsoup.connect(url)
@@ -426,9 +426,7 @@ class WebJsExtensions(
                     val jsCode = p0 ?: throw NoStackTraceException("error null")
                     analyzeRule.evalJS(jsCode).let { result ->
                         when (result) {
-                            null -> "null"
                             is Boolean, is Number, is String -> result
-                            is ByteArray -> Base64.encode(result)
                             else -> toStringValue(result)
                         }
                     }
