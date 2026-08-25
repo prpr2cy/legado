@@ -65,6 +65,8 @@ class AnalyzeUrl(
 
     var ruleUrl = ""
         private set
+    var urlNoOption = ""
+        private set
     var url: String = ""
         private set
     var body: String? = null
@@ -190,7 +192,7 @@ class AnalyzeUrl(
     private fun analyzeUrl() {
         //replaceKeyPageJs已经替换掉额外内容，此处url是基础形式，可以直接切首个‘,’之前字符串。
         val urlMatcher = paramPattern.matcher(ruleUrl)
-        val urlNoOption =
+        urlNoOption =
             if (urlMatcher.find()) ruleUrl.substring(0, urlMatcher.start()) else ruleUrl
         url = NetworkUtils.getAbsoluteURL(baseUrl, urlNoOption)
         NetworkUtils.getBaseUrl(url)?.let {
