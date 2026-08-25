@@ -13,7 +13,7 @@ import io.legado.app.model.Debug
 import io.legado.app.model.analyzeRule.AnalyzeRule
 import io.legado.app.model.analyzeRule.AnalyzeUrl
 import io.legado.app.model.analyzeRule.RuleData
-import java.net.URL
+import io.legado.app.utils.NetworkUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.isActive
@@ -21,12 +21,6 @@ import kotlin.coroutines.CoroutineContext
 
 @Suppress("MemberVisibilityCanBePrivate")
 object WebBook {
-
-    private fun String?.isAbsUrl() =
-        this?.let {
-            it.startsWith("http://", true) || it.startsWith("https://", true)
-                || it.contains(Regex("^data:[^;]*;base64,"))
-        } ?: false
 
     /**
      * 搜索
@@ -53,13 +47,12 @@ object WebBook {
         if (searchUrl.isNullOrBlank()) {
             throw NoStackTraceException("搜索url不能为空")
         }
-        val sourceUrl = bookSource.bookSourceUrl
         val ruleData = RuleData()
         val analyzeUrl = AnalyzeUrl(
             mUrl = searchUrl,
             key = key,
             page = page,
-            baseUrl = sourceUrl,
+            baseUrl = bookSource.bookSourceUrl,
             source = bookSource,
             ruleData = ruleData,
         )
@@ -71,10 +64,7 @@ object WebBook {
             }
         }
         checkRedirect(bookSource, res)
-        val ruleUrl = analyzeUrl.ruleUrl
-        val baseUrl = if (sourceUrl.isAbsUrl() && !ruleUrl.isAbsUrl()) {
-            URL(URL(sourceUrl), ruleUrl).toString()
-        } else ruleUrl
+        val baseUrl = NetworkUtils.getAbsoluteURL(res.url, analyzeUrl.ruleUrl)
         return BookList.analyzeBookList(
             bookSource = bookSource,
             ruleData = ruleData,
@@ -106,12 +96,11 @@ object WebBook {
         url: String,
         page: Int? = 1,
     ): ArrayList<SearchBook> {
-        val sourceUrl = bookSource.bookSourceUrl
         val ruleData = RuleData()
         val analyzeUrl = AnalyzeUrl(
             mUrl = url,
             page = page,
-            baseUrl = sourceUrl,
+            baseUrl = bookSource.bookSourceUrl,
             source = bookSource,
             ruleData = ruleData
         )
@@ -123,10 +112,7 @@ object WebBook {
             }
         }
         checkRedirect(bookSource, res)
-        val ruleUrl = analyzeUrl.ruleUrl
-        val baseUrl = if (sourceUrl.isAbsUrl() && !ruleUrl.isAbsUrl()) {
-            URL(URL(sourceUrl), ruleUrl).toString()
-        } else ruleUrl
+        val baseUrl = NetworkUtils.getAbsoluteURL(res.url, analyzeUrl.ruleUrl)
         return BookList.analyzeBookList(
             bookSource = bookSource,
             ruleData = ruleData,
