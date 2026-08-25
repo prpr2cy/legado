@@ -148,9 +148,7 @@ object NetworkUtils {
 
     fun getBaseUrl(url: String?): String? {
         url ?: return null
-        if (url.startsWith("http://", true)
-            || url.startsWith("https://", true)
-        ) {
+        if (url.isAbsUrl()) {
             val index = url.indexOf("/", 9)
             return if (index == -1) {
                 url

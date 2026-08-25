@@ -13,6 +13,7 @@ import io.legado.app.model.Debug
 import io.legado.app.model.analyzeRule.AnalyzeRule
 import io.legado.app.model.analyzeRule.AnalyzeUrl
 import io.legado.app.model.analyzeRule.RuleData
+import java.net.URL
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.isActive
@@ -20,6 +21,12 @@ import kotlin.coroutines.CoroutineContext
 
 @Suppress("MemberVisibilityCanBePrivate")
 object WebBook {
+
+    private fun String?.isAbsUrl() =
+        this?.let {
+            it.startsWith("http://", true) || it.startsWith("https://", true)
+                || baseUrl.contains(Regex("^data:[^;]*;base64,"))
+        } ?: false
 
     /**
      * 搜索
@@ -46,12 +53,13 @@ object WebBook {
         if (searchUrl.isNullOrBlank()) {
             throw NoStackTraceException("搜索url不能为空")
         }
+        val sourceUrl = bookSource.bookSourceUrl
         val ruleData = RuleData()
         val analyzeUrl = AnalyzeUrl(
             mUrl = searchUrl,
             key = key,
             page = page,
-            baseUrl = bookSource.bookSourceUrl,
+            baseUrl = sourceUrl,
             source = bookSource,
             ruleData = ruleData,
         )
@@ -63,17 +71,16 @@ object WebBook {
             }
         }
         checkRedirect(bookSource, res)
-        val redirectUrl = res.url
-        val idx = redirectUrl.indexOf(analyzeUrl.urlNoOption)
-        val baseUrl = if (idx != -1) {
-            redirectUrl.substring(0, idx) + analyzeUrl.ruleUrl
-        } else analyzeUrl.ruleUrl
+        val ruleUrl = analyzeUrl.ruleUrl
+        val baseUrl = if (sourceUrl.isAbsUrl() && !ruleUrl.isAbsUrl()) {
+            URL(URL(sourceUrl), ruleUrl).toString()
+        } else ruleUrl
         return BookList.analyzeBookList(
             bookSource = bookSource,
             ruleData = ruleData,
             analyzeUrl = analyzeUrl,
             baseUrl = baseUrl,
-            redirectUrl = redirectUrl,
+            redirectUrl = res.url,
             body = res.body,
             isSearch = true
         )
@@ -99,11 +106,12 @@ object WebBook {
         url: String,
         page: Int? = 1,
     ): ArrayList<SearchBook> {
+        val sourceUrl = bookSource.bookSourceUrl
         val ruleData = RuleData()
         val analyzeUrl = AnalyzeUrl(
             mUrl = url,
             page = page,
-            baseUrl = bookSource.bookSourceUrl,
+            baseUrl = sourceUrl,
             source = bookSource,
             ruleData = ruleData
         )
@@ -115,17 +123,16 @@ object WebBook {
             }
         }
         checkRedirect(bookSource, res)
-        val redirectUrl = res.url
-        val idx = redirectUrl.indexOf(analyzeUrl.urlNoOption)
-        val baseUrl = if (idx != -1) {
-            redirectUrl.substring(0, idx) + analyzeUrl.ruleUrl
-        } else analyzeUrl.ruleUrl
+        val ruleUrl = analyzeUrl.ruleUrl
+        val baseUrl = if (sourceUrl.isAbsUrl() && !ruleUrl.isAbsUrl()) {
+            URL(URL(sourceUrl), ruleUrl).toString()
+        } else ruleUrl
         return BookList.analyzeBookList(
             bookSource = bookSource,
             ruleData = ruleData,
             analyzeUrl = analyzeUrl,
             baseUrl = baseUrl,
-            redirectUrl = redirectUrl,
+            redirectUrl = res.url,
             body = res.body,
             isSearch = false
         )
