@@ -25,7 +25,7 @@ object WebBook {
     private fun String?.isAbsUrl() =
         this?.let {
             it.startsWith("http://", true) || it.startsWith("https://", true)
-                || baseUrl.contains(Regex("^data:[^;]*;base64,"))
+                || it.contains(Regex("^data:[^;]*;base64,"))
         } ?: false
 
     /**
