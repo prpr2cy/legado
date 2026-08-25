@@ -35,13 +35,10 @@ object BookList {
         isSearch: Boolean = true,
     ): ArrayList<SearchBook> {
         body ?: throw NoStackTraceException(
-            appCtx.getString(
-                R.string.error_get_web_content,
-                analyzeUrl.ruleUrl
-            )
+            appCtx.getString(R.string.error_get_web_content, baseUrl)
         )
         val bookList = ArrayList<SearchBook>()
-        Debug.log(bookSource.bookSourceUrl, "≡获取成功:${analyzeUrl.ruleUrl}")
+        Debug.log(bookSource.bookSourceUrl, "≡获取成功:${baseUrl}")
         Debug.log(bookSource.bookSourceUrl, body, state = 10)
         val analyzeRule = AnalyzeRule(ruleData, bookSource)
         analyzeRule.setContent(body).setBaseUrl(baseUrl)
