@@ -118,9 +118,8 @@ class AnalyzeUrl(
         analyzeUrl()
         //处理webJs的URL
         if (isWebUrl == true) {
-            isWebUrl = false
-            ruleUrl = url
             analyzeUrl()
+            isWebUrl = false
         }
     }
 
@@ -189,15 +188,16 @@ class AnalyzeUrl(
      */
     private fun analyzeUrl() {
         //replaceKeyPageJs已经替换掉额外内容，此处url是基础形式，可以直接切首个‘,’之前字符串。
-        val urlMatcher = paramPattern.matcher(ruleUrl)
+        val currentUrl = if (isWebUrl == true) url else ruleUrl
+        val urlMatcher = paramPattern.matcher(currentUrl)
         val urlNoOption =
-            if (urlMatcher.find()) ruleUrl.substring(0, urlMatcher.start()) else ruleUrl
+            if (urlMatcher.find()) currentUrl.substring(0, urlMatcher.start()) else currentUrl
         url = NetworkUtils.getAbsoluteURL(baseUrl, urlNoOption)
         NetworkUtils.getBaseUrl(url)?.let {
             baseUrl = it
         }
-        if (urlNoOption.length != ruleUrl.length) {
-            GSON.fromJsonObject<UrlOption>(ruleUrl.substring(urlMatcher.end())).getOrNull()
+        if (urlNoOption.length != currentUrl.length) {
+            GSON.fromJsonObject<UrlOption>(currentUrl.substring(urlMatcher.end())).getOrNull()
                 ?.let { option ->
                     ignoreHeader = option.ignoreHeader()
                     if (ignoreHeader == true) {
