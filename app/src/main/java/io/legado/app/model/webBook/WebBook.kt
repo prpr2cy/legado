@@ -47,12 +47,13 @@ object WebBook {
         if (searchUrl.isNullOrBlank()) {
             throw NoStackTraceException("搜索url不能为空")
         }
+        val sourceUrl = bookSource.bookSourceUrl
         val ruleData = RuleData()
         val analyzeUrl = AnalyzeUrl(
             mUrl = searchUrl,
             key = key,
             page = page,
-            baseUrl = bookSource.bookSourceUrl,
+            baseUrl = sourceUrl,
             source = bookSource,
             ruleData = ruleData,
         )
@@ -64,7 +65,7 @@ object WebBook {
             }
         }
         checkRedirect(bookSource, res)
-        val baseUrl = NetworkUtils.getAbsoluteURL(res.url, analyzeUrl.ruleUrl)
+        val baseUrl = NetworkUtils.getAbsoluteURL(sourceUrl, analyzeUrl.ruleUrl)
         return BookList.analyzeBookList(
             bookSource = bookSource,
             ruleData = ruleData,
@@ -96,11 +97,12 @@ object WebBook {
         url: String,
         page: Int? = 1,
     ): ArrayList<SearchBook> {
+        val sourceUrl = bookSource.bookSourceUrl
         val ruleData = RuleData()
         val analyzeUrl = AnalyzeUrl(
             mUrl = url,
             page = page,
-            baseUrl = bookSource.bookSourceUrl,
+            baseUrl = sourceUrl,
             source = bookSource,
             ruleData = ruleData
         )
@@ -112,7 +114,7 @@ object WebBook {
             }
         }
         checkRedirect(bookSource, res)
-        val baseUrl = NetworkUtils.getAbsoluteURL(res.url, analyzeUrl.ruleUrl)
+        val baseUrl = NetworkUtils.getAbsoluteURL(sourceUrl, analyzeUrl.ruleUrl)
         return BookList.analyzeBookList(
             bookSource = bookSource,
             ruleData = ruleData,
