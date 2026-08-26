@@ -149,7 +149,7 @@ object BookList {
         variable: String?
     ): SearchBook? {
         val book = Book(variable = variable)
-        book.bookUrl = analyzeUrl.ruleUrl
+        book.bookUrl = baseUrl
         book.origin = bookSource.bookSourceUrl
         book.originName = bookSource.bookSourceName
         book.originOrder = bookSource.customOrder
