@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       ref:
-        description: '构建目标 (main / tag / commit SHA)'
-        required: true
-        default: 'main'
+        description: '构建目标'
+        required: false
+        default: ''
 
 jobs:
   build:
