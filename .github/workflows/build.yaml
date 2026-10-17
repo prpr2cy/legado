@@ -6,7 +6,7 @@ on:
       ref:
         description: '构建目标'
         required: true
-        default: ''
+        default: 'master'
 
 jobs:
   build:
