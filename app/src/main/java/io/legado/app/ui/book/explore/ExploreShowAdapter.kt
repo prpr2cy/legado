@@ -79,7 +79,7 @@ class ExploreShowAdapter(context: Context, val callBack: CallBack) :
 
     override fun registerListener(holder: ItemViewHolder, binding: ItemSearchBinding) {
         holder.itemView.setOnClickListener {
-            getItem(holder.layoutPosition)?.let {
+            getItemByLayoutPosition(holder.layoutPosition)?.let {
                 callBack.showBookInfo(it.toBook())
             }
         }
